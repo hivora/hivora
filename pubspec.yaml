@@ -30,7 +30,7 @@ dependencies:
   path_provider: ^2.1.0
 
   # Internationalization (i18next)
-  i18next: ^0.7.0
+  i18next: ^0.9.0
   intl: any
 
   # UX
