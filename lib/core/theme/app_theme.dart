@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 /// Material theme tuned to the Hivora base design: soft pastel surfaces,
-/// strongly rounded corners, navy primary actions.
+/// strongly rounded corners, navy primary actions, Sora brand font.
 abstract final class AppTheme {
   static const radiusCard = 28.0;
   static const radiusControl = 16.0;
   static const radiusPill = 100.0;
+
+  /// Brand font (variable weight, bundled under assets/fonts, SIL OFL).
+  static const fontFamily = 'Sora';
 
   static ThemeData light() {
     final scheme = ColorScheme.fromSeed(
@@ -17,7 +20,11 @@ abstract final class AppTheme {
       surface: AppColors.surface,
       error: AppColors.danger,
     );
-    final base = ThemeData(useMaterial3: true, colorScheme: scheme);
+    final base = ThemeData(
+      useMaterial3: true,
+      colorScheme: scheme,
+      fontFamily: fontFamily,
+    );
     final textTheme = base.textTheme.apply(
       bodyColor: AppColors.textPrimary,
       displayColor: AppColors.textPrimary,

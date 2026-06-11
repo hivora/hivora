@@ -16,7 +16,7 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Hivora - open source, self-hosted project management.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -29,85 +29,132 @@
 
   <title>hivora</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- ===== Hivora animierter Splash (nativ: SVG + CSS, kein Flutter nötig) ===== -->
   <style id="splash-screen-style">
-    html {
-      height: 100%
+    @font-face {
+      font-family: 'Sora';
+      src: url('fonts/Sora-Variable.ttf') format('truetype-variations');
+      font-weight: 100 900;
+      font-display: swap;
     }
+
+    html { height: 100%; }
 
     body {
       margin: 0;
       min-height: 100%;
       background-color: #F2F1F8;
-          background-size: 100% 100%;
     }
 
-    .center {
-      margin: 0;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      -ms-transform: translate(-50%, -50%);
-      transform: translate(-50%, -50%);
+    #splash {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background-color: #F2F1F8;
+      z-index: 9999;
+      transition: opacity 0.35s ease;
     }
 
-    .contain {
-      display:block;
-      width:100%; height:100%;
-      object-fit: contain;
+    #splash .inner {
+      display: grid;
+      justify-items: center;
+      gap: 6vmin;
     }
 
-    .stretch {
-      display:block;
-      width:100%; height:100%;
+    #splash svg {
+      width: clamp(96px, 30vmin, 240px);
+      height: auto;
+      overflow: visible;
     }
 
-    .cover {
-      display:block;
-      width:100%; height:100%;
-      object-fit: cover;
+    #splash .markg {
+      transform-box: fill-box;
+      transform-origin: center;
+      transform: scale(0.94);
     }
 
-    .bottom {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      -ms-transform: translate(-50%, 0);
-      transform: translate(-50%, 0);
+    #splash path {
+      stroke: #2D2B55;
+      stroke-width: 11;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
     }
 
-    .bottomLeft {
-      position: absolute;
-      bottom: 0;
-      left: 0;
+    #splash .wordmark {
+      font-family: 'Sora', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: clamp(28px, 9.5vmin, 76px);
+      letter-spacing: -0.03em;
+      color: #2D2B55;
+      opacity: 0;
+      transform: translateY(12%);
     }
 
-    .bottomRight {
-      position: absolute;
-      bottom: 0;
-      right: 0;
+    #splash .hex {
+      animation: hv-draw 0.62s cubic-bezier(0.66, 0, 0.18, 1) 0.1s forwards;
+    }
+    #splash .bar {
+      animation: hv-draw 0.38s cubic-bezier(0.4, 0, 0.18, 1) 0.5s forwards;
+    }
+    #splash .markg {
+      animation: hv-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.62s forwards;
+    }
+    #splash .wordmark {
+      animation: hv-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.88s forwards;
+    }
+
+    @keyframes hv-draw { to { stroke-dashoffset: 0; } }
+    @keyframes hv-pop { from { transform: scale(0.94); } to { transform: scale(1); } }
+    @keyframes hv-rise {
+      from { opacity: 0; transform: translateY(12%); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #splash path { stroke-dashoffset: 0; animation: none; }
+      #splash .markg { transform: scale(1); animation: none; }
+      #splash .wordmark { opacity: 1; transform: none; animation: none; }
     }
 
     @media (prefers-color-scheme: dark) {
-      body {
-        background-color: #1E1C3A;
-          }
+      body { background-color: #1E1C3A; }
+      #splash { background-color: #1E1C3A; }
+      #splash path { stroke: #A9CDF3; }
+      #splash .wordmark { color: #A9CDF3; }
     }
   </style>
   <script id="splash-screen-script">
     function removeSplashFromWeb() {
-      document.getElementById("splash")?.remove();
+      var splash = document.getElementById("splash");
+      if (splash) {
+        splash.style.opacity = "0";
+        setTimeout(function () { splash.remove(); }, 400);
+      }
       document.getElementById("splash-branding")?.remove();
       document.body.style.background = "transparent";
     }
+    // Flutter feuert dieses Event nach dem ersten gerenderten Frame.
+    globalThis.addEventListener("flutter-first-frame", removeSplashFromWeb);
   </script>
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
 </head>
 <body>
-  <picture id="splash">
-      <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
-  </picture>
+  <div id="splash" aria-hidden="true">
+    <div class="inner">
+      <svg viewBox="0 0 120 120" fill="none">
+        <g class="markg">
+          <path class="hex" pathLength="1" d="M60 14 99.8 37v46L60 106 20.2 83V37Z"></path>
+          <path class="bar" pathLength="1" d="M20.2 60h79.6"></path>
+        </g>
+      </svg>
+      <div class="wordmark">hivora</div>
+    </div>
+  </div>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hivora animierter Splash (Android 12+ SplashScreen API) — Light Mode -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="288dp"
+            android:height="288dp"
+            android:viewportWidth="120"
+            android:viewportHeight="120">
+            <group
+                android:name="mark"
+                android:pivotX="60"
+                android:pivotY="60"
+                android:scaleX="0.94"
+                android:scaleY="0.94">
+                <path
+                    android:name="hex"
+                    android:pathData="M60,14 L99.8,37 L99.8,83 L60,106 L20.2,83 L20.2,37 Z"
+                    android:strokeColor="#2D2B55"
+                    android:strokeWidth="11"
+                    android:strokeLineCap="round"
+                    android:strokeLineJoin="round"
+                    android:trimPathEnd="0" />
+                <path
+                    android:name="bar"
+                    android:pathData="M20.2,60 L99.8,60"
+                    android:strokeColor="#2D2B55"
+                    android:strokeWidth="11"
+                    android:strokeLineCap="round"
+                    android:trimPathEnd="0" />
+            </group>
+        </vector>
+    </aapt:attr>
+
+    <!-- Hexagon zeichnet sich auf -->
+    <target android:name="hex">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:startOffset="100"
+                android:duration="620"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+
+    <!-- Querbalken (das „H") zieht durch -->
+    <target android:name="bar">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:startOffset="500"
+                android:duration="380"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+
+    <!-- Weicher Pop am Ende -->
+    <target android:name="mark">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:propertyName="scaleX"
+                    android:valueFrom="0.94"
+                    android:valueTo="1"
+                    android:startOffset="620"
+                    android:duration="500"
+                    android:interpolator="@android:interpolator/overshoot" />
+                <objectAnimator
+                    android:propertyName="scaleY"
+                    android:valueFrom="0.94"
+                    android:valueTo="1"
+                    android:startOffset="620"
+                    android:duration="500"
+                    android:interpolator="@android:interpolator/overshoot" />
+            </set>
+        </aapt:attr>
+    </target>
+</animated-vector>

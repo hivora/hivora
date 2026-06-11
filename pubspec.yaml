@@ -59,16 +59,26 @@ flutter:
     - assets/i18n/en/
     - assets/i18n/de/
     - assets/branding/
+  fonts:
+    - family: Sora
+      fonts:
+        - asset: assets/fonts/Sora-Variable.ttf
 
 # --- Generated native splash (run: dart run flutter_native_splash:create) ---
+# Web + iOS splash come from the animated handoff (Design/handoff) — keep both false,
+# otherwise the generator overwrites web/index.html and the iOS storyboard.
 flutter_native_splash:
   color: "#F2F1F8"
   color_dark: "#1E1C3A"
   image: assets/branding/splash_icon.png
+  image_dark: assets/branding/splash_icon_dark.png
   android_12:
     color: "#F2F1F8"
+    color_dark: "#1E1C3A"
     image: assets/branding/splash_icon.png
-  web: true
+    image_dark: assets/branding/splash_icon_dark.png
+  web: false
+  ios: false
 
 # --- Generated app icons (run: dart run flutter_launcher_icons) ---
 flutter_launcher_icons:
@@ -79,6 +89,7 @@ flutter_launcher_icons:
   macos:
     generate: true
   image_path: assets/branding/app_icon.png
-  adaptive_icon_background: "#2D2B55"
+  adaptive_icon_background: "#CFE3F8"
   adaptive_icon_foreground: assets/branding/app_icon_foreground.png
+  adaptive_icon_monochrome: assets/branding/app_icon_foreground.png
   remove_alpha_ios: true
