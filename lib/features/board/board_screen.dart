@@ -12,6 +12,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
+import '../issues/issue_form.dart';
 
 // ─────────────────────────── BoardScreen ──────────────────────────────────
 // Shown at /board — lists all boards across projects; can filter by project.
@@ -266,6 +267,19 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
     }
   }
 
+  Future<void> _addIssue(BoardColumnView column) async {
+    final view = _view;
+    if (view == null) return;
+    final projectId =
+        view.board.projectIds.isNotEmpty ? view.board.projectIds.first : null;
+    final created = await showIssueForm(
+      context,
+      projectId: projectId,
+      initialState: column.states.isNotEmpty ? column.states.first : null,
+    );
+    if (created != null) await _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading && _view == null) {
@@ -342,6 +356,7 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
               return _BoardColumn(
                 column: column,
                 onAccept: (issue) => _moveIssue(issue, column),
+                onAddIssue: () => _addIssue(column),
               );
             },
           ),
@@ -727,10 +742,15 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
 // ─────────────────────────── Kanban column ────────────────────────────────
 
 class _BoardColumn extends StatelessWidget {
-  const _BoardColumn({required this.column, required this.onAccept});
+  const _BoardColumn({
+    required this.column,
+    required this.onAccept,
+    required this.onAddIssue,
+  });
 
   final BoardColumnView column;
   final void Function(Issue) onAccept;
+  final VoidCallback onAddIssue;
 
   @override
   Widget build(BuildContext context) {
@@ -809,49 +829,50 @@ class _BoardColumn extends StatelessWidget {
                   ),
                 ),
                 Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    itemCount: column.issues.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 9),
-                    itemBuilder: (context, index) {
-                      final issue = column.issues[index];
-                      return LongPressDraggable<Issue>(
-                        data: issue,
-                        feedback: Material(
-                          color: Colors.transparent,
-                          child: SizedBox(
-                            width: 276,
-                            child: _BoardCard(issue: issue, dragging: true),
-                          ),
+                  child: column.issues.isEmpty
+                      ? const SizedBox(height: 8)
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          itemCount: column.issues.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 9),
+                          itemBuilder: (context, index) {
+                            final issue = column.issues[index];
+                            return Draggable<Issue>(
+                              data: issue,
+                              dragAnchorStrategy:
+                                  childDragAnchorStrategy,
+                              maxSimultaneousDrags: 1,
+                              feedback: Material(
+                                color: Colors.transparent,
+                                child: SizedBox(
+                                  width: 276,
+                                  child: _BoardCard(
+                                      issue: issue, dragging: true),
+                                ),
+                              ),
+                              childWhenDragging: Opacity(
+                                  opacity: 0.35,
+                                  child: _BoardCard(issue: issue)),
+                              child: _BoardCard(issue: issue),
+                            );
+                          },
                         ),
-                        childWhenDragging: Opacity(
-                            opacity: 0.35, child: _BoardCard(issue: issue)),
-                        child: _BoardCard(issue: issue),
-                      );
-                    },
-                  ),
                 ),
                 const SizedBox(height: 8),
-                _ColumnAddButton(label: context.t('board.addIssue')),
+                SizedBox(
+                  width: double.infinity,
+                  child: DottedAddButton(
+                    label: context.t('board.addIssue'),
+                    onTap: onAddIssue,
+                  ),
+                ),
               ],
             ),
           );
         },
       ),
-    );
-  }
-}
-
-class _ColumnAddButton extends StatelessWidget {
-  const _ColumnAddButton({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: DottedAddButton(label: label),
     );
   }
 }

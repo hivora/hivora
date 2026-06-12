@@ -11,7 +11,7 @@ import '../../core/theme/app_colors.dart';
 /// Responsive create/edit issue form: bottom sheet on phones, dialog on
 /// larger screens (wolt_modal_sheet decides by width).
 Future<Issue?> showIssueForm(BuildContext context,
-    {Issue? existing, String? projectId}) {
+    {Issue? existing, String? projectId, String? initialState}) {
   final repository = context.read<HivoraRepository>();
   return WoltModalSheet.show<Issue?>(
     context: context,
@@ -21,7 +21,10 @@ Future<Issue?> showIssueForm(BuildContext context,
         hasTopBarLayer: false,
         child: RepositoryProvider.value(
           value: repository,
-          child: _IssueFormBody(existing: existing, projectId: projectId),
+          child: _IssueFormBody(
+              existing: existing,
+              projectId: projectId,
+              initialState: initialState),
         ),
       ),
     ],
@@ -29,10 +32,11 @@ Future<Issue?> showIssueForm(BuildContext context,
 }
 
 class _IssueFormBody extends StatefulWidget {
-  const _IssueFormBody({this.existing, this.projectId});
+  const _IssueFormBody({this.existing, this.projectId, this.initialState});
 
   final Issue? existing;
   final String? projectId;
+  final String? initialState;
 
   @override
   State<_IssueFormBody> createState() => _IssueFormBodyState();
@@ -218,6 +222,7 @@ class _IssueFormBodyState extends State<_IssueFormBody> {
           'description': _description.text,
           'type': _type,
           'priority': _priority,
+          if (widget.initialState != null) 'state': widget.initialState,
         });
       }
       if (mounted) Navigator.of(context).pop(result);

@@ -97,11 +97,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     value: _projectId,
                     underline: const SizedBox.shrink(),
                     isDense: true,
+                    isExpanded: true,
                     borderRadius: BorderRadius.circular(12),
                     items: [
                       for (final project in _projects)
                         DropdownMenuItem(
-                            value: project.id, child: Text(project.name)),
+                            value: project.id,
+                            child: Text(project.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis)),
                     ],
                     onChanged: (value) {
                       _projectId = value;
@@ -114,12 +118,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   value: _report,
                   underline: const SizedBox.shrink(),
                   isDense: true,
+                  isExpanded: true,
                   borderRadius: BorderRadius.circular(12),
                   items: [
                     for (final report in _reports)
                       DropdownMenuItem(
                         value: report,
-                        child: Text(context.t('reports.$report')),
+                        child: Text(context.t('reports.$report'),
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
                       ),
                   ],
                   onChanged: (value) {
