@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/admin_screen.dart';
+import '../../features/admin/admin_users_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/sso_callback_screen.dart';
 import '../../features/board/board_screen.dart';
+import '../../features/board/project_boards_screen.dart';
 import '../../features/connect/connect_screen.dart';
 import '../../features/connect/update_required_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
@@ -129,6 +131,18 @@ GoRouter buildRouter({
                 IssueDetailScreen(issueId: state.pathParameters['id']!),
           ),
           GoRoute(path: '/board', builder: (_, _) => const BoardScreen()),
+          GoRoute(
+            path: '/boards/:id',
+            builder: (_, state) =>
+                KanbanBoardScreen(boardId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/projects/:id/boards',
+            builder: (_, state) => ProjectBoardsScreen(
+              projectId: state.pathParameters['id']!,
+              projectName: (state.extra as String?) ?? '',
+            ),
+          ),
           GoRoute(path: '/gantt', builder: (_, _) => const GanttScreen()),
           GoRoute(path: '/timesheet', builder: (_, _) => const TimesheetScreen()),
           GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
@@ -143,6 +157,10 @@ GoRouter buildRouter({
               builder: (_, _) => const NotificationsScreen()),
           GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
           GoRoute(path: '/admin', builder: (_, _) => const AdminScreen()),
+          GoRoute(
+            path: '/admin/users',
+            builder: (_, _) => const AdminUsersScreen(),
+          ),
         ],
       ),
     ],

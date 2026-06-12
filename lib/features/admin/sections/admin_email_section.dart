@@ -1,0 +1,132 @@
+import 'package:flutter/material.dart';
+
+import '../../../core/i18n/i18n.dart';
+import '../admin_form_helpers.dart';
+
+/// Email settings: outbound SMTP + inbound email-to-ticket (IMAP).
+class AdminEmailSection extends StatefulWidget {
+  const AdminEmailSection({super.key, required this.settings});
+
+  final Map<String, dynamic> settings;
+
+  @override
+  State<AdminEmailSection> createState() => _AdminEmailSectionState();
+}
+
+class _AdminEmailSectionState extends State<AdminEmailSection> {
+  Map<String, dynamic> get _smtp =>
+      (widget.settings['smtp'] ??= <String, dynamic>{})
+          as Map<String, dynamic>;
+
+  Map<String, dynamic> get _ingest =>
+      (widget.settings['emailIngest'] ??= <String, dynamic>{})
+          as Map<String, dynamic>;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ─── Outbound SMTP ───────────────────────────────────────
+        AdminSectionCard(
+          icon: Icons.send_rounded,
+          title: context.t('admin.smtpTitle'),
+          subtitle: context.t('admin.smtpHint'),
+          children: [
+            AdminToggle(
+              label: context.t('admin.smtpEnabled'),
+              value: _smtp['enabled'] == true,
+              onChanged: (v) => setState(() => _smtp['enabled'] = v),
+            ),
+            if (_smtp['enabled'] == true) ...[
+              const SizedBox(height: 8),
+              AdminField(
+                label: context.t('admin.smtpHost'),
+                initialValue: (_smtp['host'] as String?) ?? '',
+                onChanged: (v) => _smtp['host'] = v,
+                hint: 'mail.example.com',
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: AdminField(
+                      label: context.t('admin.smtpPort'),
+                      initialValue:
+                          '${(_smtp['port'] as int?) ?? 587}',
+                      keyboardType: TextInputType.number,
+                      onChanged: (v) =>
+                          _smtp['port'] = int.tryParse(v) ?? 587,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 3,
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(context.t('admin.smtpStartTls'),
+                          style: const TextStyle(fontSize: 13)),
+                      value: (_smtp['starttls'] as bool?) ?? true,
+                      activeTrackColor:
+                          const Color(0xFF2D2B55),
+                      onChanged: (v) =>
+                          setState(() => _smtp['starttls'] = v),
+                    ),
+                  ),
+                ],
+              ),
+              AdminField(
+                label: context.t('admin.smtpUsername'),
+                initialValue: (_smtp['username'] as String?) ?? '',
+                onChanged: (v) => _smtp['username'] = v,
+              ),
+              AdminField(
+                label: context.t('admin.smtpPassword'),
+                initialValue: '',
+                isSecret: true,
+                onChanged: (v) => _smtp['password'] = v,
+              ),
+              AdminField(
+                label: context.t('admin.smtpFromAddress'),
+                initialValue:
+                    (_smtp['fromAddress'] as String?) ?? 'hivora@localhost',
+                onChanged: (v) => _smtp['fromAddress'] = v,
+                keyboardType: TextInputType.emailAddress,
+              ),
+              AdminField(
+                label: context.t('admin.smtpFromName'),
+                initialValue:
+                    (_smtp['fromName'] as String?) ?? 'Hivora',
+                onChanged: (v) => _smtp['fromName'] = v,
+              ),
+            ],
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // ─── Email-to-Ticket (IMAP ingest) ───────────────────────
+        AdminSectionCard(
+          icon: Icons.move_to_inbox_rounded,
+          title: context.t('admin.emailIngest'),
+          subtitle: context.t('admin.emailIngestHint'),
+          children: [
+            ProviderTile(
+              title: 'IMAP',
+              subtitle: context.t('admin.imapSubtitle'),
+              section: _ingest,
+              fields: [
+                ('host', context.t('admin.smtpHost'), false),
+                ('username', context.t('auth.identifier'), false),
+                ('password', context.t('setup.password'), true),
+                ('folder', 'Folder', false),
+                ('defaultProjectId', context.t('admin.defaultProject'), false),
+              ],
+              onChanged: () => setState(() {}),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}

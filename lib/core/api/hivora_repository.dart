@@ -136,8 +136,9 @@ class HivoraRepository {
 
   // --- Boards ---------------------------------------------------------------
 
-  Future<List<AgileBoard>> boards() async =>
-      ((await _api.get('/api/v1/boards')) as List<dynamic>)
+  Future<List<AgileBoard>> boards({String? projectId}) async =>
+      ((await _api.get('/api/v1/boards',
+              query: {'projectId': ?projectId})) as List<dynamic>)
           .map((b) => AgileBoard.fromJson(b as Map<String, dynamic>))
           .toList();
 

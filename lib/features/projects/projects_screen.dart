@@ -125,6 +125,7 @@ class _ProjectCard extends StatelessWidget {
     return SoftCard(
       color: AppColors.pastelFor(index),
       onTap: () => context.go('/issues?projectId=${project.id}'),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -152,7 +153,7 @@ class _ProjectCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             project.name,
             maxLines: 1,
@@ -160,7 +161,7 @@ class _ProjectCard extends StatelessWidget {
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
           ),
           if ((project.description ?? '').isNotEmpty) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Expanded(
               child: Text(
                 project.description!,
@@ -170,8 +171,71 @@ class _ProjectCard extends StatelessWidget {
                     color: AppColors.textPrimary, fontSize: 13, height: 1.4),
               ),
             ),
-          ],
+          ] else
+            const Spacer(),
+          const SizedBox(height: 8),
+          // Quick-action row: Issues | Boards
+          Row(
+            children: [
+              _QuickAction(
+                icon: Icons.task_alt_rounded,
+                label: context.t('nav.issues'),
+                onTap: () =>
+                    context.go('/issues?projectId=${project.id}'),
+              ),
+              const SizedBox(width: 8),
+              _QuickAction(
+                icon: Icons.view_kanban_rounded,
+                label: context.t('nav.board'),
+                onTap: () => context.go(
+                  '/projects/${project.id}/boards',
+                  extra: project.name,
+                ),
+              ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: AppColors.navy),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.navy),
+            ),
+          ],
+        ),
       ),
     );
   }

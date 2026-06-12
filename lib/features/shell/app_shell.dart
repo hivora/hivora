@@ -61,6 +61,19 @@ class AppShell extends StatelessWidget {
   }
 }
 
+// Maps the current location to the nav route that should appear active.
+// /boards/:id      → /board (Board nav item)
+// /projects/:id/*  → /projects (Projects nav item)
+bool _isActive(String location, String navRoute) {
+  if (navRoute == '/board') {
+    return location.startsWith('/board') || location.startsWith('/boards/');
+  }
+  if (navRoute == '/projects') {
+    return location.startsWith('/projects');
+  }
+  return location.startsWith(navRoute);
+}
+
 // ─────────────────────────── Wide Shell (Navy Rail) ───────────────────────
 
 class _WideShell extends StatelessWidget {
@@ -196,7 +209,7 @@ class _NavRail extends StatelessWidget {
             for (final dest in _primary)
               _RailItem(
                 destination: dest,
-                selected: location.startsWith(dest.route),
+                selected: _isActive(location, dest.route),
                 collapsed: collapsed,
               ),
 
@@ -205,7 +218,7 @@ class _NavRail extends StatelessWidget {
             for (final dest in _secondary)
               _RailItem(
                 destination: dest,
-                selected: location.startsWith(dest.route),
+                selected: _isActive(location, dest.route),
                 collapsed: collapsed,
               ),
 
@@ -434,7 +447,7 @@ class _ContentTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final all = [..._primary, ..._secondary];
     final current = all.firstWhere(
-      (d) => location.startsWith(d.route),
+      (d) => _isActive(location, d.route),
       orElse: () => const _Destination('/', 'nav.dashboard', Icons.home_rounded),
     );
     return Container(
@@ -488,10 +501,11 @@ class _CompactShell extends StatefulWidget {
 class _CompactShellState extends State<_CompactShell> {
   int get _selectedIndex {
     for (var i = 0; i < _bottomTabs.length - 1; i++) {
-      if (widget.location.startsWith(_bottomTabs[i].route)) return i;
+      if (_isActive(widget.location, _bottomTabs[i].route)) return i;
     }
     // Everything not in first 3 tabs → "More" tab (index 3)
-    final inPrimary = _primary.any((d) => widget.location.startsWith(d.route));
+    final inPrimary =
+        _primary.any((d) => _isActive(widget.location, d.route));
     return inPrimary ? 0 : 3;
   }
 
