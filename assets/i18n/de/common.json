@@ -151,7 +151,20 @@
     "addComment": "Kommentar hinzufügen…",
     "deleteTitle": "Aufgabe löschen?",
     "deleteBody": "{{id}} wird dauerhaft gelöscht, inklusive Kommentaren und Arbeitseinträgen.",
-    "changeState": "Status ändern"
+    "changeState": "Status ändern",
+    "details": "Details",
+    "status": "Status",
+    "assignee": "Zugewiesene Person",
+    "assignToMe": "Mir zuweisen",
+    "unassign": "Zuweisung entfernen",
+    "unassigned": "Nicht zugewiesen",
+    "sprint": "Sprint",
+    "noSprint": "Kein Sprint",
+    "author": "Autor",
+    "startDate": "Startdatum",
+    "dueDate": "Fälligkeitsdatum",
+    "noValue": "Kein Wert",
+    "searchPeople": "Personen suchen…"
   },
   "type": {
     "task": "Aufgabe",

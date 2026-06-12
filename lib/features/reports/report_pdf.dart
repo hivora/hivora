@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart' show Color;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -19,9 +23,13 @@ class ReportPdfData {
     required this.sections,
     required this.burndown,
     required this.burndownRemaining,
+    this.logoUrl,
   });
 
   final String orgName;
+  /// Organization logo (from admin settings). Rendered in the header when it
+  /// resolves to an image; otherwise the Hivora wordmark is shown instead.
+  final String? logoUrl;
   final String projectName;
   final DateTime generatedAt;
   final int totalIssues;
@@ -63,13 +71,14 @@ Future<pw.Document> _buildDocument(ReportPdfData data) async {
   );
 
   final df = _fmtDate(data.generatedAt);
+  final logo = await _resolveLogo(data.logoUrl);
 
   doc.addPage(
     pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.fromLTRB(36, 36, 36, 40),
       build: (context) => [
-        _header(data, df),
+        _header(data, df, logo),
         pw.SizedBox(height: 22),
         _summaryRow(data),
         pw.SizedBox(height: 22),
@@ -92,7 +101,53 @@ Future<pw.Document> _buildDocument(ReportPdfData data) async {
   return doc;
 }
 
-pw.Widget _header(ReportPdfData data, String generated) {
+/// Fetches the organization logo and turns it into a header widget. Handles
+/// both raster (PNG/JPEG/…) and SVG logos. Returns null on any failure
+/// (missing URL, network error, unsupported format) so the header can fall
+/// back to the Hivora wordmark.
+Future<pw.Widget?> _resolveLogo(String? url) async {
+  if (url == null || url.trim().isEmpty) return null;
+  final clean = url.trim();
+  try {
+    final res = await Dio().get<List<int>>(
+      clean,
+      options: Options(
+        responseType: ResponseType.bytes,
+        followRedirects: true,
+        // Mirror the API client so a logo behind the same ngrok tunnel is not
+        // intercepted by ngrok's HTML browser warning. Harmless elsewhere.
+        headers: const {'ngrok-skip-browser-warning': 'true'},
+      ),
+    );
+    final bytes = Uint8List.fromList(res.data ?? const []);
+    if (bytes.isEmpty) return null;
+
+    final contentType =
+        (res.headers.value('content-type') ?? '').toLowerCase();
+    final isSvg = contentType.contains('svg') ||
+        clean.toLowerCase().endsWith('.svg') ||
+        _looksLikeSvg(bytes);
+
+    if (isSvg) {
+      return pw.SvgImage(
+        svg: utf8.decode(bytes, allowMalformed: true),
+        fit: pw.BoxFit.contain,
+      );
+    }
+    return pw.Image(pw.MemoryImage(bytes), fit: pw.BoxFit.contain);
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Cheap sniff for an SVG payload when the server omits a useful content-type.
+bool _looksLikeSvg(Uint8List bytes) {
+  final head = String.fromCharCodes(
+      bytes.take(256).where((b) => b != 0)).toLowerCase();
+  return head.contains('<svg') || head.contains('<?xml');
+}
+
+pw.Widget _header(ReportPdfData data, String generated, pw.Widget? logo) {
   return pw.Container(
     padding: const pw.EdgeInsets.all(20),
     decoration: const pw.BoxDecoration(
@@ -106,24 +161,35 @@ pw.Widget _header(ReportPdfData data, String generated) {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Row(
-                children: [
-                  pw.Container(
-                    width: 10,
-                    height: 18,
-                    decoration: const pw.BoxDecoration(
-                      color: _accent,
-                      borderRadius: pw.BorderRadius.all(pw.Radius.circular(2)),
+              if (logo != null)
+                pw.ConstrainedBox(
+                  constraints: const pw.BoxConstraints(
+                      maxHeight: 36, maxWidth: 220),
+                  child: pw.FittedBox(
+                      fit: pw.BoxFit.contain,
+                      alignment: pw.Alignment.centerLeft,
+                      child: logo),
+                )
+              else
+                pw.Row(
+                  children: [
+                    pw.Container(
+                      width: 10,
+                      height: 18,
+                      decoration: const pw.BoxDecoration(
+                        color: _accent,
+                        borderRadius:
+                            pw.BorderRadius.all(pw.Radius.circular(2)),
+                      ),
                     ),
-                  ),
-                  pw.SizedBox(width: 8),
-                  pw.Text('hivora',
-                      style: pw.TextStyle(
-                          color: PdfColors.white,
-                          fontSize: 18,
-                          fontWeight: pw.FontWeight.bold)),
-                ],
-              ),
+                    pw.SizedBox(width: 8),
+                    pw.Text('hivora',
+                        style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 18,
+                            fontWeight: pw.FontWeight.bold)),
+                  ],
+                ),
               pw.SizedBox(height: 10),
               pw.Text('Project report',
                   style: pw.TextStyle(

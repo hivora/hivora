@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/hivora_repository.dart';
+import '../../core/blocs/app_config_bloc.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/content_models.dart';
 import '../../core/models/core_models.dart';
@@ -159,10 +160,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<void> _export(String format) async {
     if (format == 'pdf') {
-      final data = _buildPdfData();
+      // Pull the freshest branding so a logo configured after app start is
+      // picked up; fall back to whatever was cached at launch.
+      final repo = context.read<HivoraRepository>();
+      final cached = context.read<AppConfigBloc>().state.meta;
+      ServerMeta? meta = cached;
+      try {
+        meta = await repo.meta();
+      } catch (_) {
+        meta = cached;
+      }
+      if (!mounted) return;
       final failMsg = context.t('reports.exportFailed');
       try {
-        await shareReportPdf(data);
+        await shareReportPdf(_buildPdfData(meta));
       } catch (_) {
         _toast(failMsg);
       }
@@ -187,7 +198,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
-  ReportPdfData _buildPdfData() {
+  ReportPdfData _buildPdfData(ServerMeta? meta) {
     final byState = _reports['issues-by-state'] ?? const {};
     final total = byState.values.fold<int>(0, (s, v) => s + v);
     final bd = _burndown();
@@ -207,7 +218,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
 
     return ReportPdfData(
-      orgName: 'Hivora',
+      orgName: (meta?.organizationName?.trim().isNotEmpty ?? false)
+          ? meta!.organizationName!.trim()
+          : 'Hivora',
+      logoUrl: meta?.logoUrl,
       projectName: _projectName(),
       generatedAt: DateTime.now(),
       totalIssues: total,

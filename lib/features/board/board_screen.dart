@@ -12,6 +12,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
+import '../issues/issue_detail_sheet.dart';
 import '../issues/issue_form.dart';
 
 // ─────────────────────────── BoardScreen ──────────────────────────────────
@@ -357,6 +358,11 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
                 column: column,
                 onAccept: (issue) => _moveIssue(issue, column),
                 onAddIssue: () => _addIssue(column),
+                onOpenIssue: (issue) => showIssueDetailSheet(
+                  context,
+                  issueId: issue.id,
+                  onChanged: _load,
+                ),
               );
             },
           ),
@@ -746,11 +752,13 @@ class _BoardColumn extends StatelessWidget {
     required this.column,
     required this.onAccept,
     required this.onAddIssue,
+    required this.onOpenIssue,
   });
 
   final BoardColumnView column;
   final void Function(Issue) onAccept;
   final VoidCallback onAddIssue;
+  final void Function(Issue) onOpenIssue;
 
   @override
   Widget build(BuildContext context) {
@@ -855,7 +863,9 @@ class _BoardColumn extends StatelessWidget {
                               childWhenDragging: Opacity(
                                   opacity: 0.35,
                                   child: _BoardCard(issue: issue)),
-                              child: _BoardCard(issue: issue),
+                              child: _BoardCard(
+                                  issue: issue,
+                                  onOpen: () => onOpenIssue(issue)),
                             );
                           },
                         ),
@@ -878,10 +888,11 @@ class _BoardColumn extends StatelessWidget {
 }
 
 class _BoardCard extends StatelessWidget {
-  const _BoardCard({required this.issue, this.dragging = false});
+  const _BoardCard({required this.issue, this.dragging = false, this.onOpen});
 
   final Issue issue;
   final bool dragging;
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -903,7 +914,7 @@ class _BoardCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: dragging ? null : () => context.go('/issues/${issue.id}'),
+          onTap: dragging ? null : onOpen,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,

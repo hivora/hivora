@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/api/hivora_repository.dart';
 import '../../core/blocs/fetch_cubit.dart';
@@ -15,6 +14,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
 import '../../core/widgets/status_widgets.dart';
+import 'issue_detail_sheet.dart';
 import 'issue_form.dart';
 
 typedef _IssuesData = ({List<Issue> issues, int total, Map<String, String> names});
@@ -354,7 +354,13 @@ class IssueRow extends StatelessWidget {
     final compact = context.isCompact;
     final name = assignee ?? '';
 
-    final tap = onTap ?? () => context.go('/issues/${issue.id}');
+    final tap = onTap ??
+        () => showIssueDetailSheet(
+              context,
+              issueId: issue.id,
+              onChanged: () =>
+                  context.read<FetchCubit<_IssuesData>>().load(),
+            );
 
     if (compact) {
       return SoftCard(

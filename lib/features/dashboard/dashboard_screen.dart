@@ -14,6 +14,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
 import '../../core/widgets/status_widgets.dart';
+import '../issues/issue_detail_sheet.dart';
 import '../issues/issue_form.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -295,7 +296,11 @@ class _FocusItem extends StatelessWidget {
             : 0.0;
     final due = dueLabel(issue.dueDate);
     return InkWell(
-      onTap: () => context.go('/issues/${issue.id}'),
+      onTap: () => showIssueDetailSheet(
+        context,
+        issueId: issue.id,
+        onChanged: () => context.read<FetchCubit<DashboardData>>().load(),
+      ),
       borderRadius: BorderRadius.circular(AppTheme.radiusControl),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),

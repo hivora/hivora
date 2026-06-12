@@ -7,6 +7,7 @@ class ServerMeta extends Equatable {
     required this.minAppVersion,
     required this.setupCompleted,
     this.organizationName,
+    this.logoUrl,
     this.privacyPolicyUrl = '',
     this.featureFlags = const {},
   });
@@ -15,6 +16,7 @@ class ServerMeta extends Equatable {
   final String minAppVersion;
   final bool setupCompleted;
   final String? organizationName;
+  final String? logoUrl;
   final String privacyPolicyUrl;
   final Map<String, bool> featureFlags;
 
@@ -23,6 +25,9 @@ class ServerMeta extends Equatable {
         minAppVersion: json['minAppVersion'] as String? ?? '0.0.0',
         setupCompleted: json['setupCompleted'] as bool? ?? false,
         organizationName: json['organizationName'] as String?,
+        logoUrl: (json['logoUrl'] as String?)?.trim().isEmpty ?? true
+            ? null
+            : (json['logoUrl'] as String).trim(),
         privacyPolicyUrl: json['privacyPolicyUrl'] as String? ?? '',
         featureFlags: (json['featureFlags'] as Map<String, dynamic>? ?? {})
             .map((k, v) => MapEntry(k, v == true)),
@@ -32,7 +37,7 @@ class ServerMeta extends Equatable {
 
   @override
   List<Object?> get props =>
-      [serverVersion, minAppVersion, setupCompleted, organizationName];
+      [serverVersion, minAppVersion, setupCompleted, organizationName, logoUrl];
 }
 
 class AuthUser extends Equatable {

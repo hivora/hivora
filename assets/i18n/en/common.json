@@ -151,7 +151,20 @@
     "addComment": "Add a comment…",
     "deleteTitle": "Delete issue?",
     "deleteBody": "{{id}} will be permanently deleted, including comments and work items.",
-    "changeState": "Change state"
+    "changeState": "Change state",
+    "details": "Details",
+    "status": "Status",
+    "assignee": "Assignee",
+    "assignToMe": "Assign to me",
+    "unassign": "Unassign",
+    "unassigned": "Unassigned",
+    "sprint": "Sprint",
+    "noSprint": "No sprint",
+    "author": "Author",
+    "startDate": "Start date",
+    "dueDate": "Due date",
+    "noValue": "No value",
+    "searchPeople": "Search people…"
   },
   "type": {
     "task": "Task",
