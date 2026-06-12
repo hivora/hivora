@@ -52,6 +52,10 @@ Future<void> showIssueDetailSheet(
 
   return WoltModalSheet.show<void>(
     context: context,
+    // Push onto the root navigator so the sheet covers the floating glass
+    // bottom-nav instead of rendering behind it (the shell nav is a Positioned
+    // sibling inside the ShellRoute's nested navigator).
+    useRootNavigator: true,
     barrierDismissible: true,
     modalTypeBuilder: (ctx) => MediaQuery.sizeOf(ctx).width >= 760
         ? const _WideDialogType()
@@ -534,7 +538,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
         ),
         const SizedBox(width: 6),
         GestureDetector(
-          onTap: () => _patch({isStart ? 'startDate' : 'dueDate': null}),
+          onTap: () => _patch(
+              {isStart ? 'clearStartDate' : 'clearDueDate': true}),
           child: const Icon(Icons.close_rounded,
               size: 15, color: AppColors.inkFaint),
         ),
@@ -711,7 +716,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       ],
     );
     if (chosen != null) {
-      await _patch({'sprintId': chosen == _noSprint ? null : chosen});
+      // Empty string clears the sprint server-side (null is ignored by PATCH).
+      await _patch({'sprintId': chosen == _noSprint ? '' : chosen});
     }
   }
 
@@ -734,6 +740,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -743,7 +750,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
         meId: me?.id,
         onUnassign: () {
           Navigator.of(sheetContext).pop();
-          _patch({'assigneeId': null});
+          // Empty string clears the assignee (PATCH ignores null).
+          _patch({'assigneeId': ''});
         },
         onAssignMe: me == null
             ? null
@@ -765,6 +773,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   }) {
     return showModalBottomSheet<T>(
       context: context,
+      useRootNavigator: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
