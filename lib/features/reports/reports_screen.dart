@@ -19,6 +19,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
+import 'logo_raster.dart';
 import 'report_pdf.dart';
 
 /// Project insight dashboard: distribution reports (state / priority /
@@ -170,10 +171,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
       } catch (_) {
         meta = cached;
       }
+      // Fetch the org logo through the server-side proxy (same-origin → no web
+      // CORS) and rasterize SVGs to PNG before embedding.
+      Uint8List? logoPng;
+      final logoAsset = await repo.organizationLogo();
+      if (logoAsset != null) {
+        logoPng = await logoToPng(
+            bytes: logoAsset.bytes, isSvg: logoAsset.isSvg);
+      }
       if (!mounted) return;
       final failMsg = context.t('reports.exportFailed');
       try {
-        await shareReportPdf(_buildPdfData(meta));
+        await shareReportPdf(_buildPdfData(meta, logoPng));
       } catch (_) {
         _toast(failMsg);
       }
@@ -198,7 +207,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
-  ReportPdfData _buildPdfData(ServerMeta? meta) {
+  ReportPdfData _buildPdfData(ServerMeta? meta, Uint8List? logoPng) {
     final byState = _reports['issues-by-state'] ?? const {};
     final total = byState.values.fold<int>(0, (s, v) => s + v);
     final bd = _burndown();
@@ -221,7 +230,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       orgName: (meta?.organizationName?.trim().isNotEmpty ?? false)
           ? meta!.organizationName!.trim()
           : 'Hivora',
-      logoUrl: meta?.logoUrl,
+      logoBytes: logoPng,
       projectName: _projectName(),
       generatedAt: DateTime.now(),
       totalIssues: total,

@@ -224,6 +224,21 @@ class HivoraRepository {
       ((await _api.get('/api/v1/reports/$name', query: query)) as Map<String, dynamic>)
           .map((k, v) => MapEntry(k, (v as num).toInt()));
 
+  /// Fetches the configured organization logo through the server-side proxy
+  /// (`/api/v1/meta/logo`) so it is delivered same-origin (no browser CORS).
+  /// Returns the raw bytes plus whether the payload is SVG, or null when no
+  /// logo is configured / reachable.
+  Future<({List<int> bytes, bool isSvg})?> organizationLogo() async {
+    final result = await _api.getBytes('/api/v1/meta/logo');
+    if (result == null) return null;
+    final head = String.fromCharCodes(result.bytes.take(256))
+        .toLowerCase();
+    final isSvg = result.contentType.contains('svg') ||
+        head.contains('<svg') ||
+        head.contains('<?xml');
+    return (bytes: result.bytes, isSvg: isSvg);
+  }
+
   /// Daily created/resolved counts for a project over the last [days] —
   /// the basis for the burndown (cumulative remaining) trend.
   Future<List<TrendPoint>> createdVsResolved(String projectId,

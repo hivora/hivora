@@ -11,6 +11,7 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hex_mark.dart';
+import '../../core/widgets/honeycomb_background.dart';
 import '../../core/widgets/app_avatar.dart';
 
 class _Destination {
@@ -128,6 +129,7 @@ class _NavRail extends StatelessWidget {
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeInOut,
       width: width,
+      clipBehavior: Clip.hardEdge,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -135,9 +137,22 @@ class _NavRail extends StatelessWidget {
           colors: [AppColors.rail, AppColors.rail2],
         ),
       ),
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        children: [
+          // Faint honeycomb texture pooling at the base of the rail.
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 240,
+            child: HoneycombBackground(),
+          ),
+          SafeArea(
+            child: Column(
+          // Centre every item on the rail's vertical axis when collapsed;
+          // left-align them in the expanded view.
+          crossAxisAlignment:
+              collapsed ? CrossAxisAlignment.center : CrossAxisAlignment.start,
           children: [
             // Logo
             Padding(
@@ -311,6 +326,8 @@ class _NavRail extends StatelessWidget {
               ),
           ],
         ),
+          ),
+        ],
       ),
     );
   }

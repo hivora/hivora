@@ -90,6 +90,26 @@ class ApiClient {
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) =>
       _run(() => _dio.get<dynamic>('$baseUrl$path', queryParameters: query));
 
+  /// Raw binary GET (e.g. the logo proxy). Returns the bytes and the response
+  /// content-type, or null on any non-2xx / transport error.
+  Future<({List<int> bytes, String contentType})?> getBytes(String path) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        '$baseUrl$path',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      final bytes = response.data;
+      if (bytes == null || bytes.isEmpty) return null;
+      return (
+        bytes: bytes,
+        contentType:
+            (response.headers.value('content-type') ?? '').toLowerCase(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<dynamic> post(String path, {Object? body}) =>
       _run(() => _dio.post<dynamic>('$baseUrl$path', data: body));
 

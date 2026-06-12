@@ -41,6 +41,7 @@ dependencies:
   # Reporting / export
   pdf: ^3.11.0
   printing: ^5.13.0
+  flutter_svg: ^2.0.10
 
   # Platform integration
   url_launcher: ^6.3.0
