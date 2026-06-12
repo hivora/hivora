@@ -82,7 +82,9 @@
     "or": "oder",
     "continueWith": "Weiter mit {{provider}}",
     "invalidCredentials": "Ungültige Zugangsdaten",
-    "tooManyAttempts": "Zu viele Fehlversuche. Bitte später erneut versuchen."
+    "tooManyAttempts": "Zu viele Fehlversuche. Bitte später erneut versuchen.",
+    "signingIn": "Du wirst angemeldet…",
+    "ssoFailed": "SSO-Anmeldung fehlgeschlagen"
   },
   "update": {
     "title": "Update erforderlich",

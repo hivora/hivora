@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/hivora_repository.dart';
@@ -27,6 +29,21 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _loadProviders();
+    _showSsoErrorIfPresent();
+  }
+
+  /// The server redirects failed SSO logins to `/login?ssoError=message`.
+  void _showSsoErrorIfPresent() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final error =
+          GoRouterState.of(context).uri.queryParameters['ssoError'];
+      if (error != null && error.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${context.t('auth.ssoFailed')}: $error')),
+        );
+      }
+    });
   }
 
   Future<void> _loadProviders() async {
@@ -181,8 +198,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _launchSso(SsoProvider provider) async {
     final serverUrl = context.read<AuthBloc>().storage.serverUrl ?? '';
-    // The server redirects back into the app via hivora://auth-callback.
-    await launchUrl(Uri.parse('$serverUrl${provider.loginUrl}'),
-        mode: LaunchMode.externalApplication);
+    var uri = Uri.parse('$serverUrl${provider.loginUrl}');
+    if (kIsWeb) {
+      // Web: tell the server where to return; the whole flow stays in this
+      // tab and ends at <origin>/#/auth-callback with the token pair.
+      uri = uri.replace(queryParameters: {
+        ...uri.queryParameters,
+        'return': Uri.base.origin,
+      });
+      await launchUrl(uri, webOnlyWindowName: '_self');
+      return;
+    }
+    // Native: the server redirects back via hivora://auth-callback.
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/admin/admin_screen.dart';
 import '../../features/auth/login_screen.dart';
+import '../../features/auth/sso_callback_screen.dart';
 import '../../features/board/board_screen.dart';
 import '../../features/connect/connect_screen.dart';
 import '../../features/connect/update_required_screen.dart';
@@ -75,10 +76,14 @@ GoRouter buildRouter({
         return location == '/onboarding' ? null : '/onboarding';
       }
       if (authStatus != AuthStatus.authenticated) {
-        return location == '/login' ? null : '/login';
+        // /auth-callback carries the SSO token pair and signs the user in.
+        const allowed = {'/login', '/auth-callback'};
+        return allowed.contains(location) ? null : '/login';
       }
       // Authenticated and ready: keep users away from gate screens.
-      const gates = {'/connect', '/setup', '/onboarding', '/login', '/update'};
+      const gates = {
+        '/connect', '/setup', '/onboarding', '/login', '/update', '/auth-callback',
+      };
       if (gates.contains(location)) return '/dashboard';
       return null;
     },
@@ -102,6 +107,13 @@ GoRouter buildRouter({
         ),
       ),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(
+        path: '/auth-callback',
+        builder: (_, state) => SsoCallbackScreen(
+          accessToken: state.uri.queryParameters['access_token'],
+          refreshToken: state.uri.queryParameters['refresh_token'],
+        ),
+      ),
       ShellRoute(
         builder: (context, state, child) =>
             AppShell(location: state.matchedLocation, child: child),

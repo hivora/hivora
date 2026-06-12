@@ -82,7 +82,9 @@
     "or": "or",
     "continueWith": "Continue with {{provider}}",
     "invalidCredentials": "Invalid credentials",
-    "tooManyAttempts": "Too many failed attempts. Please try again later."
+    "tooManyAttempts": "Too many failed attempts. Please try again later.",
+    "signingIn": "Signing you in…",
+    "ssoFailed": "SSO sign-in failed"
   },
   "update": {
     "title": "Update required",

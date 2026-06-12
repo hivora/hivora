@@ -33,6 +33,7 @@ class _AdminSsoSectionState extends State<AdminSsoSection> {
           title: 'OpenID Connect',
           section: _section('oidc'),
           fields: const [
+            ('displayName', 'Display Name', false),
             ('issuerUri', 'Issuer URI', false),
             ('clientId', 'Client ID', false),
             ('clientSecret', 'Client Secret', true),
@@ -44,6 +45,7 @@ class _AdminSsoSectionState extends State<AdminSsoSection> {
           title: 'OAuth 2.0',
           section: _section('oauth2'),
           fields: const [
+            ('displayName', 'Display Name', false),
             ('authorizationUri', 'Authorization URI', false),
             ('tokenUri', 'Token URI', false),
             ('userInfoUri', 'User-Info URI', false),
@@ -56,6 +58,7 @@ class _AdminSsoSectionState extends State<AdminSsoSection> {
           title: 'SAML',
           section: _section('saml'),
           fields: const [
+            ('displayName', 'Display Name', false),
             ('idpMetadataUri', 'IdP Metadata URL', false),
             ('entityId', 'Entity ID', false),
           ],
@@ -165,7 +168,7 @@ class _ProviderTileState extends State<_ProviderTile> {
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         tilePadding: EdgeInsets.zero,
-        childrenPadding: const EdgeInsets.only(bottom: 16),
+        childrenPadding: const EdgeInsets.only(top: 8, bottom: 16),
         title: Text(widget.title,
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
         leading: Switch(
