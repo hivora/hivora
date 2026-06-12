@@ -20,7 +20,13 @@ class ApiClient {
     _dio = Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 20),
-      headers: {'Accept': 'application/json'},
+      headers: {
+        'Accept': 'application/json',
+        // Bypass the ngrok free-tier browser interstitial: without this header
+        // ngrok answers API calls with an HTML warning page instead of JSON.
+        // Harmless against any other host, so it is sent unconditionally.
+        'ngrok-skip-browser-warning': 'true',
+      },
     ));
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
