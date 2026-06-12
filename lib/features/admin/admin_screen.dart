@@ -14,7 +14,7 @@ import 'sections/admin_general_section.dart';
 import 'sections/admin_notifications_section.dart';
 import 'sections/admin_security_section.dart';
 
-// ─────────────────────────── Admin Panel Shell ────────────────────────────
+// ─────────────────────────── Section enum ────────────────────────────────
 
 enum _AdminSection {
   general,
@@ -25,6 +25,26 @@ enum _AdminSection {
   auditLog,
   users,
 }
+
+// Metadata for a nav entry.
+typedef _SectionMeta = ({
+  _AdminSection section,
+  IconData icon,
+  String labelKey,
+  String group,
+});
+
+const _navItems = <_SectionMeta>[
+  (section: _AdminSection.general,        icon: Icons.business_rounded,       labelKey: 'admin.general',           group: 'navGeneral'),
+  (section: _AdminSection.security,       icon: Icons.shield_rounded,         labelKey: 'admin.security',          group: 'navGeneral'),
+  (section: _AdminSection.authentication, icon: Icons.lock_rounded,           labelKey: 'admin.authentication',    group: 'navIntegrations'),
+  (section: _AdminSection.email,          icon: Icons.mail_rounded,           labelKey: 'admin.email',             group: 'navIntegrations'),
+  (section: _AdminSection.notifications,  icon: Icons.notifications_rounded,  labelKey: 'admin.pushNotifications', group: 'navIntegrations'),
+  (section: _AdminSection.auditLog,       icon: Icons.history_rounded,        labelKey: 'admin.auditLog',          group: 'navSystem'),
+  (section: _AdminSection.users,          icon: Icons.people_rounded,         labelKey: 'admin.users',             group: 'navSystem'),
+];
+
+// ─────────────────────────── Root screen ─────────────────────────────────
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -38,7 +58,12 @@ class _AdminScreenState extends State<AdminScreen> {
   bool _loading = true;
   bool _saving = false;
   String? _error;
-  _AdminSection _section = _AdminSection.general;
+
+  // Desktop: which section is shown in the right pane.
+  _AdminSection _desktopSection = _AdminSection.general;
+
+  // Mobile: when non-null, the detail view is shown instead of the list.
+  _AdminSection? _mobileSection;
 
   @override
   void initState() {
@@ -82,6 +107,18 @@ class _AdminScreenState extends State<AdminScreen> {
     }
   }
 
+  void _selectSection(_AdminSection sec, {required bool mobile}) {
+    if (sec == _AdminSection.users) {
+      context.push('/admin/users');
+      return;
+    }
+    if (mobile) {
+      setState(() => _mobileSection = sec);
+    } else {
+      setState(() => _desktopSection = sec);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -106,24 +143,294 @@ class _AdminScreenState extends State<AdminScreen> {
       );
     }
 
+    final settings = _settings!;
+
     return ResponsiveBuilder(
-      builder: (context, size) => size == LayoutSize.compact
-          ? _MobileAdminShell(
-              section: _section,
-              settings: _settings!,
+      builder: (context, size) {
+        if (size == LayoutSize.compact) {
+          // Mobile: list ↔ detail in-app navigation
+          final current = _mobileSection;
+          if (current != null) {
+            return _MobileDetailView(
+              section: current,
+              settings: settings,
               saving: _saving,
-              onSectionChanged: (s) => setState(() => _section = s),
               onSave: _save,
-            )
-          : _WideAdminShell(
-              section: _section,
-              settings: _settings!,
-              saving: _saving,
-              onSectionChanged: (s) => setState(() => _section = s),
-              onSave: _save,
-            ),
+              onBack: () => setState(() => _mobileSection = null),
+            );
+          }
+          return _MobileListView(
+            onSelect: (sec) => _selectSection(sec, mobile: true),
+          );
+        }
+
+        // Desktop / tablet: split panel
+        return _WideAdminShell(
+          section: _desktopSection,
+          settings: settings,
+          saving: _saving,
+          onSectionChanged: (s) => _selectSection(s, mobile: false),
+          onSave: _save,
+        );
+      },
     );
   }
+}
+
+// ─────────────────────────── Mobile: list view ───────────────────────────
+
+class _MobileListView extends StatelessWidget {
+  const _MobileListView({required this.onSelect});
+
+  final ValueChanged<_AdminSection> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    // Group nav items
+    final groups = <String, List<_SectionMeta>>{};
+    for (final item in _navItems) {
+      groups.putIfAbsent(item.group, () => []).add(item);
+    }
+
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.t('admin.title'),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 22,
+                      color: AppColors.ink),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  context.t('admin.subtitle'),
+                  style: const TextStyle(
+                      fontSize: 13, color: AppColors.inkSoft),
+                ),
+              ],
+            ),
+          ),
+        ),
+        for (final entry in groups.entries) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 6),
+              child: Text(
+                context.t('admin.${entry.key}').toUpperCase(),
+                style: TextStyle(
+                  fontFamily: AppTheme.fontMono,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.inkFaint,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius:
+                    BorderRadius.circular(AppTheme.radiusCard),
+                border: Border.all(color: AppColors.hairline),
+              ),
+              child: Column(
+                children: [
+                  for (int i = 0; i < entry.value.length; i++) ...[
+                    if (i > 0)
+                      const Divider(
+                          height: 1,
+                          indent: 56,
+                          color: AppColors.hairline),
+                    _MobileNavTile(
+                      meta: entry.value[i],
+                      onTap: () => onSelect(entry.value[i].section),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+        const SliverToBoxAdapter(child: SizedBox(height: 32)),
+      ],
+    );
+  }
+}
+
+class _MobileNavTile extends StatelessWidget {
+  const _MobileNavTile({required this.meta, required this.onTap});
+
+  final _SectionMeta meta;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isUsers = meta.section == _AdminSection.users;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: 16, vertical: 13),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(meta.icon,
+                    size: 17, color: AppColors.accentStrong),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  context.t(meta.labelKey),
+                  style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.ink),
+                ),
+              ),
+              Icon(
+                isUsers
+                    ? Icons.open_in_new_rounded
+                    : Icons.chevron_right_rounded,
+                size: 18,
+                color: AppColors.inkFaint,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────── Mobile: detail view ─────────────────────────
+
+class _MobileDetailView extends StatelessWidget {
+  const _MobileDetailView({
+    required this.section,
+    required this.settings,
+    required this.saving,
+    required this.onSave,
+    required this.onBack,
+  });
+
+  final _AdminSection section;
+  final Map<String, dynamic> settings;
+  final bool saving;
+  final VoidCallback onSave;
+  final VoidCallback onBack;
+
+  String _title(BuildContext context) => switch (section) {
+        _AdminSection.general => context.t('admin.general'),
+        _AdminSection.authentication => context.t('admin.authentication'),
+        _AdminSection.email => context.t('admin.email'),
+        _AdminSection.notifications => context.t('admin.pushNotifications'),
+        _AdminSection.security => context.t('admin.security'),
+        _AdminSection.auditLog => context.t('admin.auditLog'),
+        _AdminSection.users => context.t('admin.users'),
+      };
+
+  bool get _hasSave => section != _AdminSection.auditLog;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // ── Top bar ──────────────────────────────────────────────
+        Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            border:
+                Border(bottom: BorderSide(color: AppColors.hairline)),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: onBack,
+                icon: const Icon(Icons.arrow_back_rounded,
+                    size: 20, color: AppColors.inkSoft),
+                tooltip: context.t('admin.title'),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  _title(context),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      color: AppColors.ink),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (_hasSave)
+                saving
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppColors.navy),
+                        ),
+                      )
+                    : TextButton.icon(
+                        onPressed: onSave,
+                        icon: const Icon(Icons.save_rounded, size: 16),
+                        label: Text(context.t('common.save')),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.navy,
+                          textStyle: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13),
+                        ),
+                      ),
+            ],
+          ),
+        ),
+        // ── Scrollable content ───────────────────────────────────
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: _sectionBody(section),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectionBody(_AdminSection sec) => switch (sec) {
+        _AdminSection.general =>
+          AdminGeneralSection(settings: settings),
+        _AdminSection.authentication =>
+          AdminSsoSection(settings: settings),
+        _AdminSection.email =>
+          AdminEmailSection(settings: settings),
+        _AdminSection.notifications =>
+          AdminNotificationsSection(settings: settings),
+        _AdminSection.security =>
+          AdminSecuritySection(settings: settings),
+        _AdminSection.auditLog => const _AuditLogPlaceholder(),
+        _AdminSection.users => const SizedBox.shrink(),
+      };
 }
 
 // ─────────────────────────── Wide layout (≥ medium) ──────────────────────
@@ -148,12 +455,13 @@ class _WideAdminShell extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Admin nav rail
+        // ── Left nav rail ─────────────────────────────────────────
         Container(
           width: 220,
           decoration: const BoxDecoration(
             color: AppColors.surface,
-            border: Border(right: BorderSide(color: AppColors.hairline)),
+            border:
+                Border(right: BorderSide(color: AppColors.hairline)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,73 +490,14 @@ class _WideAdminShell extends StatelessWidget {
               const Divider(height: 1, color: AppColors.hairline),
               const SizedBox(height: 8),
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
-                  children: [
-                    _NavGroup(label: context.t('admin.navGeneral')),
-                    _NavItem(
-                      icon: Icons.business_rounded,
-                      label: context.t('admin.general'),
-                      section: _AdminSection.general,
-                      current: section,
-                      onTap: onSectionChanged,
-                    ),
-                    _NavItem(
-                      icon: Icons.shield_rounded,
-                      label: context.t('admin.security'),
-                      section: _AdminSection.security,
-                      current: section,
-                      onTap: onSectionChanged,
-                    ),
-                    const SizedBox(height: 8),
-                    _NavGroup(label: context.t('admin.navIntegrations')),
-                    _NavItem(
-                      icon: Icons.lock_rounded,
-                      label: context.t('admin.authentication'),
-                      section: _AdminSection.authentication,
-                      current: section,
-                      onTap: onSectionChanged,
-                    ),
-                    _NavItem(
-                      icon: Icons.mail_rounded,
-                      label: context.t('admin.email'),
-                      section: _AdminSection.email,
-                      current: section,
-                      onTap: onSectionChanged,
-                    ),
-                    _NavItem(
-                      icon: Icons.notifications_rounded,
-                      label: context.t('admin.pushNotifications'),
-                      section: _AdminSection.notifications,
-                      current: section,
-                      onTap: onSectionChanged,
-                    ),
-                    const SizedBox(height: 8),
-                    _NavGroup(label: context.t('admin.navSystem')),
-                    _NavItem(
-                      icon: Icons.history_rounded,
-                      label: context.t('admin.auditLog'),
-                      section: _AdminSection.auditLog,
-                      current: section,
-                      onTap: onSectionChanged,
-                    ),
-                    _NavItem(
-                      icon: Icons.people_rounded,
-                      label: context.t('admin.users'),
-                      section: _AdminSection.users,
-                      current: section,
-                      onTap: onSectionChanged,
-                    ),
-                  ],
-                ),
+                child: _buildNavList(context),
               ),
             ],
           ),
         ),
-        // Content
+        // ── Right content pane ────────────────────────────────────
         Expanded(
-          child: _SectionContent(
+          child: _DesktopSectionContent(
             section: section,
             settings: settings,
             saving: saving,
@@ -258,225 +507,47 @@ class _WideAdminShell extends StatelessWidget {
       ],
     );
   }
-}
 
-// ─────────────────────────── Mobile layout ───────────────────────────────
-
-class _MobileAdminShell extends StatelessWidget {
-  const _MobileAdminShell({
-    required this.section,
-    required this.settings,
-    required this.saving,
-    required this.onSectionChanged,
-    required this.onSave,
-  });
-
-  final _AdminSection section;
-  final Map<String, dynamic> settings;
-  final bool saving;
-  final ValueChanged<_AdminSection> onSectionChanged;
-  final VoidCallback onSave;
-
-  static const _sections = [
-    (Icons.business_rounded, 'admin.general', _AdminSection.general),
-    (Icons.shield_rounded, 'admin.security', _AdminSection.security),
-    (Icons.lock_rounded, 'admin.authentication', _AdminSection.authentication),
-    (Icons.mail_rounded, 'admin.email', _AdminSection.email),
-    (Icons.notifications_rounded, 'admin.pushNotifications', _AdminSection.notifications),
-    (Icons.history_rounded, 'admin.auditLog', _AdminSection.auditLog),
-    (Icons.people_rounded, 'admin.users', _AdminSection.users),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    // On mobile: show a section list; navigating into one shows content + back.
-    // We use a local "selected" index approach inside this widget.
-    // Since this widget rebuilds on section changes from parent, the back action
-    // resets section to a sentinel by calling onSectionChanged with a reset.
-    // Instead, use a simple conditional: if section is still the default "general"
-    // value AND the user hasn't tapped in yet, show the list. Otherwise content.
-    // We track this with the parent's section state.
-
-    return Column(
-      children: [
-        // Top bar
-        Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            border: Border(bottom: BorderSide(color: AppColors.hairline)),
-          ),
-          child: Row(
-            children: [
-              Text(
-                context.t('admin.title'),
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: AppColors.ink),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            children: [
-              for (final (icon, labelKey, sec) in _sections)
-                ListTile(
-                  leading: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: section == sec
-                          ? AppColors.accentSoft
-                          : AppColors.canvas2,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(icon,
-                        size: 18,
-                        color: section == sec
-                            ? AppColors.accentStrong
-                            : AppColors.inkSoft),
-                  ),
-                  title: Text(
-                    context.t(labelKey),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded,
-                      size: 18, color: AppColors.inkFaint),
-                  onTap: () {
-                    if (sec == _AdminSection.users) {
-                      context.push('/admin/users');
-                    } else {
-                      onSectionChanged(sec);
-                      // Push a temporary "content" route — for simplicity we
-                      // show a bottom sheet on mobile for non-users sections
-                      _showMobileSection(context, sec);
-                    }
-                  },
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showMobileSection(BuildContext context, _AdminSection sec) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.92,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, controller) => SingleChildScrollView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          child: _SectionContent(
-            section: sec,
-            settings: settings,
-            saving: saving,
-            onSave: onSave,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────── Section content router ──────────────────────
-
-class _SectionContent extends StatelessWidget {
-  const _SectionContent({
-    required this.section,
-    required this.settings,
-    required this.saving,
-    required this.onSave,
-  });
-
-  final _AdminSection section;
-  final Map<String, dynamic> settings;
-  final bool saving;
-  final VoidCallback onSave;
-
-  @override
-  Widget build(BuildContext context) {
-    if (section == _AdminSection.users) {
-      // Navigate to the dedicated users page
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => context.push('/admin/users'),
-      );
-      return const SizedBox.shrink();
+  Widget _buildNavList(BuildContext context) {
+    final groups = <String, List<_SectionMeta>>{};
+    for (final item in _navItems) {
+      groups.putIfAbsent(item.group, () => []).add(item);
     }
 
-    return Column(
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       children: [
-        // Content header
-        Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          decoration: const BoxDecoration(
-            color: AppColors.canvas,
-            border: Border(bottom: BorderSide(color: AppColors.hairline)),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _sectionTitle(context, section),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: AppColors.ink),
-                ),
-              ),
-              if (section != _AdminSection.auditLog) ...[
-                if (saving)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.navy),
-                  )
-                else
-                  FilledButton.icon(
-                    onPressed: onSave,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.navy,
-                      foregroundColor: Colors.white,
-                      textStyle: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 13),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                    ),
-                    icon: const Icon(Icons.save_rounded, size: 16),
-                    label: Text(context.t('common.save')),
-                  ),
-              ],
-            ],
-          ),
-        ),
-        // Scrollable section body
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: _sectionBody(section),
-          ),
-        ),
+        for (final entry in groups.entries) ...[
+          _NavGroup(label: context.t('admin.${entry.key}')),
+          for (final meta in entry.value)
+            _NavItem(
+              meta: meta,
+              current: section,
+              onTap: onSectionChanged,
+            ),
+          const SizedBox(height: 4),
+        ],
       ],
     );
   }
+}
 
-  String _sectionTitle(BuildContext context, _AdminSection sec) => switch (sec) {
+// ─────────────────────────── Desktop section content ─────────────────────
+
+class _DesktopSectionContent extends StatelessWidget {
+  const _DesktopSectionContent({
+    required this.section,
+    required this.settings,
+    required this.saving,
+    required this.onSave,
+  });
+
+  final _AdminSection section;
+  final Map<String, dynamic> settings;
+  final bool saving;
+  final VoidCallback onSave;
+
+  String _title(BuildContext context) => switch (section) {
         _AdminSection.general => context.t('admin.general'),
         _AdminSection.authentication => context.t('admin.authentication'),
         _AdminSection.email => context.t('admin.email'),
@@ -486,19 +557,85 @@ class _SectionContent extends StatelessWidget {
         _AdminSection.users => context.t('admin.users'),
       };
 
-  Widget _sectionBody(_AdminSection sec) => switch (sec) {
-        _AdminSection.general => AdminGeneralSection(settings: settings),
-        _AdminSection.authentication => AdminSsoSection(settings: settings),
-        _AdminSection.email => AdminEmailSection(settings: settings),
+  bool get _hasSave => section != _AdminSection.auditLog;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Section header bar
+        Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: const BoxDecoration(
+            color: AppColors.canvas,
+            border:
+                Border(bottom: BorderSide(color: AppColors.hairline)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _title(context),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: AppColors.ink),
+                ),
+              ),
+              if (_hasSave)
+                saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: AppColors.navy),
+                      )
+                    : FilledButton.icon(
+                        onPressed: onSave,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.navy,
+                          foregroundColor: Colors.white,
+                          textStyle: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                        ),
+                        icon: const Icon(Icons.save_rounded, size: 16),
+                        label: Text(context.t('common.save')),
+                      ),
+            ],
+          ),
+        ),
+        // Scrollable body
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: _body(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _body() => switch (section) {
+        _AdminSection.general =>
+          AdminGeneralSection(settings: settings),
+        _AdminSection.authentication =>
+          AdminSsoSection(settings: settings),
+        _AdminSection.email =>
+          AdminEmailSection(settings: settings),
         _AdminSection.notifications =>
           AdminNotificationsSection(settings: settings),
-        _AdminSection.security => AdminSecuritySection(settings: settings),
+        _AdminSection.security =>
+          AdminSecuritySection(settings: settings),
         _AdminSection.auditLog => const _AuditLogPlaceholder(),
         _AdminSection.users => const SizedBox.shrink(),
       };
 }
 
-// ─────────────────────────── Nav helpers ─────────────────────────────────
+// ─────────────────────────── Nav widgets ─────────────────────────────────
 
 class _NavGroup extends StatelessWidget {
   const _NavGroup({required this.label});
@@ -524,66 +661,66 @@ class _NavGroup extends StatelessWidget {
 
 class _NavItem extends StatelessWidget {
   const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.section,
+    required this.meta,
     required this.current,
     required this.onTap,
   });
 
-  final IconData icon;
-  final String label;
-  final _AdminSection section;
+  final _SectionMeta meta;
   final _AdminSection current;
   final ValueChanged<_AdminSection> onTap;
 
   @override
   Widget build(BuildContext context) {
-    final active = section == current;
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: () {
-          if (section == _AdminSection.users) {
-            context.push('/admin/users');
-          } else {
-            onTap(section);
-          }
-        },
+    final active = meta.section == current;
+    final isUsers = meta.section == _AdminSection.users;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Material(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          decoration: active
-              ? BoxDecoration(
-                  color: AppColors.accentSoft,
-                  borderRadius: BorderRadius.circular(8),
-                )
-              : null,
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 17,
-                color: active ? AppColors.accentStrong : AppColors.inkSoft,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight:
-                        active ? FontWeight.w600 : FontWeight.w400,
-                    color: active ? AppColors.accentStrong : AppColors.ink,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+        child: InkWell(
+          onTap: () => onTap(meta.section),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 12, vertical: 9),
+            decoration: active
+                ? BoxDecoration(
+                    color: AppColors.accentSoft,
+                    borderRadius: BorderRadius.circular(8),
+                  )
+                : null,
+            child: Row(
+              children: [
+                Icon(
+                  meta.icon,
+                  size: 17,
+                  color: active
+                      ? AppColors.accentStrong
+                      : AppColors.inkSoft,
                 ),
-              ),
-              if (section == _AdminSection.users)
-                const Icon(Icons.open_in_new_rounded,
-                    size: 13, color: AppColors.inkFaint),
-            ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    context.t(meta.labelKey),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: active
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                      color: active
+                          ? AppColors.accentStrong
+                          : AppColors.ink,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (isUsers)
+                  const Icon(Icons.open_in_new_rounded,
+                      size: 12, color: AppColors.inkFaint),
+              ],
+            ),
           ),
         ),
       ),
@@ -599,36 +736,40 @@ class _AuditLogPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 60),
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: AppColors.canvas2,
-              borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 60),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.canvas2,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(Icons.history_rounded,
+                  size: 36, color: AppColors.inkSoft),
             ),
-            child: const Icon(Icons.history_rounded,
-                size: 36, color: AppColors.inkSoft),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            context.t('admin.auditLogSoon'),
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w700, color: AppColors.ink),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            context.t('admin.auditLogHint'),
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-                fontSize: 13, color: AppColors.inkSoft, height: 1.5),
-          ),
-        ],
+            const SizedBox(height: 20),
+            Text(
+              context.t('admin.auditLogSoon'),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.ink,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              context.t('admin.auditLogHint'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.inkSoft,
+                  height: 1.5),
+            ),
+          ],
+        ),
       ),
     );
   }
