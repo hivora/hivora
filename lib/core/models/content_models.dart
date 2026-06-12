@@ -142,6 +142,28 @@ class TrackerDay extends Equatable {
   List<Object?> get props => [date, focusMinutes];
 }
 
+/// One day in the created-vs-resolved trend used to derive a burndown.
+class TrendPoint extends Equatable {
+  const TrendPoint({
+    required this.date,
+    required this.created,
+    required this.resolved,
+  });
+
+  final DateTime date;
+  final int created;
+  final int resolved;
+
+  factory TrendPoint.fromJson(Map<String, dynamic> json) => TrendPoint(
+        date: DateTime.parse(json['date'] as String),
+        created: (json['created'] as num?)?.toInt() ?? 0,
+        resolved: (json['resolved'] as num?)?.toInt() ?? 0,
+      );
+
+  @override
+  List<Object?> get props => [date, created, resolved];
+}
+
 class DashboardData extends Equatable {
   const DashboardData({
     required this.todayTasks,
