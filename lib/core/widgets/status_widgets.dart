@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../i18n/i18n.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
 
 /// Small rounded pill, e.g. "High Priority" or a workflow state.
 class PillChip extends StatelessWidget {
@@ -14,16 +15,17 @@ class PillChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: background ?? Colors.white,
-        borderRadius: BorderRadius.circular(100),
+        color: background ?? AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.hairline2),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: foreground ?? AppColors.textPrimary,
-          fontSize: 12,
+          color: foreground ?? AppColors.inkSoft,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
         overflow: TextOverflow.ellipsis,
@@ -32,12 +34,35 @@ class PillChip extends StatelessWidget {
   }
 }
 
-Color priorityColor(String priority) => switch (priority) {
-      'SHOWSTOPPER' || 'CRITICAL' => AppColors.danger,
-      'MAJOR' => AppColors.accentOrange,
-      'MINOR' => AppColors.textSecondary,
-      _ => AppColors.accentBlue,
-    };
+/// State badge shown inline in issue rows.
+class StateBadge extends StatelessWidget {
+  const StateBadge({super.key, required this.state});
+  final String state;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = AppColors.stateColor(state);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.soft(color),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        state.replaceAll('_', ' '),
+        style: TextStyle(
+          fontFamily: AppTheme.fontMono,
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+/// Resolves priority → display color using the new design token mapping.
+Color priorityColor(String priority) => AppColors.priorityColor(priority);
 
 /// Centralized async UI: loading spinner, error with retry, empty hint.
 class AsyncView extends StatelessWidget {
@@ -64,7 +89,7 @@ class AsyncView extends StatelessWidget {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(40),
-          child: CircularProgressIndicator(color: AppColors.navy),
+          child: CircularProgressIndicator(color: AppColors.accent),
         ),
       );
     }
@@ -76,16 +101,17 @@ class AsyncView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.cloud_off_rounded,
-                  size: 40, color: AppColors.textSecondary),
+                  size: 40, color: AppColors.inkFaint),
               const SizedBox(height: 12),
               Text(
                 context.t(errorKey!),
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary),
+                style: const TextStyle(color: AppColors.inkSoft),
               ),
               if (onRetry != null) ...[
                 const SizedBox(height: 16),
-                OutlinedButton(onPressed: onRetry, child: Text(context.t('common.retry'))),
+                OutlinedButton(
+                    onPressed: onRetry, child: Text(context.t('common.retry'))),
               ],
             ],
           ),
@@ -99,7 +125,7 @@ class AsyncView extends StatelessWidget {
           child: Text(
             context.t(emptyKey),
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: const TextStyle(color: AppColors.inkSoft),
           ),
         ),
       );

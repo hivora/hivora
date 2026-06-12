@@ -1,41 +1,94 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens derived from the Hivora base design (pastel glassmorphism).
+/// Hivora "Hive" design tokens — redesign 2026.
+/// Navy nav-rail · warm-paper workspace · honey-amber signature accent.
+///
+/// Hex values are derived from an oklch model (constant L/C, varied hue) so
+/// status & accent tints stay perceptually harmonious. The web prototype keeps
+/// the live oklch(); these are the closest sRGB equivalents for Flutter.
 abstract final class AppColors {
-  // Brand
-  static const navy = Color(0xFF2D2B55);
-  static const navyDark = Color(0xFF1E1C3A);
-  static const lavender = Color(0xFFAEA7F0);
+  // ---- brand & ink ----
+  static const navy = Color(0xFF2D2B55); // primary action
+  static const navyDeep = Color(0xFF1E1C3A);
+  static const ink = Color(0xFF23223F); // primary text
+  static const inkSoft = Color(0xFF6B6A85); // secondary text
+  static const inkFaint = Color(0xFF9A99B0); // tertiary / hints
 
-  // Surfaces
-  static const background = Color(0xFFF2F1F8);
-  static const backgroundEnd = Color(0xFFE9E4F1);
-  static const surface = Color(0xFFFFFFFF);
-  static const surfaceMuted = Color(0xFFF7F6FB);
+  // ---- workspace surfaces (warm paper, NOT the old pastel-lavender) ----
+  static const canvas = Color(0xFFF4F3EF); // app background
+  static const canvas2 = Color(0xFFEFEEE8); // recessed (board columns)
+  static const surface = Color(0xFFFFFFFF); // cards
+  static const surfaceMuted = Color(0xFFFAF9F6);
+  static const hairline = Color(0xFFE7E5DE); // card borders
+  static const hairline2 = Color(0xFFEFEDE6);
 
-  // Pastel card palette (rotating accents, like the "Today Task" cards)
-  static const pastelBlue = Color(0xFFC9DCF5);
-  static const pastelLavender = Color(0xFFDCD6F7);
-  static const pastelPeach = Color(0xFFF8CDB8);
-  static const pastelMint = Color(0xFFCBEAD9);
+  // ---- nav rail (deep navy) ----
+  static const rail = Color(0xFF211F3D);
+  static const rail2 = Color(0xFF1A1830);
+  static const railInk = Color(0xFFC9C7E0);
+  static const railFaint = Color(0xFF807EA0);
 
-  // Accents
-  static const accentOrange = Color(0xFFE8836B);
-  static const accentPurple = Color(0xFF9B8CF0);
-  static const accentBlue = Color(0xFF6FA8DC);
-  static const accentTeal = Color(0xFFA8CDC4);
+  // ---- signature honey-amber accent (hue 70) ----
+  static const accent = Color(0xFFD9A032); // oklch(.74 .135 70)
+  static const accentStrong = Color(0xFFB9831F); // oklch(.66 .145 70)
+  static const accentSoft = Color(0xFFF3E9D2); // oklch(.94 .045 70)
+  static const accentLine = Color(0xFFE4CE96); // oklch(.86 .07 70)
 
-  // Text
-  static const textPrimary = Color(0xFF2B2950);
-  static const textSecondary = Color(0xFF8C8AA7);
-  static const textOnDark = Color(0xFFFFFFFF);
+  // ---- workflow status (varied hue, constant L/C ~ oklch .6 .13) ----
+  static const stBacklog = Color(0xFF7E81AE); // hue 255, muted slate
+  static const stTodo = Color(0xFF5B86D6); // hue 250
+  static const stProgress = Color(0xFFC58A22); // hue 70 (honey)
+  static const stReview = Color(0xFF9A6BD0); // hue 300
+  static const stDone = Color(0xFF2FA06E); // hue 155
 
-  // Semantic
-  static const success = Color(0xFF4CAF85);
-  static const warning = Color(0xFFE8B26B);
-  static const danger = Color(0xFFD9534F);
+  // ---- priority ----
+  static const priUrgent = Color(0xFFD9544B); // hue 22
+  static const priHigh = Color(0xFFD98A2B); // hue 45
+  static const priNormal = Color(0xFF5B86D6); // hue 250
+  static const priLow = Color(0xFF9A99B0); // muted
 
+  // ---- semantic ----
+  static const danger = Color(0xFFD9544B);
+  static const dangerSoft = Color(0xFFFBE7E4);
+  static const success = Color(0xFF2FA06E);
+  static const warning = Color(0xFFD9A032);
+
+  // ---- compatibility aliases (migrate screens progressively) ----
+  static const textPrimary = ink;
+  static const textSecondary = inkSoft;
+  static const textOnDark = Colors.white;
+  static const navyDark = navyDeep;
+  static const lavender = stReview; // closest purple equivalent
+  static const background = canvas;
+  static const backgroundEnd = canvas2;
+  // pastel palette → warm tints matching the new paper canvas
+  static const pastelBlue = Color(0xFFE9EEF8);
+  static const pastelLavender = Color(0xFFEFEBF8);
+  static const pastelPeach = Color(0xFFF3E9D2); // = accentSoft
+  static const pastelMint = Color(0xFFE4F2EC);
   static const pastels = [pastelBlue, pastelLavender, pastelPeach, pastelMint];
-
   static Color pastelFor(int index) => pastels[index % pastels.length];
+  // old accent names → new semantic equivalents
+  static const accentOrange = accent;
+  static const accentPurple = stReview;
+  static const accentBlue = stTodo;
+  static const accentTeal = stDone;
+
+  static Color stateColor(String state) => switch (state) {
+        'TODO' => stTodo,
+        'IN_PROGRESS' => stProgress,
+        'IN_REVIEW' => stReview,
+        'DONE' => stDone,
+        _ => stBacklog,
+      };
+
+  static Color priorityColor(String priority) => switch (priority) {
+        'URGENT' => priUrgent,
+        'HIGH' => priHigh,
+        'NORMAL' => priNormal,
+        _ => priLow,
+      };
+
+  /// Soft tint of any base color for badge / chip backgrounds (~oklch .96 tint).
+  static Color soft(Color base) => Color.alphaBlend(base.withValues(alpha: 0.12), surface);
 }

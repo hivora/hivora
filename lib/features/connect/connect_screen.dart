@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/blocs/app_config_bloc.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/hex_mark.dart';
 import '../../core/widgets/soft_card.dart';
 
 /// First screen: the app cannot run without a server, so we ask for its URL
@@ -45,7 +46,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const _BrandMark(),
+                          const Center(child: HivBrandLockup(hexSize: 64)),
                           const SizedBox(height: 24),
                           Text(
                             context.t('connect.title'),
@@ -124,36 +125,3 @@ class _ConnectScreenState extends State<ConnectScreen> {
   }
 }
 
-class _BrandMark extends StatelessWidget {
-  const _BrandMark();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            color: AppColors.navy,
-            borderRadius: BorderRadius.circular(22),
-          ),
-          alignment: Alignment.center,
-          child: const Text(
-            'H',
-            style: TextStyle(
-              color: AppColors.lavender,
-              fontSize: 36,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Hivora',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-        ),
-      ],
-    );
-  }
-}

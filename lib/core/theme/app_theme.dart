@@ -2,69 +2,99 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// Material theme tuned to the Hivora base design: soft pastel surfaces,
-/// strongly rounded corners, navy primary actions, Sora brand font.
+/// Hivora "Hive" Material theme — redesign 2026.
+///
+/// Key shifts from the old pastel-glassmorphism theme:
+///   • Tighter radii: cards 14 (was 28), controls 10 — crisp, not bubbly.
+///   • Hairline borders + a whisper of shadow instead of heavy soft cards.
+///   • Warm-paper canvas (#F4F3EF) instead of lavender-grey.
+///   • Sora is reserved for display/headings; IBM Plex Sans drives dense UI,
+///     IBM Plex Mono renders issue IDs & numeric metrics.
+///   • Honey-amber accent used for highlights/active/focus.
 abstract final class AppTheme {
-  static const radiusCard = 28.0;
-  static const radiusControl = 16.0;
-  static const radiusPill = 100.0;
+  static const radiusCard = 14.0;
+  static const radiusControl = 10.0;
+  static const radiusPill = 999.0;
 
-  /// Brand font (variable weight, bundled under assets/fonts, SIL OFL).
-  static const fontFamily = 'Sora';
+  static const fontBrand = 'Sora';       // headings, wordmark
+  static const fontUi = 'IBMPlexSans';   // body / dense UI
+  static const fontMono = 'IBMPlexMono'; // ids, metrics
 
   static ThemeData light() {
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.navy,
       primary: AppColors.navy,
-      secondary: AppColors.accentPurple,
+      secondary: AppColors.accent,
       surface: AppColors.surface,
       error: AppColors.danger,
     );
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      fontFamily: fontFamily,
+      fontFamily: fontUi,
     );
-    final textTheme = base.textTheme.apply(
-      bodyColor: AppColors.textPrimary,
-      displayColor: AppColors.textPrimary,
-    );
+    final text = base.textTheme
+        .apply(bodyColor: AppColors.ink, displayColor: AppColors.ink)
+        .copyWith(
+          headlineSmall: base.textTheme.headlineSmall?.copyWith(
+            fontFamily: fontBrand,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+            color: AppColors.ink,
+          ),
+          titleLarge: base.textTheme.titleLarge?.copyWith(
+            fontFamily: fontBrand,
+            fontWeight: FontWeight.w700,
+            color: AppColors.ink,
+          ),
+        );
+
+    OutlineInputBorder border(Color c, [double w = 1]) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusControl),
+          borderSide: BorderSide(color: c, width: w),
+        );
+
     return base.copyWith(
-      scaffoldBackgroundColor: AppColors.background,
-      textTheme: textTheme,
+      scaffoldBackgroundColor: AppColors.canvas,
+      textTheme: text,
+      dividerColor: AppColors.hairline,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
-        foregroundColor: AppColors.textPrimary,
+        foregroundColor: AppColors.ink,
         elevation: 0,
         centerTitle: false,
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(radiusCard)),
+          borderRadius: BorderRadius.circular(radiusCard),
+          side: const BorderSide(color: AppColors.hairline),
         ),
         margin: EdgeInsets.zero,
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.navy,
-          foregroundColor: AppColors.textOnDark,
-          minimumSize: const Size(48, 48),
+          foregroundColor: Colors.white,
+          minimumSize: const Size(44, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusPill),
+            borderRadius: BorderRadius.circular(radiusControl),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.navy,
-          minimumSize: const Size(48, 48),
-          side: const BorderSide(color: Color(0xFFD8D5E8)),
+          foregroundColor: AppColors.ink,
+          backgroundColor: AppColors.surface,
+          minimumSize: const Size(44, 44),
+          side: const BorderSide(color: AppColors.hairline),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusPill),
+            borderRadius: BorderRadius.circular(radiusControl),
           ),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -72,41 +102,37 @@ abstract final class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surfaceMuted,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusControl),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusControl),
-          borderSide: const BorderSide(color: AppColors.navy, width: 1.4),
-        ),
-        hintStyle: const TextStyle(color: AppColors.textSecondary),
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: border(AppColors.hairline),
+        enabledBorder: border(AppColors.hairline),
+        focusedBorder: border(AppColors.accent, 1.5),
+        hintStyle: const TextStyle(color: AppColors.inkFaint),
       ),
       chipTheme: base.chipTheme.copyWith(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radiusPill),
-          side: BorderSide.none,
-        ),
-        labelStyle: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
+        backgroundColor: AppColors.surfaceMuted,
+        side: const BorderSide(color: AppColors.hairline2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        labelStyle: const TextStyle(color: AppColors.inkSoft, fontSize: 11),
       ),
       dividerTheme: const DividerThemeData(
-        color: Color(0xFFE7E4F0),
+        color: AppColors.hairline,
         thickness: 1,
         space: 1,
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.navy.withValues(alpha: 0.12),
+        indicatorColor: AppColors.accentSoft,
         labelTextStyle: WidgetStatePropertyAll(
-          textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+          text.labelSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
+      navigationDrawerTheme: const NavigationDrawerThemeData(
+        backgroundColor: AppColors.rail,
+        indicatorColor: Color(0x14FFFFFF),
+      ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.navyDark,
+        backgroundColor: AppColors.navyDeep,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusControl),
