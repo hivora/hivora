@@ -179,24 +179,40 @@ class _NavRail extends StatelessWidget {
                       tooltip: 'New issue',
                       onTap: () {},
                     )
-                  : SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () {},
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.accent,
-                          foregroundColor: const Color(0xFF2A2410),
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppTheme.radiusControl),
+                  : DecoratedBox(
+                      // Soft honey glow beneath the CTA (matches the web
+                      // prototype's box-shadow: 0 6px 18px -8px amber/0.7).
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusControl),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accent.withValues(alpha: 0.45),
+                            blurRadius: 18,
+                            spreadRadius: -6,
+                            offset: const Offset(0, 6),
                           ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          textStyle: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 13),
+                        ],
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () => context.go('/issues'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: const Color(0xFF2A2410),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.radiusControl),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12),
+                            textStyle: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('New issue'),
                         ),
-                        icon: const Icon(Icons.add_rounded, size: 18),
-                        label: const Text('New issue'),
                       ),
                     ),
             ),
@@ -337,29 +353,49 @@ class _RailItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(
-          horizontal: collapsed ? 8 : 10, vertical: 1),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          onTap: () => context.go(destination.route),
-          borderRadius: BorderRadius.circular(8),
-          hoverColor: Colors.white.withValues(alpha: 0.06),
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: collapsed ? 10 : 12,
-              vertical: 9,
+          horizontal: collapsed ? 8 : 10, vertical: 2),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Clean amber edge indicator (3×18, rounded) — sits just outside
+          // the tile's left edge like the prototype's `::before` bar.
+          if (selected && !collapsed)
+            Positioned(
+              left: -10,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: Container(
+                  width: 3,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
             ),
-            decoration: selected
-                ? BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                    border: const Border(
-                      left: BorderSide(color: AppColors.accent, width: 3),
-                    ),
-                  )
-                : null,
-            child: collapsed
+          Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            child: InkWell(
+              onTap: () => context.go(destination.route),
+              borderRadius: BorderRadius.circular(8),
+              hoverColor: Colors.white.withValues(alpha: 0.06),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                width: collapsed ? null : double.infinity,
+                padding: EdgeInsets.symmetric(
+                  horizontal: collapsed ? 10 : 12,
+                  vertical: 9,
+                ),
+                decoration: selected
+                    ? BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      )
+                    : null,
+                child: collapsed
                 ? Tooltip(
                     message: context.t(destination.labelKey),
                     preferBelow: false,
@@ -393,8 +429,10 @@ class _RailItem extends StatelessWidget {
                       ),
                     ],
                   ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
