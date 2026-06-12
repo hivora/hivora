@@ -539,26 +539,16 @@ class _CompactShellState extends State<_CompactShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.canvas,
-      // extendBody lets the content scroll behind the floating glass nav.
+      // Content fills the entire body and scrolls *behind* the floating glass
+      // nav — the translucent BackdropFilter blurs whatever passes underneath.
       body: Stack(
         children: [
-          // Column approach: content fills everything above the nav spacer.
-          // This physically constrains ALL child layouts — scroll views with
-          // explicit padding, fixed-height screens, etc. — so nothing ever
-          // ends up unreachable behind the glass nav.
-          Column(
-            children: [
-              Expanded(
-                child: SafeArea(bottom: false, child: widget.child),
-              ),
-              // Spacer that mirrors _LiquidGlassNav's total pixel footprint:
-              // padding-top(0) + container(64) + padding-bottom(14 + safeArea).
-              SizedBox(
-                height: 78 + MediaQuery.viewPaddingOf(context).bottom,
-              ),
-            ],
+          // Full-bleed content. Screens that need their last items clear of the
+          // glass add their own bottom padding (~78px + safe-area).
+          Positioned.fill(
+            child: SafeArea(bottom: false, child: widget.child),
           ),
-          // Glass nav floats on top of the spacer — NOT in bottomNavigationBar,
+          // Glass nav floats on top — NOT in bottomNavigationBar,
           // so its rounded corners and BackdropFilter are never clipped.
           Positioned(
             left: 0,
