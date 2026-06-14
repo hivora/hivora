@@ -228,7 +228,9 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   // Inline editing + activity filter state.
   bool _editingTitle = false;
   bool _editingDesc = false;
-  _ActivityFilter _activityFilter = _ActivityFilter.all;
+  // Default the activity panel to the Comments tab so the conversation shows
+  // up front when an issue is opened.
+  _ActivityFilter _activityFilter = _ActivityFilter.comments;
 
   HivoraRepository get _repo => context.read<HivoraRepository>();
 
@@ -437,7 +439,9 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                 const SizedBox(height: 14),
                 _timeCard(issue),
               ];
-              if (c.maxWidth >= 680) {
+              // While editing the description, drop to a single full-width
+              // column so the Markdown editor gets the whole width.
+              if (c.maxWidth >= 680 && !_editingDesc) {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -488,6 +492,9 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       color: Colors.transparent,
       borderRadius: BorderRadius.zero,
       border: Border.all(color: Colors.transparent),
+      // Transparent, borderless card → no inset, so the description (and its
+      // editor) use the full content width instead of losing 20px each side.
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -10,8 +10,8 @@ import '../../core/theme/app_theme.dart';
 //  Lightweight, dependency-free Markdown for the issue description.
 //  Renderer covers the common subset (headings, bold, italic, inline code,
 //  fenced code blocks, bullet/ordered lists, clickable links, rules,
-//  paragraphs); the editor pairs a plain multi-line field with a small
-//  toolbar that inserts the matching syntax.
+//  GitHub-flavored tables, paragraphs); the editor pairs a plain multi-line
+//  field with a small toolbar that inserts the matching syntax.
 // ════════════════════════════════════════════════════════════════════════
 
 /// Renders a Markdown [data] string as styled Flutter widgets.
@@ -143,6 +143,25 @@ class _MarkdownTextState extends State<MarkdownText> {
         continue;
       }
 
+      // GitHub-flavored table: a header row of `| a | b |` immediately
+      // followed by a separator row `| --- | :-: |`, then body rows.
+      if (line.contains('|') &&
+          i + 1 < lines.length &&
+          _isTableSeparator(lines[i + 1])) {
+        final header = _splitRow(line);
+        final aligns = _parseAligns(lines[i + 1]);
+        i += 2;
+        final rows = <List<String>>[];
+        while (i < lines.length &&
+            lines[i].trim().isNotEmpty &&
+            lines[i].contains('|')) {
+          rows.add(_splitRow(lines[i]));
+          i++;
+        }
+        blocks.add(_table(header, rows, aligns, base));
+        continue;
+      }
+
       // Paragraph.
       blocks.add(Padding(
         padding: const EdgeInsets.only(bottom: 2),
@@ -173,6 +192,84 @@ class _MarkdownTextState extends State<MarkdownText> {
           ),
           Expanded(child: RichText(text: _inline(content, base))),
         ],
+      ),
+    );
+  }
+
+  /// True if [line] is a table separator row, e.g. `| --- | :-: | ---: |`.
+  bool _isTableSeparator(String line) {
+    if (!line.contains('-')) return false;
+    final cells = _splitRow(line);
+    if (cells.isEmpty) return false;
+    return cells.every((c) => RegExp(r'^:?-+:?$').hasMatch(c.trim()));
+  }
+
+  /// Splits a `| a | b |` row into trimmed cell strings (outer pipes optional).
+  List<String> _splitRow(String line) {
+    var t = line.trim();
+    if (t.startsWith('|')) t = t.substring(1);
+    if (t.endsWith('|')) t = t.substring(0, t.length - 1);
+    return t.split('|').map((c) => c.trim()).toList();
+  }
+
+  /// Column alignments from a separator row (`:--` left, `--:` right, `:-:` center).
+  List<TextAlign> _parseAligns(String separator) {
+    return _splitRow(separator).map((c) {
+      final s = c.trim();
+      final left = s.startsWith(':');
+      final right = s.endsWith(':');
+      if (left && right) return TextAlign.center;
+      if (right) return TextAlign.right;
+      return TextAlign.left;
+    }).toList();
+  }
+
+  /// Renders a Markdown table. Columns share the available width (so it never
+  /// overflows on a narrow screen); cell text wraps and supports inline syntax.
+  Widget _table(List<String> header, List<List<String>> rows,
+      List<TextAlign> aligns, TextStyle base) {
+    final cols = header.length;
+    TextAlign alignFor(int c) => c < aligns.length ? aligns[c] : TextAlign.left;
+
+    TableRow buildRow(List<String> cells, {required bool isHeader}) {
+      final style =
+          isHeader ? base.copyWith(fontWeight: FontWeight.w700) : base;
+      return TableRow(
+        decoration: isHeader
+            ? BoxDecoration(color: AppColors.surfaceMuted)
+            : null,
+        children: [
+          for (var c = 0; c < cols; c++)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              child: RichText(
+                textAlign: alignFor(c),
+                text: _inline(c < cells.length ? cells[c] : '', style),
+              ),
+            ),
+        ],
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+          border: Border.all(color: AppColors.hairline),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Table(
+          border: TableBorder.symmetric(
+            inside: BorderSide(color: AppColors.hairline),
+          ),
+          defaultColumnWidth: const FlexColumnWidth(),
+          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+          children: [
+            buildRow(header, isHeader: true),
+            for (final r in rows) buildRow(r, isHeader: false),
+          ],
+        ),
       ),
     );
   }
