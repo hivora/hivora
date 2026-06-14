@@ -1437,7 +1437,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
         // Bottom clearance for the pinned save bar (which overlays the content):
         // ~save button + its padding + the device safe-area inset.
         padding: EdgeInsets.fromLTRB(
-            20, 4, 20, 88 + MediaQuery.viewPaddingOf(context).bottom),
+            20, 16, 20, 88 + MediaQuery.viewPaddingOf(context).bottom),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
