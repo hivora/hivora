@@ -146,16 +146,21 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 24),
                           FilledButton(
                             onPressed: busy ? null : _submit,
-                            child: passwordBusy
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: HiveLoader(
-                                        size: 22,
-                                        strokeWidth: 2,
-                                        color: Colors.white),
-                                  )
-                                : Text(context.t('auth.signIn')),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              child: passwordBusy
+                                  ? const SizedBox(
+                                      key: ValueKey('loader'),
+                                      width: 22,
+                                      height: 22,
+                                      child: HiveLoader(
+                                          size: 22,
+                                          strokeWidth: 2,
+                                          color: Colors.white),
+                                    )
+                                  : Text(context.t('auth.signIn'),
+                                      key: const ValueKey('label')),
+                            ),
                           ),
                           if (_providers.isNotEmpty) ...[
                             const SizedBox(height: 24),
@@ -181,19 +186,31 @@ class _LoginScreenState extends State<LoginScreen> {
                                 child: OutlinedButton.icon(
                                   onPressed:
                                       busy ? null : () => _launchSso(provider),
-                                  icon: _launchingSsoId == provider.id
-                                      ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: HiveLoader(
-                                              size: 18, strokeWidth: 2),
-                                        )
-                                      : const Icon(Icons.shield_rounded,
-                                          size: 18),
-                                  label: _launchingSsoId == provider.id
-                                      ? Text(context.t('auth.signingIn'))
-                                      : Text(context.t('auth.continueWith',
-                                          variables: {'provider': provider.displayName})),
+                                  icon: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    child: _launchingSsoId == provider.id
+                                        ? const SizedBox(
+                                            key: ValueKey('loader'),
+                                            width: 18,
+                                            height: 18,
+                                            child: HiveLoader(
+                                                size: 18, strokeWidth: 2),
+                                          )
+                                        : const Icon(Icons.shield_rounded,
+                                            size: 18, key: ValueKey('icon')),
+                                  ),
+                                  label: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    child: _launchingSsoId == provider.id
+                                        ? Text(context.t('auth.signingIn'),
+                                            key: const ValueKey('signing'))
+                                        : Text(
+                                            context.t('auth.continueWith',
+                                                variables: {
+                                                  'provider': provider.displayName
+                                                }),
+                                            key: const ValueKey('continue')),
+                                  ),
                                 ),
                               ),
                           ],
