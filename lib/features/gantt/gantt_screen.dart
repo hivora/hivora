@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/hivora_repository.dart';
@@ -17,24 +18,14 @@ import '../../core/widgets/soft_card.dart';
 /// month band (Jira "Wochen"); [month] collapses to month columns only.
 enum GanttZoom { week, month }
 
-/// Short month names per language — kept local so we never depend on
-/// `intl`'s date-symbol initialisation at runtime.
-const Map<String, List<String>> _monthsShort = {
-  'en': [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ],
-  'de': [
-    'Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez',
-  ],
-};
-
+/// Localised short month label (e.g. `Jan` / `Mär`, or `Jan 2026` with year).
+/// Uses `intl`'s [DateFormat] against the active locale — the date-symbol data
+/// for that locale is loaded by `GlobalMaterialLocalizations`.
 String _monthLabel(BuildContext context, DateTime date, {bool withYear = false}) {
-  final code = Localizations.localeOf(context).languageCode;
-  final names = _monthsShort[code] ?? _monthsShort['en']!;
-  final name = names[date.month - 1];
-  return withYear ? '$name ${date.year}' : name;
+  final locale = Localizations.localeOf(context).toString();
+  return withYear
+      ? DateFormat.yMMM(locale).format(date)
+      : DateFormat.MMM(locale).format(date);
 }
 
 DateTime _dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
