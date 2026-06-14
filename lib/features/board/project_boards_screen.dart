@@ -242,7 +242,9 @@ class _BoardCard extends StatelessWidget {
                     Text(
                       context.t('board.boardLabel'),
                       style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 11),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                          color: AppColors.navy),
                     ),
                   ],
                 ),

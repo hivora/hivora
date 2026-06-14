@@ -62,7 +62,7 @@ class SettingsScreen extends StatelessWidget {
           child: Column(
             children: [
               ListTile(
-                leading: const Icon(Icons.language_rounded, color: AppColors.navy),
+                leading: Icon(Icons.language_rounded, color: AppColors.brandInk),
                 title: Text(context.t('settings.language')),
                 trailing: DropdownButton<String>(
                   value: locale.languageCode,
@@ -81,15 +81,15 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.brightness_6_rounded,
-                    color: AppColors.navy),
+                leading: Icon(Icons.brightness_6_rounded,
+                    color: AppColors.brandInk),
                 title: Text(context.t('settings.theme')),
                 trailing: _ThemeModeSelector(mode: themeMode),
               ),
               if ((config.meta?.privacyPolicyUrl ?? '').isNotEmpty)
                 ListTile(
-                  leading: const Icon(Icons.privacy_tip_rounded,
-                      color: AppColors.navy),
+                  leading: Icon(Icons.privacy_tip_rounded,
+                      color: AppColors.brandInk),
                   title: Text(context.t('settings.privacyPolicy')),
                   trailing: const Icon(Icons.open_in_new_rounded, size: 18),
                   onTap: () => launchUrl(
@@ -99,8 +99,8 @@ class SettingsScreen extends StatelessWidget {
                 ),
               if (user?.isAdmin ?? false)
                 ListTile(
-                  leading: const Icon(Icons.admin_panel_settings_rounded,
-                      color: AppColors.navy),
+                  leading: Icon(Icons.admin_panel_settings_rounded,
+                      color: AppColors.brandInk),
                   title: Text(context.t('settings.adminArea')),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.go('/admin'),

@@ -555,12 +555,12 @@ class _RoleBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isAdmin
-            ? AppColors.navy.withValues(alpha: 0.1)
+            ? AppColors.brandInk.withValues(alpha: 0.12)
             : AppColors.canvas2,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
             color: isAdmin
-                ? AppColors.navy.withValues(alpha: 0.3)
+                ? AppColors.brandInk.withValues(alpha: 0.35)
                 : AppColors.hairline),
       ),
       child: Text(
@@ -568,7 +568,7 @@ class _RoleBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: isAdmin ? AppColors.navy : AppColors.inkSoft,
+          color: isAdmin ? AppColors.brandInk : AppColors.inkSoft,
           letterSpacing: 0.4,
         ),
       ),

@@ -104,13 +104,27 @@ abstract final class AppColors {
   static const lavender = stReview; // closest purple equivalent
   static Color get background => canvas;
   static Color get backgroundEnd => canvas2;
-  // pastel palette → warm tints matching the new paper canvas
+
+  // Brand-tinted foreground for icons/labels sitting ON a theme surface. The
+  // raw [navy] is a fixed dark brand colour and is unreadable on dark surfaces,
+  // so this lifts to a light lavender in dark mode.
+  static Color get brandInk => _dark ? railInk : navy;
+
+  // Pastel card tints — light & warm on light, muted & dark (white-text safe)
+  // on dark, so colourful cards keep their hue without losing legibility.
   static const pastelBlue = Color(0xFFE9EEF8);
   static const pastelLavender = Color(0xFFEFEBF8);
   static const pastelPeach = Color(0xFFF3E9D2); // = accentSoftLight
   static const pastelMint = Color(0xFFE4F2EC);
   static const pastels = [pastelBlue, pastelLavender, pastelPeach, pastelMint];
-  static Color pastelFor(int index) => pastels[index % pastels.length];
+  static const pastelsDark = [
+    Color(0xFF20263A), // blue-slate
+    Color(0xFF272138), // lavender
+    Color(0xFF2E2716), // amber-brown
+    Color(0xFF16291F), // green
+  ];
+  static Color pastelFor(int index) =>
+      (_dark ? pastelsDark : pastels)[index % pastels.length];
   // old accent names → new semantic equivalents
   static const accentOrange = accent;
   static const accentPurple = stReview;
