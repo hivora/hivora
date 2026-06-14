@@ -22,10 +22,12 @@ class _TypeMeta {
 }
 
 const _typeMeta = <String, _TypeMeta>{
-  'STORY': _TypeMeta(Icons.bookmark_border_rounded, AppColors.stDone),
+  // Backend Issue.Type: TASK, BUG, FEATURE, EPIC (STORY kept for compatibility).
   'TASK': _TypeMeta(Icons.check_circle_outline_rounded, AppColors.stTodo),
   'BUG': _TypeMeta(Icons.bug_report_outlined, AppColors.priUrgent),
+  'FEATURE': _TypeMeta(Icons.auto_awesome_rounded, AppColors.stProgress),
   'EPIC': _TypeMeta(Icons.bolt_rounded, AppColors.stReview),
+  'STORY': _TypeMeta(Icons.bookmark_border_rounded, AppColors.stDone),
 };
 
 _TypeMeta _typeOf(String type) =>
@@ -38,9 +40,16 @@ class _PriMeta {
 }
 
 const _priMeta = <String, _PriMeta>{
+  // Backend Issue.Priority: SHOWSTOPPER, CRITICAL, MAJOR, NORMAL, MINOR.
+  'SHOWSTOPPER':
+      _PriMeta(Icons.keyboard_double_arrow_up_rounded, AppColors.priUrgent),
+  'CRITICAL': _PriMeta(Icons.keyboard_arrow_up_rounded, AppColors.priUrgent),
+  'MAJOR': _PriMeta(Icons.keyboard_arrow_up_rounded, AppColors.priHigh),
+  'NORMAL': _PriMeta(Icons.drag_handle_rounded, AppColors.priNormal),
+  'MINOR': _PriMeta(Icons.keyboard_arrow_down_rounded, AppColors.priLow),
+  // Legacy aliases kept so older data / the design palette still resolve.
   'URGENT': _PriMeta(Icons.keyboard_double_arrow_up_rounded, AppColors.priUrgent),
   'HIGH': _PriMeta(Icons.keyboard_arrow_up_rounded, AppColors.priHigh),
-  'NORMAL': _PriMeta(Icons.drag_handle_rounded, AppColors.priNormal),
   'LOW': _PriMeta(Icons.keyboard_arrow_down_rounded, AppColors.priLow),
 };
 

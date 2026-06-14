@@ -121,6 +121,11 @@ class HivoraRepository {
 
   Future<void> deleteIssue(String id) => _api.delete('/api/v1/issues/$id');
 
+  Future<List<IssueActivity>> issueActivity(String issueId) async =>
+      ((await _api.get('/api/v1/issues/$issueId/activity')) as List<dynamic>)
+          .map((a) => IssueActivity.fromJson(a as Map<String, dynamic>))
+          .toList();
+
   Future<List<IssueComment>> comments(String issueId) async =>
       ((await _api.get('/api/v1/issues/$issueId/comments')) as List<dynamic>)
           .map((c) => IssueComment.fromJson(c as Map<String, dynamic>))

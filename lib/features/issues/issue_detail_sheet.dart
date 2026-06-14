@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
@@ -14,7 +15,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
-import 'issue_form.dart';
+import 'issue_markdown.dart';
 import 'work_log_sheet.dart';
 
 /// Centered dialog that can grow much wider than the wolt default so the
@@ -80,7 +81,8 @@ Future<void> showIssueDetailSheet(
                 ),
         ),
         trailingNavBarWidget: _SheetActions(
-          onEdit: () => bodyKey.currentState?.editIssue(),
+          onCopyLink: () => bodyKey.currentState?.copyIssueLink(),
+          onEdit: () => bodyKey.currentState?.beginTitleEdit(),
           onDelete: () => bodyKey.currentState?.confirmDeleteIssue(),
           onClose: () => Navigator.of(modalContext).maybePop(),
         ),
@@ -101,14 +103,17 @@ Future<void> showIssueDetailSheet(
   ).whenComplete(header.dispose);
 }
 
-/// Edit / delete / close actions rendered in the wolt top bar.
+/// Copy-link · overflow menu (edit / delete) · close — rendered in the wolt
+/// top bar. All secondary actions live in the 3-dot menu.
 class _SheetActions extends StatelessWidget {
   const _SheetActions({
+    required this.onCopyLink,
     required this.onEdit,
     required this.onDelete,
     required this.onClose,
   });
 
+  final VoidCallback onCopyLink;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onClose;
@@ -119,17 +124,12 @@ class _SheetActions extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          tooltip: context.t('issues.edit'),
-          onPressed: onEdit,
-          icon: const Icon(Icons.edit_rounded,
-              size: 19, color: AppColors.inkSoft),
+          tooltip: context.t('issues.copyLink'),
+          onPressed: onCopyLink,
+          icon: const Icon(Icons.link_rounded,
+              size: 20, color: AppColors.inkSoft),
         ),
-        IconButton(
-          tooltip: context.t('common.delete'),
-          onPressed: onDelete,
-          icon: const Icon(Icons.delete_outline_rounded,
-              size: 20, color: AppColors.danger),
-        ),
+        _IssueOverflowMenu(onEdit: onEdit, onDelete: onDelete),
         IconButton(
           tooltip: context.t('common.cancel'),
           onPressed: onClose,
@@ -137,6 +137,49 @@ class _SheetActions extends StatelessWidget {
               size: 20, color: AppColors.inkSoft),
         ),
         const SizedBox(width: 4),
+      ],
+    );
+  }
+}
+
+/// Shared 3-dot menu holding the edit + delete actions.
+class _IssueOverflowMenu extends StatelessWidget {
+  const _IssueOverflowMenu({required this.onEdit, required this.onDelete});
+
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: '',
+      icon: const Icon(Icons.more_horiz_rounded,
+          size: 22, color: AppColors.inkSoft),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          value: 'edit',
+          child: Row(
+            children: [
+              const Icon(Icons.edit_rounded, size: 18, color: AppColors.inkSoft),
+              const SizedBox(width: 10),
+              Text(context.t('issues.edit')),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              const Icon(Icons.delete_outline_rounded,
+                  size: 18, color: AppColors.danger),
+              const SizedBox(width: 10),
+              Text(context.t('common.delete'),
+                  style: const TextStyle(color: AppColors.danger)),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -163,19 +206,29 @@ class IssueDetailBody extends StatefulWidget {
 
 class IssueDetailBodyState extends State<IssueDetailBody> {
   final _comment = TextEditingController();
+  final _titleCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
 
   Issue? _issue;
   List<IssueComment> _comments = const [];
+  List<IssueActivity> _activity = const [];
   List<WorkItem> _workItems = const [];
   Project? _project;
   List<DirectoryUser> _users = const [];
   List<Sprint> _sprints = const [];
   Map<String, String> get _names =>
       {for (final u in _users) u.id: u.displayName};
+  Map<String, String> get _sprintNames =>
+      {for (final s in _sprints) s.id: s.name};
 
   bool _loading = true;
   String? _error;
   bool _busy = false;
+
+  // Inline editing + activity filter state.
+  bool _editingTitle = false;
+  bool _editingDesc = false;
+  _ActivityFilter _activityFilter = _ActivityFilter.all;
 
   HivoraRepository get _repo => context.read<HivoraRepository>();
 
@@ -188,6 +241,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   @override
   void dispose() {
     _comment.dispose();
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
     super.dispose();
   }
 
@@ -203,6 +258,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
         _repo.workItems(widget.issueId),
         _repo.projects(),
         _repo.users(),
+        _repo.issueActivity(widget.issueId),
       ]);
       _issue = issue;
       _comments = results[0] as List<IssueComment>;
@@ -211,6 +267,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           .where((p) => p.id == issue.projectId)
           .firstOrNull;
       _users = results[3] as List<DirectoryUser>;
+      _activity = results[4] as List<IssueActivity>;
       // Sprints come from the project's board(s); best-effort.
       try {
         final boards = await _repo.boards(projectId: issue.projectId);
@@ -240,6 +297,12 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       _issue = updated;
       widget.header?.value = updated;
       widget.onChanged?.call();
+      // Refresh the change history so the new entry shows immediately.
+      try {
+        _activity = await _repo.issueActivity(widget.issueId);
+      } catch (_) {
+        // Non-critical; the next full load reflects server truth.
+      }
     } on ApiFailure catch (failure) {
       _toast(failure.message);
     } finally {
@@ -266,13 +329,48 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Public entry points so the wolt top-bar actions can drive the body.
-  Future<void> editIssue() async {
+  // ── inline editing + actions (driven by the top-bar / double-tap) ─────────
+
+  /// Public entry points so the top-bar actions can drive the body.
+  void beginTitleEdit() {
     final issue = _issue;
     if (issue == null) return;
-    await showIssueForm(context, existing: issue);
-    widget.onChanged?.call();
-    await _load();
+    _titleCtrl.text = issue.title;
+    setState(() => _editingTitle = true);
+  }
+
+  void _beginDescEdit() {
+    final issue = _issue;
+    if (issue == null) return;
+    _descCtrl.text = issue.description ?? '';
+    setState(() => _editingDesc = true);
+  }
+
+  Future<void> _saveTitle() async {
+    final value = _titleCtrl.text.trim();
+    setState(() => _editingTitle = false);
+    if (value.isEmpty || value == _issue!.title) return;
+    await _patch({'title': value});
+  }
+
+  Future<void> _saveDesc() async {
+    final value = _descCtrl.text;
+    setState(() => _editingDesc = false);
+    if (value == (_issue!.description ?? '')) return;
+    await _patch({'description': value});
+  }
+
+  void copyIssueLink() {
+    final issue = _issue;
+    if (issue == null) return;
+    String link;
+    try {
+      link = '${Uri.base.origin}/#/issues/${issue.id}';
+    } catch (_) {
+      link = '/issues/${issue.id}';
+    }
+    Clipboard.setData(ClipboardData(text: link));
+    _toast(context.t('issues.linkCopied'));
   }
 
   Future<void> confirmDeleteIssue() async {
@@ -320,7 +418,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           _RouteTopBar(
             issue: issue,
             busy: _busy,
-            onEdit: editIssue,
+            onCopyLink: copyIssueLink,
+            onEdit: beginTitleEdit,
             onDelete: () => _confirmDelete(issue),
             onClose: () => Navigator.of(context).maybePop(),
           ),
@@ -329,9 +428,9 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           child: LayoutBuilder(
             builder: (context, c) {
               final left = <Widget>[
-                _titleCard(issue),
+                _contentCard(issue),
                 const SizedBox(height: 14),
-                _commentsCard(),
+                _activityCard(),
               ];
               final right = <Widget>[
                 _detailsCard(issue),
@@ -358,17 +457,17 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                   ],
                 );
               }
-              // Stacked (phone): title, details, time, comments.
+              // Stacked (phone): content, details, time, activity.
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _titleCard(issue),
+                  _contentCard(issue),
                   const SizedBox(height: 14),
                   _detailsCard(issue),
                   const SizedBox(height: 14),
                   _timeCard(issue),
                   const SizedBox(height: 14),
-                  _commentsCard(),
+                  _activityCard(),
                 ],
               );
             },
@@ -378,18 +477,35 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     );
   }
 
-  Widget _titleCard(Issue issue) {
+  Widget _contentCard(Issue issue) {
+    const titleStyle = TextStyle(
+        fontFamily: AppTheme.fontBrand,
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        height: 1.25);
+
     return SoftCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(issue.title,
-              style: const TextStyle(
-                  fontFamily: AppTheme.fontBrand,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  height: 1.25)),
-          if (issue.tags.isNotEmpty) ...[
+          // Title — double-tap to edit inline.
+          if (_editingTitle)
+            _InlineTitleEditor(
+              controller: _titleCtrl,
+              onSave: _saveTitle,
+              onCancel: () => setState(() => _editingTitle = false),
+            )
+          else
+            Tooltip(
+              message: context.t('issues.editTitleHint'),
+              waitDuration: const Duration(milliseconds: 700),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onDoubleTap: beginTitleEdit,
+                child: Text(issue.title, style: titleStyle),
+              ),
+            ),
+          if (issue.tags.isNotEmpty && !_editingTitle) ...[
             const SizedBox(height: 12),
             Wrap(
               spacing: 6,
@@ -397,15 +513,64 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
               children: [for (final t in issue.tags) LabelTag(t)],
             ),
           ],
-          if ((issue.description ?? '').isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text(issue.description!,
-                style: const TextStyle(height: 1.55, color: AppColors.ink)),
-          ],
+          const SizedBox(height: 18),
+          _sectionLabel(context.t('issues.description')),
+          const SizedBox(height: 8),
+          // Description — double-tap to edit as Markdown.
+          if (_editingDesc)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                MarkdownEditorField(
+                  controller: _descCtrl,
+                  hintText: context.t('issues.description'),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.navy),
+                      onPressed: _saveDesc,
+                      child: Text(context.t('common.save')),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () => setState(() => _editingDesc = false),
+                      child: Text(context.t('common.cancel'),
+                          style: const TextStyle(color: AppColors.inkSoft)),
+                    ),
+                  ],
+                ),
+              ],
+            )
+          else
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onDoubleTap: _beginDescEdit,
+              child: (issue.description ?? '').isNotEmpty
+                  ? MarkdownText(issue.description!)
+                  : Text(
+                      context.t('issues.noDescription'),
+                      style: const TextStyle(
+                          color: AppColors.inkFaint,
+                          fontStyle: FontStyle.italic),
+                    ),
+            ),
         ],
       ),
     );
   }
+
+  Widget _sectionLabel(String text) => Text(
+        text.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+          color: AppColors.inkFaint,
+        ),
+      );
 
   Widget _detailsCard(Issue issue) {
     final assigneeName =
@@ -613,67 +778,105 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     );
   }
 
-  Widget _commentsCard() {
+  Widget _activityCard() {
+    final filter = _activityFilter;
+    final showComposer = filter != _ActivityFilter.history;
     return SoftCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('issues.comments'),
+          Text(context.t('issues.activity'),
               style: const TextStyle(
                   fontSize: 14.5, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
-          for (final comment in _comments)
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(13),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceMuted,
-                borderRadius: BorderRadius.circular(AppTheme.radiusControl),
-                border: Border.all(color: AppColors.hairline2),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(comment.text,
-                      style: const TextStyle(height: 1.45, fontSize: 13)),
-                  if (comment.createdAt != null) ...[
-                    const SizedBox(height: 5),
-                    Text(
-                      MaterialLocalizations.of(context)
-                          .formatShortDate(comment.createdAt!.toLocal()),
-                      style: const TextStyle(
-                          fontSize: 11, color: AppColors.inkFaint),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _comment,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    hintText: context.t('issues.addComment'),
-                  ),
-                  onSubmitted: (_) => _submitComment(),
-                ),
-              ),
-              const SizedBox(width: 10),
-              IconButton.filled(
-                style: IconButton.styleFrom(backgroundColor: AppColors.navy),
-                onPressed: _submitComment,
-                icon: const Icon(Icons.send_rounded,
-                    color: Colors.white, size: 18),
-              ),
-            ],
+          // Filter tabs: All · Comments · History
+          _ActivityTabs(
+            value: filter,
+            onChanged: (f) => setState(() => _activityFilter = f),
           ),
+          const SizedBox(height: 14),
+          ..._activityItems(filter),
+          if (showComposer) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _comment,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: context.t('issues.addComment'),
+                    ),
+                    onSubmitted: (_) => _submitComment(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton.filled(
+                  style: IconButton.styleFrom(backgroundColor: AppColors.navy),
+                  onPressed: _submitComment,
+                  icon: const Icon(Icons.send_rounded,
+                      color: Colors.white, size: 18),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
+
+  /// Builds the activity feed for [filter]:
+  ///  • comments → comments oldest-first (chat style)
+  ///  • history  → change events newest-first
+  ///  • all      → both, merged newest-first
+  List<Widget> _activityItems(_ActivityFilter filter) {
+    Widget commentTile(IssueComment c) => _CommentTile(
+          comment: c,
+          authorName: _names[c.authorId] ?? c.authorId,
+        );
+    Widget activityTile(IssueActivity a) => _ActivityTile(
+          activity: a,
+          actorName: a.actorId != null
+              ? (_names[a.actorId!] ?? a.actorId!)
+              : context.t('issues.unassigned'),
+          names: _names,
+          sprintNames: _sprintNames,
+        );
+
+    switch (filter) {
+      case _ActivityFilter.comments:
+        if (_comments.isEmpty) {
+          return [_emptyActivity(context.t('issues.activityEmpty'))];
+        }
+        return [for (final c in _comments) commentTile(c)];
+      case _ActivityFilter.history:
+        if (_activity.isEmpty) {
+          return [_emptyActivity(context.t('issues.historyEmpty'))];
+        }
+        return [for (final a in _activity) activityTile(a)];
+      case _ActivityFilter.all:
+        // Merge by timestamp, newest first.
+        final epoch = DateTime.fromMillisecondsSinceEpoch(0);
+        final merged = <({DateTime time, Widget tile})>[
+          for (final c in _comments)
+            (time: c.createdAt ?? epoch, tile: commentTile(c)),
+          for (final a in _activity)
+            (time: a.createdAt ?? epoch, tile: activityTile(a)),
+        ]..sort((x, y) => y.time.compareTo(x.time));
+        if (merged.isEmpty) {
+          return [_emptyActivity(context.t('issues.activityEmpty'))];
+        }
+        return [for (final m in merged) m.tile];
+    }
+  }
+
+  Widget _emptyActivity(String message) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 22),
+        child: Center(
+          child: Text(message,
+              style: const TextStyle(color: AppColors.inkFaint, fontSize: 13)),
+        ),
+      );
 
   // ── pickers ────────────────────────────────────────────────────────────
 
@@ -892,6 +1095,7 @@ class _RouteTopBar extends StatelessWidget {
   const _RouteTopBar({
     required this.issue,
     required this.busy,
+    required this.onCopyLink,
     required this.onEdit,
     required this.onDelete,
     required this.onClose,
@@ -899,6 +1103,7 @@ class _RouteTopBar extends StatelessWidget {
 
   final Issue issue;
   final bool busy;
+  final VoidCallback onCopyLink;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onClose;
@@ -928,19 +1133,368 @@ class _RouteTopBar extends StatelessWidget {
           ],
           const Spacer(),
           IconButton(
-            tooltip: context.t('issues.edit'),
-            onPressed: onEdit,
-            icon: const Icon(Icons.edit_rounded,
-                size: 19, color: AppColors.inkSoft),
+            tooltip: context.t('issues.copyLink'),
+            onPressed: onCopyLink,
+            icon: const Icon(Icons.link_rounded,
+                size: 20, color: AppColors.inkSoft),
           ),
-          IconButton(
-            tooltip: context.t('common.delete'),
-            onPressed: onDelete,
-            icon: const Icon(Icons.delete_outline_rounded,
-                size: 20, color: AppColors.danger),
+          _IssueOverflowMenu(onEdit: onEdit, onDelete: onDelete),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────── Inline title editor ───────────────────────────
+
+/// Inline title field with a green-check (save) / red-cross (cancel) row.
+class _InlineTitleEditor extends StatelessWidget {
+  const _InlineTitleEditor({
+    required this.controller,
+    required this.onSave,
+    required this.onCancel,
+  });
+
+  final TextEditingController controller;
+  final VoidCallback onSave;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: null,
+          style: const TextStyle(
+              fontFamily: AppTheme.fontBrand,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              height: 1.25),
+          decoration: const InputDecoration(isDense: true),
+          onSubmitted: (_) => onSave(),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _SquareButton(
+              icon: Icons.check_rounded,
+              color: AppColors.success,
+              onTap: onSave,
+            ),
+            const SizedBox(width: 8),
+            _SquareButton(
+              icon: Icons.close_rounded,
+              color: AppColors.danger,
+              onTap: onCancel,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Small bordered square action button (✓ / ✕).
+class _SquareButton extends StatelessWidget {
+  const _SquareButton(
+      {required this.icon, required this.color, required this.onTap});
+
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.hairline),
+          ),
+          child: Icon(icon, size: 18, color: color),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────── Activity tabs + comment tile ──────────────────
+
+enum _ActivityFilter { all, comments, history }
+
+class _ActivityTabs extends StatelessWidget {
+  const _ActivityTabs({required this.value, required this.onChanged});
+
+  final _ActivityFilter value;
+  final ValueChanged<_ActivityFilter> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppColors.canvas2,
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        border: Border.all(color: AppColors.hairline2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _seg(context, _ActivityFilter.all, context.t('issues.filterAll')),
+          _seg(context, _ActivityFilter.comments,
+              context.t('issues.filterComments')),
+          _seg(context, _ActivityFilter.history,
+              context.t('issues.filterHistory')),
+        ],
+      ),
+    );
+  }
+
+  Widget _seg(BuildContext context, _ActivityFilter filter, String label) {
+    final active = value == filter;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => onChanged(filter),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? AppColors.surface : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+          border: Border.all(
+              color: active ? AppColors.hairline : Colors.transparent),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            color: active ? AppColors.ink : AppColors.inkSoft,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Comment row: author avatar + name + relative date + body text.
+class _CommentTile extends StatelessWidget {
+  const _CommentTile({required this.comment, required this.authorName});
+
+  final IssueComment comment;
+  final String authorName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          HiveAvatar(name: authorName, size: 30),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(authorName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w700)),
+                    ),
+                    if (comment.createdAt != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        MaterialLocalizations.of(context)
+                            .formatShortDate(comment.createdAt!.toLocal()),
+                        style: const TextStyle(
+                            fontSize: 11.5, color: AppColors.inkFaint),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(comment.text,
+                    style: const TextStyle(
+                        height: 1.5, fontSize: 13, color: AppColors.inkSoft)),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// History row: actor avatar + "[name] changed [field]" + optional from→to.
+class _ActivityTile extends StatelessWidget {
+  const _ActivityTile({
+    required this.activity,
+    required this.actorName,
+    required this.names,
+    required this.sprintNames,
+  });
+
+  final IssueActivity activity;
+  final String actorName;
+  final Map<String, String> names;
+  final Map<String, String> sprintNames;
+
+  // Fields where a before→after value pair is worth showing as chips.
+  static const _chipFields = {
+    'STATE', 'ASSIGNEE', 'PRIORITY', 'TYPE', 'SPRINT',
+    'START_DATE', 'DUE_DATE', 'ESTIMATE', 'TAGS',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final action = activity.field == 'CREATED'
+        ? context.t('issues.act.created')
+        : context.t('issues.act.changed',
+            variables: {'field': _fieldLabel(context, activity.field)});
+    final showChips = _chipFields.contains(activity.field);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          HiveAvatar(name: actorName, size: 30),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                        text: actorName,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, color: AppColors.ink)),
+                    TextSpan(text: ' $action'),
+                  ]),
+                  style: const TextStyle(
+                      fontSize: 13, height: 1.4, color: AppColors.inkSoft),
+                ),
+                if (activity.createdAt != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    MaterialLocalizations.of(context)
+                        .formatShortDate(activity.createdAt!.toLocal()),
+                    style: const TextStyle(
+                        fontSize: 11.5, color: AppColors.inkFaint),
+                  ),
+                ],
+                if (showChips) ...[
+                  const SizedBox(height: 7),
+                  _changeRow(context),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _changeRow(BuildContext context) {
+    final from = _displayValue(context, activity.fromValue);
+    final to = _displayValue(context, activity.toValue);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (from != null) _ChangeChip(from),
+        if (from != null)
+          const Icon(Icons.arrow_forward_rounded,
+              size: 14, color: AppColors.inkFaint),
+        if (to != null) _ChangeChip(to),
+      ],
+    );
+  }
+
+  /// Humanises a raw stored value for the activity's field.
+  String? _displayValue(BuildContext context, String? raw) {
+    final field = activity.field;
+    if (raw == null || raw.isEmpty) {
+      // Assignee / sprint cleared → show an explicit "none" chip.
+      return switch (field) {
+        'ASSIGNEE' => context.t('issues.unassigned'),
+        'SPRINT' => context.t('issues.noSprint'),
+        _ => null,
+      };
+    }
+    return switch (field) {
+      'ASSIGNEE' => names[raw] ?? raw,
+      'SPRINT' => sprintNames[raw] ?? raw,
+      'STATE' => stateLabel(raw),
+      'PRIORITY' => context.t('priority.${raw.toLowerCase()}'),
+      'TYPE' => context.t('type.${raw.toLowerCase()}'),
+      'ESTIMATE' => fmtDuration(int.tryParse(raw)),
+      'START_DATE' || 'DUE_DATE' => _fmtDate(context, raw),
+      _ => raw,
+    };
+  }
+
+  String _fmtDate(BuildContext context, String raw) {
+    final parsed = DateTime.tryParse(raw);
+    return parsed != null
+        ? MaterialLocalizations.of(context).formatMediumDate(parsed)
+        : raw;
+  }
+
+  String _fieldLabel(BuildContext context, String field) =>
+      switch (field) {
+        'TITLE' => context.t('issues.field.title'),
+        'DESCRIPTION' => context.t('issues.field.description'),
+        'STATE' => context.t('issues.field.state'),
+        'ASSIGNEE' => context.t('issues.field.assignee'),
+        'PRIORITY' => context.t('issues.field.priority'),
+        'TYPE' => context.t('issues.field.type'),
+        'SPRINT' => context.t('issues.field.sprint'),
+        'START_DATE' => context.t('issues.field.startDate'),
+        'DUE_DATE' => context.t('issues.field.dueDate'),
+        'ESTIMATE' => context.t('issues.field.estimate'),
+        'TAGS' => context.t('issues.field.tags'),
+        _ => field.toLowerCase(),
+      };
+}
+
+/// Small bordered pill used for before/after values in the history.
+class _ChangeChip extends StatelessWidget {
+  const _ChangeChip(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        border: Border.all(color: AppColors.hairline),
+      ),
+      child: Text(text,
+          style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.ink)),
     );
   }
 }

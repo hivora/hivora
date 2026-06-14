@@ -89,10 +89,17 @@ abstract final class AppColors {
         _ => stBacklog,
       };
 
-  static Color priorityColor(String priority) => switch (priority) {
+  static Color priorityColor(String priority) =>
+      switch (priority.toUpperCase()) {
+        // Backend Issue.Priority enum.
+        'SHOWSTOPPER' || 'CRITICAL' => priUrgent,
+        'MAJOR' => priHigh,
+        'NORMAL' => priNormal,
+        'MINOR' => priLow,
+        // Legacy aliases.
         'URGENT' => priUrgent,
         'HIGH' => priHigh,
-        'NORMAL' => priNormal,
+        'LOW' => priLow,
         _ => priLow,
       };
 

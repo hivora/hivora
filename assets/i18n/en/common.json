@@ -126,6 +126,32 @@
   "issues": {
     "new": "New issue",
     "edit": "Edit issue",
+    "activity": "Activity",
+    "filterComments": "Comments",
+    "filterHistory": "History",
+    "historyEmpty": "No history yet.",
+    "activityEmpty": "No activity yet.",
+    "act": {
+      "created": "created this issue",
+      "changed": "changed the {{field}}"
+    },
+    "field": {
+      "title": "title",
+      "description": "description",
+      "state": "status",
+      "assignee": "assignee",
+      "priority": "priority",
+      "type": "type",
+      "sprint": "sprint",
+      "startDate": "start date",
+      "dueDate": "due date",
+      "estimate": "estimate",
+      "tags": "labels"
+    },
+    "copyLink": "Copy link",
+    "linkCopied": "Issue link copied",
+    "noDescription": "No description yet. Double-tap to add one.",
+    "editTitleHint": "Double-tap the title or description to edit.",
     "project": "Project",
     "title": "Title",
     "description": "Description",

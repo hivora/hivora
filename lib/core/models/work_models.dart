@@ -172,6 +172,39 @@ class IssueComment extends Equatable {
   List<Object?> get props => [id, authorId, text];
 }
 
+/// One entry in an issue's change history ("Verlauf").
+class IssueActivity extends Equatable {
+  const IssueActivity({
+    required this.id,
+    required this.field,
+    this.actorId,
+    this.fromValue,
+    this.toValue,
+    this.createdAt,
+  });
+
+  /// Backend IssueActivity.Field: CREATED, TITLE, DESCRIPTION, STATE,
+  /// ASSIGNEE, PRIORITY, TYPE, SPRINT, START_DATE, DUE_DATE, ESTIMATE, TAGS.
+  final String field;
+  final String id;
+  final String? actorId;
+  final String? fromValue;
+  final String? toValue;
+  final DateTime? createdAt;
+
+  factory IssueActivity.fromJson(Map<String, dynamic> json) => IssueActivity(
+        id: json['id'] as String? ?? '',
+        field: json['field'] as String? ?? 'CREATED',
+        actorId: json['actorId'] as String?,
+        fromValue: json['fromValue'] as String?,
+        toValue: json['toValue'] as String?,
+        createdAt: _instant(json['createdAt']),
+      );
+
+  @override
+  List<Object?> get props => [id, field, fromValue, toValue, createdAt];
+}
+
 class Sprint extends Equatable {
   const Sprint({
     required this.id,

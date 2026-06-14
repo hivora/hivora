@@ -126,6 +126,32 @@
   "issues": {
     "new": "Neue Aufgabe",
     "edit": "Aufgabe bearbeiten",
+    "activity": "Aktivität",
+    "filterComments": "Kommentare",
+    "filterHistory": "Verlauf",
+    "historyEmpty": "Noch keine Verlaufseinträge.",
+    "activityEmpty": "Noch keine Aktivität.",
+    "act": {
+      "created": "hat diesen Vorgang erstellt",
+      "changed": "hat {{field}} geändert"
+    },
+    "field": {
+      "title": "den Titel",
+      "description": "die Beschreibung",
+      "state": "den Status",
+      "assignee": "die zugewiesene Person",
+      "priority": "die Priorität",
+      "type": "den Typ",
+      "sprint": "den Sprint",
+      "startDate": "das Startdatum",
+      "dueDate": "das Fälligkeitsdatum",
+      "estimate": "die Schätzung",
+      "tags": "die Labels"
+    },
+    "copyLink": "Link kopieren",
+    "linkCopied": "Vorgangslink kopiert",
+    "noDescription": "Noch keine Beschreibung. Zum Hinzufügen doppeltippen.",
+    "editTitleHint": "Titel oder Beschreibung zum Bearbeiten doppeltippen.",
     "project": "Projekt",
     "title": "Titel",
     "description": "Beschreibung",

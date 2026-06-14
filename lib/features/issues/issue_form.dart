@@ -8,10 +8,11 @@ import '../../core/i18n/i18n.dart';
 import '../../core/models/work_models.dart';
 import '../../core/theme/app_colors.dart';
 
-/// Responsive create/edit issue form: bottom sheet on phones, dialog on
-/// larger screens (wolt_modal_sheet decides by width).
+/// Responsive *create* issue form: bottom sheet on phones, dialog on larger
+/// screens (wolt_modal_sheet decides by width). Editing happens inline in the
+/// issue detail view, so this form is create-only.
 Future<Issue?> showIssueForm(BuildContext context,
-    {Issue? existing, String? projectId, String? initialState}) {
+    {String? projectId, String? initialState}) {
   final repository = context.read<HivoraRepository>();
   return WoltModalSheet.show<Issue?>(
     context: context,
@@ -22,9 +23,7 @@ Future<Issue?> showIssueForm(BuildContext context,
         child: RepositoryProvider.value(
           value: repository,
           child: _IssueFormBody(
-              existing: existing,
-              projectId: projectId,
-              initialState: initialState),
+              projectId: projectId, initialState: initialState),
         ),
       ),
     ],
@@ -32,9 +31,8 @@ Future<Issue?> showIssueForm(BuildContext context,
 }
 
 class _IssueFormBody extends StatefulWidget {
-  const _IssueFormBody({this.existing, this.projectId, this.initialState});
+  const _IssueFormBody({this.projectId, this.initialState});
 
-  final Issue? existing;
   final String? projectId;
   final String? initialState;
 
@@ -44,9 +42,8 @@ class _IssueFormBody extends StatefulWidget {
 
 class _IssueFormBodyState extends State<_IssueFormBody> {
   final _formKey = GlobalKey<FormState>();
-  late final _title = TextEditingController(text: widget.existing?.title);
-  late final _description =
-      TextEditingController(text: widget.existing?.description);
+  final _title = TextEditingController();
+  final _description = TextEditingController();
   List<Project> _projects = const [];
   String? _projectId;
   String _type = 'TASK';
@@ -60,9 +57,7 @@ class _IssueFormBodyState extends State<_IssueFormBody> {
   @override
   void initState() {
     super.initState();
-    _projectId = widget.existing?.projectId ?? widget.projectId;
-    _type = widget.existing?.type ?? 'TASK';
-    _priority = widget.existing?.priority ?? 'NORMAL';
+    _projectId = widget.projectId;
     _loadProjects();
   }
 
@@ -88,7 +83,6 @@ class _IssueFormBodyState extends State<_IssueFormBody> {
 
   @override
   Widget build(BuildContext context) {
-    final isEdit = widget.existing != null;
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
       child: Form(
@@ -98,29 +92,28 @@ class _IssueFormBodyState extends State<_IssueFormBody> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              context.t(isEdit ? 'issues.edit' : 'issues.new'),
+              context.t('issues.new'),
               style: Theme.of(context)
                   .textTheme
                   .titleLarge
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 20),
-            if (!isEdit)
-              DropdownButtonFormField<String>(
-                initialValue: _projectId,
-                decoration: InputDecoration(labelText: context.t('issues.project')),
-                items: [
-                  for (final project in _projects)
-                    DropdownMenuItem(
-                      value: project.id,
-                      child: Text('${project.key} – ${project.name}',
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                ],
-                onChanged: (value) => setState(() => _projectId = value),
-                validator: (value) =>
-                    value == null ? context.t('errors.required') : null,
-              ),
+            DropdownButtonFormField<String>(
+              initialValue: _projectId,
+              decoration: InputDecoration(labelText: context.t('issues.project')),
+              items: [
+                for (final project in _projects)
+                  DropdownMenuItem(
+                    value: project.id,
+                    child: Text('${project.key} – ${project.name}',
+                        overflow: TextOverflow.ellipsis),
+                  ),
+              ],
+              onChanged: (value) => setState(() => _projectId = value),
+              validator: (value) =>
+                  value == null ? context.t('errors.required') : null,
+            ),
             const SizedBox(height: 14),
             TextFormField(
               controller: _title,
@@ -207,24 +200,14 @@ class _IssueFormBodyState extends State<_IssueFormBody> {
     });
     final repository = context.read<HivoraRepository>();
     try {
-      final Issue result;
-      if (widget.existing != null) {
-        result = await repository.updateIssue(widget.existing!.id, {
-          'title': _title.text.trim(),
-          'description': _description.text,
-          'type': _type,
-          'priority': _priority,
-        });
-      } else {
-        result = await repository.createIssue({
-          'projectId': _projectId,
-          'title': _title.text.trim(),
-          'description': _description.text,
-          'type': _type,
-          'priority': _priority,
-          if (widget.initialState != null) 'state': widget.initialState,
-        });
-      }
+      final result = await repository.createIssue({
+        'projectId': _projectId,
+        'title': _title.text.trim(),
+        'description': _description.text,
+        'type': _type,
+        'priority': _priority,
+        if (widget.initialState != null) 'state': widget.initialState,
+      });
       if (mounted) Navigator.of(context).pop(result);
     } on ApiFailure catch (failure) {
       if (mounted) {
