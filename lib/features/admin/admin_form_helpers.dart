@@ -202,7 +202,6 @@ class AdminToggle extends StatelessWidget {
                     fontSize: 12, color: AppColors.inkSoft))
             : null,
         value: value,
-        activeTrackColor: AppColors.navy,
         onChanged: onChanged,
       ),
     );
@@ -259,7 +258,6 @@ class _ProviderTileState extends State<ProviderTile> {
             children: [
               Switch(
                 value: enabled,
-                activeTrackColor: AppColors.navy,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 onChanged: (value) {
                   setState(() => widget.section['enabled'] = value);

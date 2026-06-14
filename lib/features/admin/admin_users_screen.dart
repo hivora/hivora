@@ -774,7 +774,6 @@ class _CreateUserFormState extends State<_CreateUserForm> {
               contentPadding: EdgeInsets.zero,
               title: Text(context.t('admin.isAdmin')),
               value: _admin,
-              activeTrackColor: AppColors.navy,
               onChanged: (v) => setState(() => _admin = v),
             ),
             if (_error != null)

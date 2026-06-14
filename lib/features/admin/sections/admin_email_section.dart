@@ -67,8 +67,6 @@ class _AdminEmailSectionState extends State<AdminEmailSection> {
                       title: Text(context.t('admin.smtpStartTls'),
                           style: const TextStyle(fontSize: 13)),
                       value: (_smtp['starttls'] as bool?) ?? true,
-                      activeTrackColor:
-                          const Color(0xFF2D2B55),
                       onChanged: (v) =>
                           setState(() => _smtp['starttls'] = v),
                     ),

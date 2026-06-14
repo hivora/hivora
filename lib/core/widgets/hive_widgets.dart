@@ -448,8 +448,8 @@ class PrimaryButton extends StatelessWidget {
     return FilledButton.icon(
       onPressed: onPressed,
       style: FilledButton.styleFrom(
-        backgroundColor: AppColors.navy,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.accent,
+        foregroundColor: const Color(0xFF2A2410),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         shape: RoundedRectangleBorder(

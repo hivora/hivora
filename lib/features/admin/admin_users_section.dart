@@ -248,7 +248,6 @@ class _CreateUserBodyState extends State<_CreateUserBody> {
               contentPadding: EdgeInsets.zero,
               title: Text(context.t('admin.isAdmin')),
               value: _admin,
-              activeTrackColor: AppColors.navy,
               onChanged: (value) => setState(() => _admin = value),
             ),
             if (_error != null)
