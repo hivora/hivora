@@ -26,6 +26,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final _password = TextEditingController();
   List<SsoProvider> _providers = const [];
 
+  /// Id of the SSO provider currently launching, or null. Drives the per-button
+  /// loader; combined with [AuthStatus.authenticating] it disables every button
+  /// so no second login can start while one is in flight.
+  String? _launchingSsoId;
+
   @override
   void initState() {
     super.initState();
@@ -83,7 +88,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   }
                 },
                 builder: (context, state) {
-                  final busy = state.status == AuthStatus.authenticating;
+                  final passwordBusy =
+                      state.status == AuthStatus.authenticating;
+                  // While any login is in flight every button is disabled, so a
+                  // second flow can't start on top of the first.
+                  final busy = passwordBusy || _launchingSsoId != null;
                   return SoftCard(
                     padding: const EdgeInsets.all(32),
                     child: Form(
@@ -137,12 +146,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 24),
                           FilledButton(
                             onPressed: busy ? null : _submit,
-                            child: busy
+                            child: passwordBusy
                                 ? const SizedBox(
                                     width: 22,
                                     height: 22,
                                     child: HiveLoader(
-                                        strokeWidth: 2, color: Colors.white),
+                                        size: 22,
+                                        strokeWidth: 2,
+                                        color: Colors.white),
                                   )
                                 : Text(context.t('auth.signIn')),
                           ),
@@ -170,9 +181,19 @@ class _LoginScreenState extends State<LoginScreen> {
                                 child: OutlinedButton.icon(
                                   onPressed:
                                       busy ? null : () => _launchSso(provider),
-                                  icon: const Icon(Icons.shield_rounded, size: 18),
-                                  label: Text(context.t('auth.continueWith',
-                                      variables: {'provider': provider.displayName})),
+                                  icon: _launchingSsoId == provider.id
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: HiveLoader(
+                                              size: 18, strokeWidth: 2),
+                                        )
+                                      : const Icon(Icons.shield_rounded,
+                                          size: 18),
+                                  label: _launchingSsoId == provider.id
+                                      ? Text(context.t('auth.signingIn'))
+                                      : Text(context.t('auth.continueWith',
+                                          variables: {'provider': provider.displayName})),
                                 ),
                               ),
                           ],
@@ -200,17 +221,38 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _launchSso(SsoProvider provider) async {
     final serverUrl = context.read<AuthBloc>().storage.serverUrl ?? '';
     var uri = Uri.parse('$serverUrl${provider.loginUrl}');
-    if (kIsWeb) {
-      // Web: tell the server where to return; the whole flow stays in this
-      // tab and ends at <origin>/#/auth-callback with the token pair.
-      uri = uri.replace(queryParameters: {
-        ...uri.queryParameters,
-        'return': Uri.base.origin,
-      });
-      await launchUrl(uri, webOnlyWindowName: '_self');
-      return;
+    setState(() => _launchingSsoId = provider.id);
+    try {
+      // Let the disabled/loading state actually reach the screen before we
+      // hand the tab to the browser. On web `launchUrl('_self')` changes
+      // window.location synchronously and tears this page down; a single
+      // endOfFrame fires before the rasterized frame is composited, so the
+      // loader was being skipped. A short delay lets the browser paint a few
+      // frames (loader visible, buttons disabled) first.
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      if (!mounted) return;
+      if (kIsWeb) {
+        // Web: tell the server where to return; the whole flow stays in this
+        // tab and ends at <origin>/#/auth-callback with the token pair.
+        uri = uri.replace(queryParameters: {
+          ...uri.queryParameters,
+          'return': Uri.base.origin,
+        });
+        await launchUrl(uri, webOnlyWindowName: '_self');
+        // The tab is on its way to the SSO provider and the flow finishes by
+        // redirecting back. Keep the buttons disabled — re-enabling them lets
+        // the user start a second login while this one completes in the
+        // background, which is exactly the bug we're fixing.
+        return;
+      }
+      // Native: the server redirects back via hivora://auth-callback.
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      // The external browser took over; restore the buttons so the user can
+      // retry if they return without completing the login.
+      if (mounted) setState(() => _launchingSsoId = null);
+    } catch (_) {
+      // Launch failed before the redirect — restore the buttons to try again.
+      if (mounted) setState(() => _launchingSsoId = null);
     }
-    // Native: the server redirects back via hivora://auth-callback.
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }
