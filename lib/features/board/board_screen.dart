@@ -14,6 +14,7 @@ import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
 import '../issues/issue_detail_sheet.dart';
 import '../issues/issue_form.dart';
+import '../shell/page_chrome.dart';
 
 // ─────────────────────────── BoardScreen ──────────────────────────────────
 // Shown at /board — lists all boards across projects; can filter by project.
@@ -305,7 +306,11 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
     final activeSprint = _sprintId != null
         ? view.sprints.where((s) => s.id == _sprintId).firstOrNull
         : view.sprints.firstOrNull;
-    return Column(
+    // Back navigation is handled by the shell app bar (via PageChrome), which
+    // also shows the board name as the title.
+    return PageChrome(
+      title: view.board.name,
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -314,14 +319,6 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
           child: PageHead(
             title: view.board.name,
             subtitle: context.t('board.agileBoard'),
-            actions: [
-              GhostButton(
-                icon: Icons.arrow_back_rounded,
-                label: context.t('board.boards'),
-                onPressed: () =>
-                    context.canPop() ? context.pop() : context.go('/board'),
-              ),
-            ],
           ),
         ),
         // sprint chip + sprint selector
@@ -368,6 +365,7 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
           ),
         ),
       ],
+      ),
     );
   }
 }

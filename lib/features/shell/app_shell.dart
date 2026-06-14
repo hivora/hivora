@@ -16,6 +16,9 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hex_mark.dart';
 import '../../core/widgets/honeycomb_background.dart';
 import '../../core/widgets/app_avatar.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
+    show GlassBottomBar, GlassBottomBarTab;
+import 'page_chrome.dart';
 
 class _Destination {
   const _Destination(this.route, this.labelKey, this.icon);
@@ -49,19 +52,83 @@ const _bottomTabs = [
 /// Responsive scaffold:
 /// • phone/compact (<987): Liquid-Glass floating bottom nav
 /// • desktop/wide (≥987): persistent dark Navy rail on the left
-class AppShell extends StatelessWidget {
+class AppShell extends StatefulWidget {
   const AppShell({super.key, required this.location, required this.child});
 
   final String location;
   final Widget child;
 
   @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  // One controller per shell: sub-pages publish their title / back behaviour to
+  // it (via [PageChrome]) and the top bars listen so they can render a back
+  // button + the real page title instead of the brand mark.
+  final _chrome = PageChromeController();
+
+  @override
+  void dispose() {
+    _chrome.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ResponsiveBuilder(
-      builder: (context, size) => size == LayoutSize.compact
-          ? _CompactShell(location: location, child: child)
-          : _WideShell(location: location, child: child),
+    return PageChromeScope(
+      controller: _chrome,
+      child: ResponsiveBuilder(
+        builder: (context, size) => size == LayoutSize.compact
+            ? _CompactShell(location: widget.location, child: widget.child)
+            : _WideShell(location: widget.location, child: widget.child),
+      ),
     );
+  }
+}
+
+// ─────────────────────────── Sub-page chrome ──────────────────────────────
+// A "sub-page" is any route that isn't a primary nav destination — its top bar
+// shows a back button + the page's own title instead of the brand mark + the
+// nav-derived breadcrumb. The i18n key here is only a fallback; pages with a
+// dynamic title (an issue, an article, a board…) override it through
+// [PageChrome].
+
+/// Fallback title key for a sub-page route, or null if [location] is a primary
+/// nav destination (dashboard, projects, issues, board, …).
+String? _subPageTitleKey(String location) {
+  if (location == '/admin') return 'admin.title';
+  if (location.startsWith('/admin/users')) return 'admin.users';
+  if (location == '/notifications') return 'nav.notifications';
+  if (location == '/settings') return 'nav.settings';
+  if (location.startsWith('/issues/')) return 'nav.issues';
+  if (location.startsWith('/knowledge/')) return 'nav.knowledge';
+  if (location.startsWith('/boards/')) return 'nav.board';
+  if (location.startsWith('/projects/')) return 'board.boards';
+  return null;
+}
+
+/// Parent route to fall back to when a sub-page can't simply pop (e.g. opened
+/// via a deep link with nothing on the navigation stack).
+String _subPageBackRoute(String location) {
+  if (location.startsWith('/admin/users')) return '/admin';
+  if (location == '/admin') return '/settings';
+  if (location.startsWith('/issues/')) return '/issues';
+  if (location.startsWith('/knowledge/')) return '/knowledge';
+  if (location.startsWith('/boards/')) return '/board';
+  if (location.startsWith('/projects/')) return '/projects';
+  return '/dashboard';
+}
+
+/// Resolves the back action for a sub-page: a page-supplied [override] wins,
+/// otherwise pop the stack, otherwise jump to the parent route.
+void _handleBack(BuildContext context, String location, VoidCallback? override) {
+  if (override != null) {
+    override();
+  } else if (context.canPop()) {
+    context.pop();
+  } else {
+    context.go(_subPageBackRoute(location));
   }
 }
 
@@ -503,11 +570,25 @@ class _HivoraTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final all = [..._primary, ..._secondary];
-    final current = all.firstWhere(
-      (d) => _isActive(location, d.route),
-      orElse: () => const _Destination('/', 'nav.dashboard', Icons.home_rounded),
-    );
+    // Sub-page → back button + the page's own title; primary nav page → the
+    // workspace breadcrumb.
+    final subKey = _subPageTitleKey(location);
+    final String titleText;
+    VoidCallback? onBack;
+    if (subKey != null) {
+      final chrome = PageChromeScope.of(context);
+      titleText = chrome.titleFor(location) ?? context.t(subKey);
+      final override = chrome.onBackFor(location);
+      onBack = () => _handleBack(context, location, override);
+    } else {
+      final all = [..._primary, ..._secondary];
+      final current = all.firstWhere(
+        (d) => _isActive(location, d.route),
+        orElse: () =>
+            const _Destination('/', 'nav.dashboard', Icons.home_rounded),
+      );
+      titleText = context.t(current.labelKey);
+    }
     final segStyle = TextStyle(fontSize: 13, color: AppColors.inkSoft);
     final curStyle = TextStyle(
         fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink);
@@ -530,29 +611,46 @@ class _HivoraTopBar extends StatelessWidget {
               ],
               // Breadcrumb zone. A single Expanded absorbs all free space (so the
               // search + actions sit flush right) and shrinks/ellipsises under
-              // pressure (so nothing overflows on narrow widths). On compact only
-              // the current page label shows.
-              Expanded(
-                child: Row(
-                  children: [
-                    if (!compact) ...[
-                      Text(context.t('appbar.workspace'), style: segStyle),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8),
-                        child: Icon(Icons.chevron_right_rounded,
-                            size: 16, color: AppColors.inkFaint),
+              // pressure (so nothing overflows on narrow widths). On a sub-page
+              // it becomes a back button + the page title.
+              if (onBack != null) ...[
+                IconButton(
+                  onPressed: onBack,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  icon: Icon(Icons.arrow_back_rounded,
+                      size: 20, color: AppColors.inkSoft),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    titleText,
+                    style: curStyle,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ] else
+                Expanded(
+                  child: Row(
+                    children: [
+                      if (!compact) ...[
+                        Text(context.t('appbar.workspace'), style: segStyle),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Icon(Icons.chevron_right_rounded,
+                              size: 16, color: AppColors.inkFaint),
+                        ),
+                      ],
+                      Flexible(
+                        child: Text(
+                          titleText,
+                          style: curStyle,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
-                    Flexible(
-                      child: Text(
-                        context.t(current.labelKey),
-                        style: curStyle,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
               const SizedBox(width: 16),
               _TopSearchField(compact: compact),
               const SizedBox(width: 8),
@@ -1190,6 +1288,7 @@ class _CompactShellState extends State<_CompactShell> {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: AppColors.canvas,
       // Content fills the whole screen and scrolls *behind* the translucent
@@ -1203,8 +1302,9 @@ class _CompactShellState extends State<_CompactShell> {
               final mq = MediaQuery.of(context);
               // Glass app bar: status-bar inset + bar content height.
               final topFootprint = _kCompactBarHeight + mq.viewPadding.top;
-              // Floating nav: container(64) + padding-bottom(14) + safe-area.
-              final navFootprint = 78 + mq.viewPadding.bottom;
+              // Floating nav: GlassBottomBar barHeight(64) + verticalPadding
+              // (8 top + 8 bottom) + device safe-area.
+              final navFootprint = 80 + mq.viewPadding.bottom;
               return MediaQuery(
                 data: mq.copyWith(
                   padding: mq.padding.copyWith(
@@ -1234,13 +1334,35 @@ class _CompactShellState extends State<_CompactShell> {
             bottom: 0,
             child: IgnorePointer(child: _BottomNavScrim()),
           ),
-          // Floating liquid-glass nav — NOT in bottomNavigationBar, so its
-          // rounded corners and BackdropFilter are never clipped.
+          // Floating liquid-glass nav (package GlassBottomBar). Kept in the
+          // Stack (not Scaffold.bottomNavigationBar) so it floats over the
+          // content it refracts; SafeArea lifts it above the home indicator.
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: _LiquidGlassNav(index: _selectedIndex, onTap: _onTap),
+            child: SafeArea(
+              top: false,
+              child: GlassBottomBar(
+                horizontalPadding: 14,
+                verticalPadding: 8,
+                selectedIndex: _selectedIndex,
+                onTabSelected: _onTap,
+                // Honey-amber indicator (translucent so the glass shows through).
+                indicatorColor: AppColors.accent
+                    .withValues(alpha: dark ? 0.30 : 0.22),
+                selectedIconColor:
+                    dark ? AppColors.accent : AppColors.accentStrong,
+                unselectedIconColor: AppColors.inkSoft,
+                tabs: [
+                  for (final d in _bottomTabs)
+                    GlassBottomBarTab(
+                      icon: Icon(d.icon),
+                      label: context.t(d.labelKey),
+                    ),
+                ],
+              ),
+            ),
           ),
           // Transparent glass app bar with a top-down scrim — overlays content.
           Positioned(
@@ -1269,12 +1391,26 @@ class _GlassTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final topInset = MediaQuery.viewPaddingOf(context).top;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final all = [..._primary, ..._secondary];
-    final current = all.firstWhere(
-      (d) => _isActive(location, d.route),
-      orElse: () =>
-          const _Destination('/', 'nav.dashboard', Icons.home_rounded),
-    );
+
+    // Sub-page → back button + the page's own title; primary nav page → brand
+    // mark + the nav-derived title.
+    final subKey = _subPageTitleKey(location);
+    final String titleText;
+    VoidCallback? onBack;
+    if (subKey != null) {
+      final chrome = PageChromeScope.of(context);
+      titleText = chrome.titleFor(location) ?? context.t(subKey);
+      final override = chrome.onBackFor(location);
+      onBack = () => _handleBack(context, location, override);
+    } else {
+      final all = [..._primary, ..._secondary];
+      final current = all.firstWhere(
+        (d) => _isActive(location, d.route),
+        orElse: () =>
+            const _Destination('/', 'nav.dashboard', Icons.home_rounded),
+      );
+      titleText = context.t(current.labelKey);
+    }
     // Black scrim, strongest under the status bar, fading to nothing at the
     // bar's lower edge. Subtle in light (keeps dark status-bar icons legible),
     // stronger in dark.
@@ -1323,7 +1459,7 @@ class _GlassTopBar extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 136),
                     child: Text(
-                      context.t(current.labelKey),
+                      titleText,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
@@ -1337,13 +1473,18 @@ class _GlassTopBar extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Brand mark, left.
+                // Left: back button on sub-pages, brand mark on primary pages.
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 16),
-                    child: HexMark(size: 24, color: AppColors.accent),
-                  ),
+                  child: onBack != null
+                      ? Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: _GlassBackButton(onTap: onBack),
+                        )
+                      : const Padding(
+                          padding: EdgeInsets.only(left: 16),
+                          child: HexMark(size: 24, color: AppColors.accent),
+                        ),
                 ),
                 // Action capsule, right.
                 Align(
@@ -1357,6 +1498,35 @@ class _GlassTopBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Circular ghost back button shown on the left of the glass app bar for
+/// sub-pages (replacing the brand mark).
+class _GlassBackButton extends StatelessWidget {
+  const _GlassBackButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: MaterialLocalizations.of(context).backButtonTooltip,
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            width: 40,
+            height: 40,
+            child: Icon(Icons.arrow_back_rounded,
+                size: 22, color: AppColors.ink),
+          ),
+        ),
       ),
     );
   }
@@ -1481,176 +1651,6 @@ class _BottomNavScrim extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _LiquidGlassNav extends StatelessWidget {
-  const _LiquidGlassNav({required this.index, required this.onTap});
-
-  final int index;
-  final ValueChanged<int> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final pad = MediaQuery.viewPaddingOf(context).bottom;
-    final reducedMotion = MediaQuery.disableAnimationsOf(context);
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    // Frosted glass: a bright specular top easing into a thinner film at the
-    // bottom — the liquid-glass body, over the blurred content (light or dark).
-    final fill = dark
-        ? const [Color(0x40FFFFFF), Color(0x1AFFFFFF), Color(0x0FFFFFFF)]
-        : const [Color(0xA6FFFFFF), Color(0x66FFFFFF), Color(0x4DFFFFFF)];
-    final borderColor = dark ? const Color(0x40FFFFFF) : const Color(0x8AFFFFFF);
-    final shadowColor = dark ? const Color(0x73000000) : const Color(0x332D2B55);
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(14, 0, 14, 14 + pad),
-      // Shadow lives OUTSIDE ClipRRect so it is never clipped away.
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(26),
-          boxShadow: [
-            BoxShadow(
-              color: shadowColor,
-              blurRadius: 30,
-              spreadRadius: -4,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(26),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-            child: Container(
-              height: 64,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: fill,
-                  stops: const [0.0, 0.55, 1.0],
-                ),
-                border: Border.all(color: borderColor, width: 1),
-              ),
-              child: LayoutBuilder(builder: (context, c) {
-                final tabW = c.maxWidth / _bottomTabs.length;
-                return Stack(
-                  children: [
-                    // Specular rim: a thin bright highlight hugging the top edge.
-                    Positioned(
-                      top: 0,
-                      left: 14,
-                      right: 14,
-                      height: 1,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.white.withValues(alpha: 0),
-                              Colors.white.withValues(alpha: dark ? 0.45 : 0.85),
-                              Colors.white.withValues(alpha: 0),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    AnimatedPositioned(
-                      duration: reducedMotion
-                          ? Duration.zero
-                          : const Duration(milliseconds: 500),
-                      curve: const Cubic(0.5, 1.5, 0.4, 1),
-                      left: index * tabW,
-                      width: tabW,
-                      top: 0,
-                      bottom: 0,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 5),
-                        decoration: BoxDecoration(
-                          // Honey-amber active indicator (kept per request).
-                          color: AppColors.accentSoft,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: AppColors.accent
-                                .withValues(alpha: dark ? 0.50 : 0.32),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.accent
-                                  .withValues(alpha: dark ? 0.28 : 0.18),
-                              blurRadius: 12,
-                              spreadRadius: -2,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        for (var i = 0; i < _bottomTabs.length; i++)
-                          Expanded(
-                            child: _GlassTab(
-                              data: _bottomTabs[i],
-                              active: i == index,
-                              onTap: () => onTap(i),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                );
-              }),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassTab extends StatelessWidget {
-  const _GlassTab(
-      {required this.data, required this.active, required this.onTap});
-
-  final _Destination data;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    // Honey-amber active accent (brighter on dark for contrast); muted ink idle.
-    final color = active
-        ? (dark ? AppColors.accent : AppColors.accentStrong)
-        : AppColors.inkSoft;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedScale(
-            duration: const Duration(milliseconds: 400),
-            scale: active ? 1.06 : 1.0,
-            child: Icon(data.icon, size: 22, color: color),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            context.t(data.labelKey),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-        ],
       ),
     );
   }

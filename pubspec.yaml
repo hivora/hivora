@@ -38,6 +38,10 @@ dependencies:
   wolt_modal_sheet: ^0.11.0
   fl_chart: ^1.1.1
 
+  # Liquid Glass UI (vendored source under packages/ — full control, MIT)
+  liquid_glass_widgets:
+    path: packages/liquid_glass_widgets
+
   # Reporting / export
   pdf: ^3.11.0
   printing: ^5.13.0

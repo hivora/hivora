@@ -12,6 +12,7 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/soft_card.dart';
 import '../../core/widgets/status_widgets.dart';
+import '../shell/page_chrome.dart';
 
 /// Lists all boards for a single project and allows creating new ones.
 class ProjectBoardsScreen extends StatefulWidget {
@@ -68,7 +69,11 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
+    return PageChrome(
+      title: widget.projectName.isNotEmpty
+          ? widget.projectName
+          : context.t('board.boards'),
+      child: BlocProvider.value(
       value: _cubit,
       child: BlocBuilder<FetchCubit<List<AgileBoard>>, FetchState<List<AgileBoard>>>(
         builder: (context, state) {
@@ -84,16 +89,6 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
                   sliver: SliverToBoxAdapter(
                     child: Row(
                       children: [
-                        InkWell(
-                          onTap: () => context.pop(),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Padding(
-                            padding: EdgeInsets.all(4),
-                            child: Icon(Icons.arrow_back_rounded,
-                                size: 20, color: AppColors.inkSoft),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,6 +203,7 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
             ),
           );
         },
+      ),
       ),
     );
   }

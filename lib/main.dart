@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'app.dart';
@@ -17,6 +18,12 @@ Future<void> main() async {
         : HydratedStorageDirectory(
             (await getApplicationDocumentsDirectory()).path),
   );
+
+  // Pre-warm the liquid-glass shaders so the first frame of the bottom nav
+  // doesn't flash. Guarded: a failure here must never block app startup.
+  try {
+    await LiquidGlassWidgets.initialize(enablePerformanceMonitor: false);
+  } catch (_) {}
 
   final storage = await AppStorage.create();
   final apiClient = ApiClient(storage);

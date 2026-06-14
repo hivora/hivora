@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/api/hivora_repository.dart';
 import '../../core/blocs/fetch_cubit.dart';
@@ -10,6 +9,7 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/soft_card.dart';
 import '../../core/widgets/status_widgets.dart';
+import '../shell/page_chrome.dart';
 import 'article_editor.dart';
 
 class ArticleScreen extends StatefulWidget {
@@ -51,19 +51,16 @@ class _ArticleScreenState extends State<ArticleScreen> {
             onRetry: _cubit.load,
             builder: (context) {
               final article = state.data!;
-              return SingleChildScrollView(
+              // Back + title are provided by the shell app bar (via PageChrome).
+              return PageChrome(
+                title: article.title,
+                child: SingleChildScrollView(
                 padding: context.pagePadding,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Row(
                       children: [
-                        IconButton(
-                          onPressed: () => context.canPop()
-                              ? context.pop()
-                              : context.go('/knowledge'),
-                          icon: const Icon(Icons.arrow_back_rounded),
-                        ),
                         const Spacer(),
                         IconButton(
                           tooltip: context.t('common.edit'),
@@ -111,6 +108,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
                     ),
                   ],
                 ),
+              ),
               );
             },
           );

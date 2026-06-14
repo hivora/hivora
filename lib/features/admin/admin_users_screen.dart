@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
 import '../../core/api/api_client.dart';
@@ -10,6 +9,7 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_avatar.dart';
+import '../shell/page_chrome.dart';
 
 // ─────────────────────────── User filter ─────────────────────────────────
 
@@ -121,12 +121,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    // Back + title are provided by the shell app bar (via PageChrome).
+    return PageChrome(
+      title: context.t('admin.users'),
+      child: Column(
       children: [
         // ── Header bar ──────────────────────────────────────────
         Container(
-          padding: EdgeInsets.symmetric(
-              horizontal: context.pageGutter, vertical: 12),
+          padding: EdgeInsets.fromLTRB(context.pageGutter,
+              12 + context.topGutter, context.pageGutter, 12),
           decoration: BoxDecoration(
             color: AppColors.surface,
             border:
@@ -134,16 +137,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           ),
           child: Row(
             children: [
-              InkWell(
-                onTap: () => context.pop(),
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(Icons.arrow_back_rounded,
-                      size: 20, color: AppColors.inkSoft),
-                ),
-              ),
-              const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -289,6 +282,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         ),
         ),
       ],
+      ),
     );
   }
 

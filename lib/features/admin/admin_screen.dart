@@ -8,6 +8,7 @@ import '../../core/i18n/i18n.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../shell/page_chrome.dart';
 import 'admin_sso_section.dart';
 import 'sections/admin_email_section.dart';
 import 'sections/admin_general_section.dart';
@@ -148,34 +149,58 @@ class _AdminScreenState extends State<AdminScreen> {
     return ResponsiveBuilder(
       builder: (context, size) {
         if (size == LayoutSize.compact) {
-          // Mobile: list ↔ detail in-app navigation
+          // Mobile: list ↔ detail in-app navigation. Both steps live on the
+          // same /admin route, so the shell's back button is wired through
+          // PageChrome: in the detail it returns to the list, in the list it
+          // pops back to where admin was opened from.
           final current = _mobileSection;
           if (current != null) {
-            return _MobileDetailView(
-              section: current,
-              settings: settings,
-              saving: _saving,
-              onSave: _save,
+            return PageChrome(
+              title: context.t(_sectionTitleKey(current)),
               onBack: () => setState(() => _mobileSection = null),
+              child: _MobileDetailView(
+                section: current,
+                settings: settings,
+                saving: _saving,
+                onSave: _save,
+              ),
             );
           }
-          return _MobileListView(
-            onSelect: (sec) => _selectSection(sec, mobile: true),
+          return PageChrome(
+            title: context.t('admin.title'),
+            child: _MobileListView(
+              onSelect: (sec) => _selectSection(sec, mobile: true),
+            ),
           );
         }
 
         // Desktop / tablet: split panel
-        return _WideAdminShell(
-          section: _desktopSection,
-          settings: settings,
-          saving: _saving,
-          onSectionChanged: (s) => _selectSection(s, mobile: false),
-          onSave: _save,
+        return PageChrome(
+          title: context.t('admin.title'),
+          child: _WideAdminShell(
+            section: _desktopSection,
+            settings: settings,
+            saving: _saving,
+            onSectionChanged: (s) => _selectSection(s, mobile: false),
+            onSave: _save,
+          ),
         );
       },
     );
   }
 }
+
+/// i18n key for an admin section's title (shared by the shell app bar and the
+/// in-pane section header).
+String _sectionTitleKey(_AdminSection section) => switch (section) {
+      _AdminSection.general => 'admin.general',
+      _AdminSection.authentication => 'admin.authentication',
+      _AdminSection.email => 'admin.email',
+      _AdminSection.notifications => 'admin.pushNotifications',
+      _AdminSection.security => 'admin.security',
+      _AdminSection.auditLog => 'admin.auditLog',
+      _AdminSection.users => 'admin.users',
+    };
 
 // ─────────────────────────── Mobile: list view ───────────────────────────
 
@@ -329,88 +354,58 @@ class _MobileDetailView extends StatelessWidget {
     required this.settings,
     required this.saving,
     required this.onSave,
-    required this.onBack,
   });
 
   final _AdminSection section;
   final Map<String, dynamic> settings;
   final bool saving;
   final VoidCallback onSave;
-  final VoidCallback onBack;
-
-  String _title(BuildContext context) => switch (section) {
-        _AdminSection.general => context.t('admin.general'),
-        _AdminSection.authentication => context.t('admin.authentication'),
-        _AdminSection.email => context.t('admin.email'),
-        _AdminSection.notifications => context.t('admin.pushNotifications'),
-        _AdminSection.security => context.t('admin.security'),
-        _AdminSection.auditLog => context.t('admin.auditLog'),
-        _AdminSection.users => context.t('admin.users'),
-      };
 
   bool get _hasSave => section != _AdminSection.auditLog;
 
   @override
   Widget build(BuildContext context) {
+    // Back + title come from the shell app bar (via PageChrome); this slim bar
+    // — cleared of the glass bar by topGutter — carries only the Save action.
     return Column(
       children: [
-        // ── Top bar ──────────────────────────────────────────────
-        Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            border:
-                Border(bottom: BorderSide(color: AppColors.hairline)),
+        if (_hasSave)
+          Container(
+            height: 52,
+            margin: EdgeInsets.only(top: context.topGutter),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            alignment: Alignment.centerRight,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              border: Border(bottom: BorderSide(color: AppColors.hairline)),
+            ),
+            child: saving
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppColors.navy),
+                    ),
+                  )
+                : TextButton.icon(
+                    onPressed: onSave,
+                    icon: const Icon(Icons.save_rounded, size: 16),
+                    label: Text(context.t('common.save')),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.navy,
+                      textStyle: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                  ),
           ),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: onBack,
-                icon: Icon(Icons.arrow_back_rounded,
-                    size: 20, color: AppColors.inkSoft),
-                tooltip: context.t('admin.title'),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  _title(context),
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                      color: AppColors.ink),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (_hasSave)
-                saving
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.navy),
-                        ),
-                      )
-                    : TextButton.icon(
-                        onPressed: onSave,
-                        icon: const Icon(Icons.save_rounded, size: 16),
-                        label: Text(context.t('common.save')),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.navy,
-                          textStyle: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13),
-                        ),
-                      ),
-            ],
-          ),
-        ),
         // ── Scrollable content ───────────────────────────────────
         Expanded(
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + context.bottomGutter),
+            padding: EdgeInsets.fromLTRB(
+                16, _hasSave ? 16 : 16 + context.topGutter, 16,
+                16 + context.bottomGutter),
             child: _sectionBody(section),
           ),
         ),
