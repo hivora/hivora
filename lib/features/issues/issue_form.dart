@@ -61,9 +61,12 @@ Future<Issue?> showIssueForm(BuildContext context,
               fontSize: 16,
               fontWeight: FontWeight.w700),
         ),
-        trailingNavBarWidget: IconButton(
-          onPressed: () => Navigator.of(modalContext).maybePop(),
-          icon: Icon(Icons.close_rounded, color: AppColors.inkSoft),
+        trailingNavBarWidget: Container(
+          margin: const EdgeInsets.only(right: 12),
+          child: IconButton(
+            onPressed: () => Navigator.of(modalContext).maybePop(),
+            icon: Icon(Icons.close_rounded, color: AppColors.inkSoft),
+          ),
         ),
         stickyActionBar: _CreateSaveBar(controller: controller),
         child: RepositoryProvider.value(

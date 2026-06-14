@@ -139,7 +139,7 @@ class _SheetActions extends StatelessWidget {
           onPressed: onClose,
           icon: Icon(Icons.close_rounded, size: 20, color: AppColors.inkSoft),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 16),
       ],
     );
   }
