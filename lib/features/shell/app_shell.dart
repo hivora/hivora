@@ -1344,8 +1344,8 @@ class _CompactShellState extends State<_CompactShell> {
             child: SafeArea(
               top: false,
               child: GlassBottomBar(
-                horizontalPadding: 14,
-                verticalPadding: 8,
+                horizontalPadding: 24,
+                verticalPadding: 16,
                 selectedIndex: _selectedIndex,
                 onTabSelected: _onTap,
                 // Honey-amber indicator (translucent so the glass shows through).
