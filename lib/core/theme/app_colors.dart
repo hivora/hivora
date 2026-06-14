@@ -74,11 +74,18 @@ abstract final class AppColors {
   static const accentBlue = stTodo;
   static const accentTeal = stDone;
 
-  static Color stateColor(String state) => switch (state) {
+  /// Maps a workflow state to its signature colour. Accepts both canonical
+  /// codes (`IN_PROGRESS`) and human/display variants (`In Progress`, `in-progress`)
+  /// by normalising case and any space/underscore/hyphen separators first — so a
+  /// column whose `states` carry display names still tints to the theme colour
+  /// instead of silently falling through to the backlog slate.
+  static Color stateColor(String state) =>
+      switch (state.toUpperCase().replaceAll(RegExp(r'[\s_-]+'), '')) {
         'TODO' => stTodo,
-        'IN_PROGRESS' => stProgress,
-        'IN_REVIEW' => stReview,
+        'INPROGRESS' => stProgress,
+        'INREVIEW' => stReview,
         'DONE' => stDone,
+        'BACKLOG' => stBacklog,
         _ => stBacklog,
       };
 

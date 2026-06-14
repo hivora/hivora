@@ -264,6 +264,11 @@ class HivoraRepository {
   Future<void> markNotificationRead(String id) =>
       _api.post('/api/v1/notifications/$id/read');
 
+  /// Marks every supplied notification id as read. The backend exposes no bulk
+  /// endpoint, so we fan the per-id calls out concurrently.
+  Future<void> markNotificationsRead(Iterable<String> ids) =>
+      Future.wait(ids.map(markNotificationRead));
+
   // --- Admin ----------------------------------------------------------------
 
   Future<Map<String, dynamic>> adminSettings() async =>

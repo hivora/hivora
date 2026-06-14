@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/api/hivora_repository.dart';
 import '../../core/blocs/auth_bloc.dart';
+import '../../core/blocs/fetch_cubit.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/models/content_models.dart';
 import '../../core/models/core_models.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
@@ -100,7 +103,7 @@ class _WideShell extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                _ContentTopBar(location: location),
+                _HivoraTopBar(location: location, compact: false),
                 Expanded(child: child),
               ],
             ),
@@ -255,20 +258,6 @@ class _NavRail extends StatelessWidget {
 
             const Spacer(),
 
-            // Footer: settings + user
-            _RailItem(
-              destination: const _Destination(
-                  '/notifications', 'nav.notifications', Icons.notifications_none_rounded),
-              selected: location.startsWith('/notifications'),
-              collapsed: collapsed,
-            ),
-            _RailItem(
-              destination: const _Destination(
-                  '/settings', 'nav.settings', Icons.settings_rounded),
-              selected: location.startsWith('/settings'),
-              collapsed: collapsed,
-            ),
-            const SizedBox(height: 8),
             if (!collapsed)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -492,11 +481,16 @@ class _RailIconButton extends StatelessWidget {
   }
 }
 
-// ─────────────────────────── Content topbar ────────────────────────────────
+// ─────────────────────────── App top bar ───────────────────────────────────
+// Shared across every screen size. Left → right: brand mark (compact only),
+// breadcrumb, global search, notification bell (with unread dot + popover),
+// settings. The bell + settings live here so they never disappear on mobile.
 
-class _ContentTopBar extends StatelessWidget {
-  const _ContentTopBar({required this.location});
+class _HivoraTopBar extends StatelessWidget {
+  const _HivoraTopBar({required this.location, required this.compact});
+
   final String location;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -505,37 +499,629 @@ class _ContentTopBar extends StatelessWidget {
       (d) => _isActive(location, d.route),
       orElse: () => const _Destination('/', 'nav.dashboard', Icons.home_rounded),
     );
-    return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+    final segStyle = const TextStyle(fontSize: 13, color: AppColors.inkSoft);
+    final curStyle = const TextStyle(
+        fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink);
+
+    return DecoratedBox(
       decoration: const BoxDecoration(
         color: AppColors.canvas,
         border: Border(bottom: BorderSide(color: AppColors.hairline)),
       ),
-      child: Row(
-        children: [
-          Text(
-            context.t(current.labelKey),
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontFamily: AppTheme.fontBrand,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+              horizontal: compact ? 16 : 28, vertical: 11),
+          child: Row(
+            children: [
+              if (compact) ...[
+                HexMark(size: 26, color: AppColors.accent),
+                const SizedBox(width: 12),
+              ],
+              // Breadcrumb zone. A single Expanded absorbs all free space (so the
+              // search + actions sit flush right) and shrinks/ellipsises under
+              // pressure (so nothing overflows on narrow widths). On compact only
+              // the current page label shows.
+              Expanded(
+                child: Row(
+                  children: [
+                    if (!compact) ...[
+                      Text(context.t('appbar.workspace'), style: segStyle),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Icon(Icons.chevron_right_rounded,
+                            size: 16, color: AppColors.inkFaint),
+                      ),
+                    ],
+                    Flexible(
+                      child: Text(
+                        context.t(current.labelKey),
+                        style: curStyle,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              const SizedBox(width: 16),
+              _TopSearchField(compact: compact),
+              const SizedBox(width: 8),
+              _NotificationBell(active: location.startsWith('/notifications')),
+              const SizedBox(width: 4),
+              _TopIconButton(
+                icon: Icons.settings_rounded,
+                tooltip: context.t('nav.settings'),
+                active: location.startsWith('/settings'),
+                onTap: () => context.go('/settings'),
+              ),
+            ],
           ),
-          const Spacer(),
-          IconButton(
-            tooltip: context.t('nav.notifications'),
-            onPressed: () => context.go('/notifications'),
-            icon: const Icon(Icons.notifications_none_rounded, size: 20),
-            color: AppColors.inkSoft,
+        ),
+      ),
+    );
+  }
+}
+
+/// Pill global-search field. Collapses to a single icon button on compact.
+class _TopSearchField extends StatelessWidget {
+  const _TopSearchField({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (compact) {
+      return _TopIconButton(
+        icon: Icons.search_rounded,
+        tooltip: context.t('appbar.search'),
+        onTap: () {},
+      );
+    }
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 300, maxHeight: 38),
+      child: Material(
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          side: const BorderSide(color: AppColors.hairline),
+        ),
+        child: InkWell(
+          onTap: () {},
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: Row(
+              children: [
+                const Icon(Icons.search_rounded,
+                    size: 16, color: AppColors.inkFaint),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    context.t('appbar.search'),
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13, color: AppColors.inkFaint),
+                  ),
+                ),
+                const SizedBox(width: 9),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceMuted,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.hairline),
+                  ),
+                  child: const Text(
+                    '⌘K',
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontMono,
+                      fontSize: 11,
+                      color: AppColors.inkFaint,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          IconButton(
-            tooltip: context.t('nav.settings'),
-            onPressed: () => context.go('/settings'),
-            icon: const Icon(Icons.settings_rounded, size: 20),
-            color: AppColors.inkSoft,
+        ),
+      ),
+    );
+  }
+}
+
+/// 38×38 ghost icon button matching the prototype's `.icon-btn`.
+class _TopIconButton extends StatelessWidget {
+  const _TopIconButton({
+    required this.icon,
+    required this.onTap,
+    this.tooltip,
+    this.active = false,
+    this.child,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String? tooltip;
+  final bool active;
+
+  /// Optional overlay (e.g. the unread dot) painted above the icon.
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = Material(
+      color: active ? AppColors.surface : Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        side: BorderSide(
+            color: active ? AppColors.hairline : Colors.transparent),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        hoverColor: AppColors.surface,
+        child: SizedBox(
+          width: 38,
+          height: 38,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Icon(icon,
+                  size: 18,
+                  color: active ? AppColors.ink : AppColors.inkSoft),
+              ?child,
+            ],
           ),
-        ],
+        ),
+      ),
+    );
+    return tooltip != null
+        ? Tooltip(message: tooltip!, child: button)
+        : button;
+  }
+}
+
+// ─────────────────────────── Notification bell + popover ──────────────────
+
+/// Bell action with an unread dot and an anchored popover listing the 10 most
+/// recent notifications. The popover footer links to the full list.
+class _NotificationBell extends StatefulWidget {
+  const _NotificationBell({required this.active});
+
+  final bool active;
+
+  @override
+  State<_NotificationBell> createState() => _NotificationBellState();
+}
+
+class _NotificationBellState extends State<_NotificationBell> {
+  final _portalController = OverlayPortalController();
+  final _link = LayerLink();
+  late final FetchCubit<List<AppNotification>> _cubit;
+  bool _open = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cubit = FetchCubit(() => context.read<HivoraRepository>().notifications())
+      ..load();
+  }
+
+  @override
+  void dispose() {
+    _cubit.close();
+    super.dispose();
+  }
+
+  void _toggle() {
+    if (_open) {
+      _close();
+    } else {
+      _cubit.load(); // refresh contents whenever the popover opens
+      setState(() => _open = true);
+      _portalController.show();
+    }
+  }
+
+  void _close() {
+    if (!_open) return;
+    setState(() => _open = false);
+    _portalController.hide();
+  }
+
+  Future<void> _markAllRead(List<AppNotification> items) async {
+    final unread = items.where((n) => !n.read).map((n) => n.id).toList();
+    if (unread.isEmpty) return;
+    try {
+      await context.read<HivoraRepository>().markNotificationsRead(unread);
+    } catch (_) {
+      // Non-critical; the reload below reflects server truth.
+    }
+    await _cubit.load();
+  }
+
+  Future<void> _openNotification(AppNotification notification) async {
+    _close();
+    final repository = context.read<HivoraRepository>();
+    if (!notification.read) {
+      try {
+        await repository.markNotificationRead(notification.id);
+      } catch (_) {}
+      _cubit.load();
+    }
+    final link = notification.link;
+    if (link != null && link.startsWith('/issues/') && mounted) {
+      context.go(link);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider.value(
+      value: _cubit,
+      child: BlocBuilder<FetchCubit<List<AppNotification>>,
+          FetchState<List<AppNotification>>>(
+        builder: (context, state) {
+          final items = state.data ?? const <AppNotification>[];
+          final hasUnread = items.any((n) => !n.read);
+          return OverlayPortal(
+            controller: _portalController,
+            overlayChildBuilder: (_) => _buildOverlay(items),
+            child: CompositedTransformTarget(
+              link: _link,
+              child: _TopIconButton(
+                icon: Icons.notifications_none_rounded,
+                tooltip: context.t('nav.notifications'),
+                active: widget.active || _open,
+                onTap: _toggle,
+                child: (hasUnread && !_open)
+                    ? const Positioned(top: 7, right: 8, child: _UnreadDot())
+                    : null,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildOverlay(List<AppNotification> items) {
+    return Stack(
+      children: [
+        // Transparent click-catcher (mirrors the prototype's z-29 backdrop).
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _close,
+          ),
+        ),
+        CompositedTransformFollower(
+          link: _link,
+          targetAnchor: Alignment.bottomRight,
+          followerAnchor: Alignment.topRight,
+          offset: const Offset(0, 8),
+          child: Align(
+            alignment: Alignment.topRight,
+            child: _NotifPopoverCard(
+              items: items,
+              onMarkAllRead: () => _markAllRead(items),
+              onTapNotification: _openNotification,
+              onViewAll: () {
+                _close();
+                context.go('/notifications');
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _UnreadDot extends StatelessWidget {
+  const _UnreadDot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 7,
+      height: 7,
+      decoration: BoxDecoration(
+        color: AppColors.accentStrong,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.canvas, width: 2),
+      ),
+    );
+  }
+}
+
+class _NotifPopoverCard extends StatelessWidget {
+  const _NotifPopoverCard({
+    required this.items,
+    required this.onMarkAllRead,
+    required this.onTapNotification,
+    required this.onViewAll,
+  });
+
+  final List<AppNotification> items;
+  final VoidCallback onMarkAllRead;
+  final void Function(AppNotification) onTapNotification;
+  final VoidCallback onViewAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final width = (media.size.width - 24).clamp(0.0, 340.0);
+    final maxListHeight = media.size.height * 0.5;
+    final latest = items.take(10).toList();
+    final hasUnread = items.any((n) => !n.read);
+
+    return _PopIn(
+      child: Container(
+        width: width,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+          border: Border.all(color: AppColors.hairline),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x222D2B55),
+              blurRadius: 28,
+              spreadRadius: -6,
+              offset: Offset(0, 12),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Material(
+          color: Colors.transparent,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 10, 14),
+                child: Row(
+                  children: [
+                    Text(
+                      context.t('notifications.title'),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                          color: AppColors.ink),
+                    ),
+                    const Spacer(),
+                    if (hasUnread)
+                      InkWell(
+                        onTap: onMarkAllRead,
+                        borderRadius: BorderRadius.circular(6),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          child: Text(
+                            context.t('notifications.markAllRead'),
+                            style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.accentStrong),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: AppColors.hairline2),
+              // List (max 10 latest)
+              if (latest.isEmpty)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 30, horizontal: 16),
+                  child: Text(
+                    context.t('notifications.empty'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: AppColors.inkSoft, fontSize: 13),
+                  ),
+                )
+              else
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: maxListHeight),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      itemCount: latest.length,
+                      separatorBuilder: (_, _) =>
+                          const Divider(height: 1, color: AppColors.hairline2),
+                      itemBuilder: (_, i) => _NotifRow(
+                        notification: latest[i],
+                        onTap: () => onTapNotification(latest[i]),
+                      ),
+                    ),
+                  ),
+                ),
+              const Divider(height: 1, color: AppColors.hairline2),
+              // Fixed footer → full notifications page
+              InkWell(
+                onTap: onViewAll,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        context.t('notifications.viewAll'),
+                        style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.inkSoft),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.arrow_forward_rounded,
+                          size: 15, color: AppColors.inkSoft),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NotifRow extends StatelessWidget {
+  const _NotifRow({required this.notification, required this.onTap});
+
+  final AppNotification notification;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final unread = !notification.read;
+    final (icon, tint) = _notifVisual(notification.type);
+    final ago = _timeAgo(notification.createdAt);
+    return Material(
+      color: unread ? AppColors.accentSoft : AppColors.surface,
+      child: InkWell(
+        onTap: onTap,
+        hoverColor: AppColors.surfaceMuted,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: AppColors.soft(tint),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Icon(icon, size: 16, color: tint),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            notification.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              height: 1.4,
+                              color: AppColors.ink,
+                              fontWeight:
+                                  unread ? FontWeight.w700 : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        if (ago != null) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            ago,
+                            style: const TextStyle(
+                                fontSize: 11, color: AppColors.inkFaint),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if ((notification.body ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        notification.body!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.inkSoft,
+                            height: 1.4),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Leading icon + tint for a notification type.
+(IconData, Color) _notifVisual(String type) => switch (type.toUpperCase()) {
+      'MENTION' => (Icons.alternate_email_rounded, AppColors.stReview),
+      'ASSIGN' ||
+      'ASSIGNED' ||
+      'ASSIGNMENT' =>
+        (Icons.assignment_ind_rounded, AppColors.stTodo),
+      'COMMENT' => (Icons.mode_comment_outlined, AppColors.stProgress),
+      'REVIEW' ||
+      'REVIEW_REQUEST' =>
+        (Icons.rate_review_rounded, AppColors.stReview),
+      'DUE' || 'DEADLINE' => (Icons.event_rounded, AppColors.priHigh),
+      _ => (Icons.notifications_rounded, AppColors.inkSoft),
+    };
+
+/// Compact relative time ("now", "8m", "2h", "3d", "5w").
+String? _timeAgo(DateTime? time) {
+  if (time == null) return null;
+  final diff = DateTime.now().difference(time);
+  if (diff.isNegative || diff.inSeconds < 60) return 'now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+  if (diff.inHours < 24) return '${diff.inHours}h';
+  if (diff.inDays < 7) return '${diff.inDays}d';
+  return '${(diff.inDays / 7).floor()}w';
+}
+
+/// Subtle scale + fade entrance for the popover (anchored top-right).
+class _PopIn extends StatefulWidget {
+  const _PopIn({required this.child});
+  final Widget child;
+
+  @override
+  State<_PopIn> createState() => _PopInState();
+}
+
+class _PopInState extends State<_PopIn> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 180),
+  )..forward();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final curve =
+        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    return FadeTransition(
+      opacity: curve,
+      child: AnimatedBuilder(
+        animation: curve,
+        child: widget.child,
+        builder: (context, child) => Transform.scale(
+          alignment: Alignment.topRight,
+          scale: 0.96 + 0.04 * curve.value,
+          child: child,
+        ),
       ),
     );
   }
@@ -594,38 +1180,49 @@ class _CompactShellState extends State<_CompactShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.canvas,
-      // Content fills the entire body and scrolls *behind* the floating glass
-      // nav — the translucent BackdropFilter blurs whatever passes underneath.
-      body: Stack(
+      body: Column(
         children: [
-          // Full-bleed content scrolls *behind* the glass nav. We inject the
-          // nav's footprint into MediaQuery.padding.bottom so screens can pad
-          // their scroll content clear of it (via context.bottomGutter) while
-          // the content still blurs through the translucent glass.
-          Positioned.fill(
-            child: Builder(builder: (context) {
-              final mq = MediaQuery.of(context);
-              // Mirrors _LiquidGlassNav: container(64) + padding-bottom(14)
-              // + device safe-area = total pixel footprint.
-              final navFootprint = 78 + mq.viewPadding.bottom;
-              return MediaQuery(
-                data: mq.copyWith(
-                  padding: mq.padding.copyWith(bottom: navFootprint),
-                  viewPadding: mq.viewPadding.copyWith(bottom: navFootprint),
+          // Fixed top bar (brand + search + notifications + settings) — its
+          // action icons stay visible on every screen size.
+          _HivoraTopBar(location: widget.location, compact: true),
+          // Content fills the rest and scrolls *behind* the floating glass nav —
+          // the translucent BackdropFilter blurs whatever passes underneath.
+          Expanded(
+            child: Stack(
+              children: [
+                // We inject the nav's footprint into MediaQuery.padding.bottom so
+                // screens can pad their scroll content clear of it (via
+                // context.bottomGutter) while the content still blurs through.
+                Positioned.fill(
+                  child: Builder(builder: (context) {
+                    final mq = MediaQuery.of(context);
+                    // Mirrors _LiquidGlassNav: container(64) + padding-bottom(14)
+                    // + device safe-area = total pixel footprint.
+                    final navFootprint = 78 + mq.viewPadding.bottom;
+                    return MediaQuery(
+                      data: mq.copyWith(
+                        padding: mq.padding.copyWith(bottom: navFootprint),
+                        viewPadding:
+                            mq.viewPadding.copyWith(bottom: navFootprint),
+                      ),
+                      // Top inset already consumed by the top bar above.
+                      child: SafeArea(
+                          top: false, bottom: false, child: widget.child),
+                    );
+                  }),
                 ),
-                child: SafeArea(bottom: false, child: widget.child),
-              );
-            }),
-          ),
-          // Glass nav floats on top — NOT in bottomNavigationBar,
-          // so its rounded corners and BackdropFilter are never clipped.
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _LiquidGlassNav(
-              index: _selectedIndex,
-              onTap: _onTap,
+                // Glass nav floats on top — NOT in bottomNavigationBar,
+                // so its rounded corners and BackdropFilter are never clipped.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: _LiquidGlassNav(
+                    index: _selectedIndex,
+                    onTap: _onTap,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -778,7 +1375,8 @@ class _MoreSheet extends StatelessWidget {
     _Destination('/reports', 'nav.reports', Icons.insights_rounded),
     _Destination('/knowledge', 'nav.knowledge', Icons.menu_book_rounded),
     _Destination('/settings', 'nav.settings', Icons.settings_rounded),
-    _Destination('/notifications', 'nav.notifications', Icons.notifications_none_rounded),
+    // Notifications intentionally omitted — they live in the always-visible
+    // top bar bell, so they need no entry in the overflow sheet.
   ];
 
   @override

@@ -764,9 +764,11 @@ class _BoardColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     final overWip =
         column.wipLimit != null && column.issues.length > column.wipLimit!;
-    final dotColor = column.states.isNotEmpty
-        ? AppColors.stateColor(column.states.first.toUpperCase())
-        : AppColors.stBacklog;
+    // Tint from the column's first workflow state, falling back to its display
+    // name so the header dot still matches the theme when `states` is empty.
+    // stateColor normalises case/separators, so either form resolves correctly.
+    final dotColor = AppColors.stateColor(
+        column.states.isNotEmpty ? column.states.first : column.name);
     final countLabel = column.wipLimit != null
         ? '${column.issues.length}/${column.wipLimit}'
         : '${column.issues.length}';

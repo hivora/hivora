@@ -263,7 +263,13 @@
   },
   "notifications": {
     "title": "Notifications",
-    "empty": "You're all caught up!"
+    "empty": "You're all caught up!",
+    "markAllRead": "Mark all read",
+    "viewAll": "View all notifications"
+  },
+  "appbar": {
+    "search": "Search or jump to…",
+    "workspace": "Workspace"
   },
   "settings": {
     "title": "Settings",

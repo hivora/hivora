@@ -263,7 +263,13 @@
   },
   "notifications": {
     "title": "Mitteilungen",
-    "empty": "Du bist auf dem neuesten Stand!"
+    "empty": "Du bist auf dem neuesten Stand!",
+    "markAllRead": "Alle als gelesen markieren",
+    "viewAll": "Alle Mitteilungen anzeigen"
+  },
+  "appbar": {
+    "search": "Suchen oder springen zu…",
+    "workspace": "Workspace"
   },
   "settings": {
     "title": "Einstellungen",
