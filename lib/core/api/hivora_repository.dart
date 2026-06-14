@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../models/content_models.dart';
 import '../models/core_models.dart';
+import '../models/search_api.dart';
 import '../models/work_models.dart';
 import 'api_client.dart';
 
@@ -189,6 +190,17 @@ class HivoraRepository {
       ((await _api.get('/api/v1/projects/$projectId/gantt')) as List<dynamic>)
           .map((t) => GanttTask.fromJson(t as Map<String, dynamic>))
           .toList();
+
+  // --- Global search --------------------------------------------------------
+
+  /// Unified search across issues, projects, people, boards and knowledge.
+  /// [scope] is `all` (default) or a single category (`issues`, `projects`,
+  /// `people`, `boards`, `docs`). A blank [query] returns just category counts.
+  Future<SearchApiResponse> search({String query = '', String? scope}) async =>
+      SearchApiResponse.fromJson(await _api.get('/api/v1/search', query: {
+        'q': ?(query.trim().isEmpty ? null : query.trim()),
+        'scope': ?scope,
+      }) as Map<String, dynamic>);
 
   // --- Knowledge base -------------------------------------------------------
 

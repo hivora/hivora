@@ -11,6 +11,10 @@ class AppStorage {
   static const _kRefreshToken = 'refresh_token';
   static const _kOnboardingDone = 'onboarding_done';
   static const _kLocale = 'locale';
+  static const _kRecentSearch = 'hivora.recentSearch.v1';
+
+  /// Maximum number of recent global-search queries kept on device.
+  static const recentSearchMax = 6;
 
   final SharedPreferences _prefs;
 
@@ -38,4 +42,12 @@ class AppStorage {
 
   String? get locale => _prefs.getString(_kLocale);
   Future<void> setLocale(String code) => _prefs.setString(_kLocale, code);
+
+  /// Recent global-search queries, most-recent first (max [recentSearchMax]).
+  List<String> get recentSearches =>
+      _prefs.getStringList(_kRecentSearch) ?? const [];
+
+  Future<void> setRecentSearches(List<String> list) =>
+      _prefs.setStringList(
+          _kRecentSearch, list.take(recentSearchMax).toList());
 }

@@ -300,6 +300,47 @@
     "search": "Search or jump to…",
     "workspace": "Workspace"
   },
+  "search": {
+    "placeholder": "Search issues, projects, people…  or type a command",
+    "scope": {
+      "all": "All"
+    },
+    "cat": {
+      "commands": "Commands",
+      "issues": "Issues",
+      "projects": "Projects",
+      "people": "People",
+      "boards": "Boards & Sprints",
+      "docs": "Knowledge"
+    },
+    "recent": {
+      "title": "Recent searches",
+      "clear": "Clear"
+    },
+    "empty": {
+      "title": "Search anything in Hivora",
+      "subtitle": "Find issues, projects, people, boards and docs — or run a command. Start typing."
+    },
+    "noMatch": "No matches for “{{q}}”",
+    "noMatchSub": "Try a different term, an issue id like HIV-241, or a command name.",
+    "foot": {
+      "navigate": "navigate",
+      "open": "open",
+      "scope": "scope"
+    },
+    "brand": "Hivora Search",
+    "cmd": {
+      "dashboard": "Go to Dashboard",
+      "projects": "Go to Projects",
+      "issues": "Go to Issues",
+      "board": "Go to Board",
+      "timeline": "Go to Timeline",
+      "reports": "Go to Reports",
+      "knowledge": "Go to Knowledge",
+      "newIssue": "Create new issue",
+      "toggleTheme": "Toggle light / dark appearance"
+    }
+  },
   "settings": {
     "title": "Settings",
     "logout": "Sign out",

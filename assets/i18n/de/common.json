@@ -300,6 +300,47 @@
     "search": "Suchen oder springen zu…",
     "workspace": "Workspace"
   },
+  "search": {
+    "placeholder": "Vorgänge, Projekte, Personen suchen…  oder Befehl eingeben",
+    "scope": {
+      "all": "Alle"
+    },
+    "cat": {
+      "commands": "Befehle",
+      "issues": "Vorgänge",
+      "projects": "Projekte",
+      "people": "Personen",
+      "boards": "Boards & Sprints",
+      "docs": "Wissen"
+    },
+    "recent": {
+      "title": "Letzte Suchen",
+      "clear": "Leeren"
+    },
+    "empty": {
+      "title": "Durchsuche alles in Hivora",
+      "subtitle": "Finde Vorgänge, Projekte, Personen, Boards und Dokumente — oder führe einen Befehl aus. Tippe los."
+    },
+    "noMatch": "Keine Treffer für „{{q}}“",
+    "noMatchSub": "Versuche einen anderen Begriff, eine Vorgangs-ID wie HIV-241 oder einen Befehlsnamen.",
+    "foot": {
+      "navigate": "navigieren",
+      "open": "öffnen",
+      "scope": "Bereich"
+    },
+    "brand": "Hivora Suche",
+    "cmd": {
+      "dashboard": "Zum Dashboard",
+      "projects": "Zu Projekte",
+      "issues": "Zu Vorgänge",
+      "board": "Zum Board",
+      "timeline": "Zur Timeline",
+      "reports": "Zu Berichte",
+      "knowledge": "Zu Wissen",
+      "newIssue": "Neuen Vorgang erstellen",
+      "toggleTheme": "Hell / Dunkel umschalten"
+    }
+  },
   "settings": {
     "title": "Einstellungen",
     "logout": "Abmelden",

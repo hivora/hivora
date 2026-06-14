@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -18,6 +19,7 @@ import '../../core/widgets/honeycomb_background.dart';
 import '../../core/widgets/app_avatar.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
     show GlassAppBar, GlassBottomBar, GlassBottomBarTab, GlassIconButton;
+import '../search/global_search_dialog.dart';
 import 'page_chrome.dart';
 
 class _Destination {
@@ -69,9 +71,34 @@ class _AppShellState extends State<AppShell> {
   final _chrome = PageChromeController();
 
   @override
+  void initState() {
+    super.initState();
+    // App-level ⌘K / Ctrl+K opens the global search palette (§4.5). A hardware
+    // key handler is genuinely global and never disturbs widget focus.
+    HardwareKeyboard.instance.addHandler(_onGlobalKey);
+  }
+
+  @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onGlobalKey);
     _chrome.dispose();
     super.dispose();
+  }
+
+  bool _onGlobalKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    if (event.logicalKey != LogicalKeyboardKey.keyK) return false;
+    final keys = HardwareKeyboard.instance.logicalKeysPressed;
+    final meta = keys.contains(LogicalKeyboardKey.metaLeft) ||
+        keys.contains(LogicalKeyboardKey.metaRight);
+    final ctrl = keys.contains(LogicalKeyboardKey.controlLeft) ||
+        keys.contains(LogicalKeyboardKey.controlRight);
+    if (!meta && !ctrl) return false;
+    // Don't stack a second palette (or open one over another modal).
+    final route = ModalRoute.of(context);
+    if (route == null || !route.isCurrent) return false;
+    openGlobalSearch(context);
+    return true;
   }
 
   @override
@@ -682,7 +709,7 @@ class _TopSearchField extends StatelessWidget {
       return _TopIconButton(
         icon: Icons.search_rounded,
         tooltip: context.t('appbar.search'),
-        onTap: () {},
+        onTap: () => openGlobalSearch(context),
       );
     }
     return ConstrainedBox(
@@ -694,7 +721,7 @@ class _TopSearchField extends StatelessWidget {
           side: BorderSide(color: AppColors.hairline),
         ),
         child: InkWell(
-          onTap: () {},
+          onTap: () => openGlobalSearch(context),
           borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
