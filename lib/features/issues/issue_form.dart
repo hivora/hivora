@@ -31,14 +31,17 @@ class _CreateDialogType extends WoltDialogType {
 }
 
 /// Opens the *create* issue form with the same modern Wolt modal chrome as the
-/// issue detail sheet: a bottom sheet on phones, a wide centered dialog on
-/// desktop, a persistent top bar (title + close), and the same two-column
-/// layout — title + Markdown description on the left, an editable details card
-/// on the right — with a full-width save button at the bottom.
+/// issue detail sheet: bottom sheet on phones, wide centered dialog on desktop,
+/// a persistent top bar (title + close), the same two-column layout, and a
+/// pinned (sticky) save button that gates on validation, shows a loading state,
+/// then an animated check. On success the freshly created issue is opened in
+/// the detail sheet.
 Future<Issue?> showIssueForm(BuildContext context,
-    {String? projectId, String? initialState}) {
+    {String? projectId, String? initialState}) async {
   final repository = context.read<HivoraRepository>();
-  return WoltModalSheet.show<Issue?>(
+  final controller = IssueCreateController();
+
+  final created = await WoltModalSheet.show<Issue?>(
     context: context,
     useRootNavigator: true,
     barrierDismissible: true,
@@ -62,9 +65,11 @@ Future<Issue?> showIssueForm(BuildContext context,
           onPressed: () => Navigator.of(modalContext).maybePop(),
           icon: Icon(Icons.close_rounded, color: AppColors.inkSoft),
         ),
+        stickyActionBar: _CreateSaveBar(controller: controller),
         child: RepositoryProvider.value(
           value: repository,
           child: IssueCreateBody(
+            controller: controller,
             projectId: projectId,
             initialState: initialState,
             onCreated: (issue) => Navigator.of(modalContext).pop(issue),
@@ -73,4 +78,88 @@ Future<Issue?> showIssueForm(BuildContext context,
       ),
     ],
   );
+
+  controller.dispose();
+
+  // On success, take the user straight into the new issue's detail view.
+  if (created != null && context.mounted) {
+    await showIssueDetailSheet(context, issueId: created.id);
+  }
+  return created;
+}
+
+/// Pinned save button at the bottom of the create modal. The button stays
+/// pressable (so a tap can surface form-validation errors); it shows a spinner
+/// while saving and an animated green check on success. Colour + content
+/// transitions are animated.
+class _CreateSaveBar extends StatelessWidget {
+  const _CreateSaveBar({required this.controller});
+
+  final IssueCreateController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final phase = controller.phase;
+        final success = phase == IssueCreatePhase.success;
+        // Only block re-taps while a save is in flight or already done.
+        final pressable = phase == IssueCreatePhase.idle;
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+              height: 50,
+              decoration: BoxDecoration(
+                color: success ? AppColors.success : AppColors.navy,
+                borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: pressable ? () => controller.submit?.call() : null,
+                  child: Center(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      transitionBuilder: (child, anim) => ScaleTransition(
+                        scale: anim,
+                        child: FadeTransition(opacity: anim, child: child),
+                      ),
+                      child: switch (phase) {
+                        IssueCreatePhase.saving => const SizedBox(
+                            key: ValueKey('saving'),
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          ),
+                        IssueCreatePhase.success => const Icon(
+                            Icons.check_rounded,
+                            key: ValueKey('success'),
+                            size: 26,
+                            color: Colors.white),
+                        IssueCreatePhase.idle => Text(
+                            context.t('common.save'),
+                            key: const ValueKey('idle'),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15),
+                          ),
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

@@ -41,33 +41,43 @@ class _PriMeta {
 
 const _priMeta = <String, _PriMeta>{
   // Backend Issue.Priority: SHOWSTOPPER, CRITICAL, MAJOR, NORMAL, MINOR.
-  'SHOWSTOPPER':
-      _PriMeta(Icons.keyboard_double_arrow_up_rounded, AppColors.priUrgent),
+  'SHOWSTOPPER': _PriMeta(
+    Icons.keyboard_double_arrow_up_rounded,
+    AppColors.priUrgent,
+  ),
   'CRITICAL': _PriMeta(Icons.keyboard_arrow_up_rounded, AppColors.priUrgent),
   'MAJOR': _PriMeta(Icons.keyboard_arrow_up_rounded, AppColors.priHigh),
   'NORMAL': _PriMeta(Icons.drag_handle_rounded, AppColors.priNormal),
   'MINOR': _PriMeta(Icons.keyboard_arrow_down_rounded, AppColors.priLow),
   // Legacy aliases kept so older data / the design palette still resolve.
-  'URGENT': _PriMeta(Icons.keyboard_double_arrow_up_rounded, AppColors.priUrgent),
+  'URGENT': _PriMeta(
+    Icons.keyboard_double_arrow_up_rounded,
+    AppColors.priUrgent,
+  ),
   'HIGH': _PriMeta(Icons.keyboard_arrow_up_rounded, AppColors.priHigh),
   'LOW': _PriMeta(Icons.keyboard_arrow_down_rounded, AppColors.priLow),
 };
 
-_PriMeta _priOf(String pri) => _priMeta[pri.toUpperCase()] ?? _priMeta['NORMAL']!;
+_PriMeta _priOf(String pri) =>
+    _priMeta[pri.toUpperCase()] ?? _priMeta['NORMAL']!;
 
 /// Friendly label for a workflow state code, falling back to a humanized form.
 String stateLabel(String state) => switch (state.toUpperCase()) {
-      'BACKLOG' => 'Backlog',
-      'TODO' => 'To Do',
-      'IN_PROGRESS' => 'In Progress',
-      'IN_REVIEW' => 'In Review',
-      'DONE' => 'Done',
-      _ => state
-          .replaceAll('_', ' ')
-          .split(' ')
-          .map((w) => w.isEmpty ? w : w[0].toUpperCase() + w.substring(1).toLowerCase())
-          .join(' '),
-    };
+  'BACKLOG' => 'Backlog',
+  'TODO' => 'To Do',
+  'IN_PROGRESS' => 'In Progress',
+  'IN_REVIEW' => 'In Review',
+  'DONE' => 'Done',
+  _ =>
+    state
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map(
+          (w) =>
+              w.isEmpty ? w : w[0].toUpperCase() + w.substring(1).toLowerCase(),
+        )
+        .join(' '),
+};
 
 // ───────────────────────────── glyphs / badges ──────────────────────────
 
@@ -112,7 +122,11 @@ class TypeBadge extends StatelessWidget {
 
 /// Priority indicator: a bare flag icon, or a labelled pill.
 class PriorityFlag extends StatelessWidget {
-  const PriorityFlag({super.key, required this.priority, this.withLabel = false});
+  const PriorityFlag({
+    super.key,
+    required this.priority,
+    this.withLabel = false,
+  });
 
   final String priority;
   final bool withLabel;
@@ -153,7 +167,10 @@ class StateDotBadge extends StatelessWidget {
             stateLabel(state),
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-                fontSize: 12.5, fontWeight: FontWeight.w600, color: color),
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
           ),
         ),
       ],
@@ -181,11 +198,16 @@ class _Pill extends StatelessWidget {
           Icon(icon, size: 13, color: color),
           const SizedBox(width: 5),
           Flexible(
-            child: Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 11.5, fontWeight: FontWeight.w600, color: color)),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
           ),
         ],
       ),
@@ -207,28 +229,36 @@ class LabelTag extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: AppColors.hairline2),
       ),
-      child: Text(label,
-          style: TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.inkSoft)),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: AppColors.inkSoft,
+        ),
+      ),
     );
   }
 }
 
 /// Monospace readable id (`HIV-241`).
 class IdMono extends StatelessWidget {
-  const IdMono(this.text, {super.key, this.color});
+  const IdMono(this.text, {super.key, this.color, this.fontSize = 11.5});
   final String text;
   final Color? color;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
-    return Text(text,
-        style: TextStyle(
-          fontFamily: AppTheme.fontMono,
-          fontSize: 11.5,
-          fontWeight: FontWeight.w500,
-          color: color ?? AppColors.inkSoft,
-        ));
+    return Text(
+      text,
+      style: TextStyle(
+        fontFamily: AppTheme.fontMono,
+        fontSize: fontSize,
+        fontWeight: FontWeight.w500,
+        color: color ?? AppColors.inkSoft,
+      ),
+    );
   }
 }
 
@@ -236,7 +266,12 @@ class IdMono extends StatelessWidget {
 
 /// Thin animated progress bar (matches `.prog`).
 class HiveProgress extends StatelessWidget {
-  const HiveProgress({super.key, required this.value, this.color, this.height = 6});
+  const HiveProgress({
+    super.key,
+    required this.value,
+    this.color,
+    this.height = 6,
+  });
 
   final double value;
   final Color? color;
@@ -271,11 +306,15 @@ Color hiveHueColor(String seed) {
 }
 
 String _initials(String value) {
-  final parts =
-      value.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  final parts = value
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((p) => p.isNotEmpty)
+      .toList();
   if (parts.isEmpty) return '?';
   if (parts.length == 1) return parts.first.characters.first.toUpperCase();
-  return (parts.first.characters.first + parts.last.characters.first).toUpperCase();
+  return (parts.first.characters.first + parts.last.characters.first)
+      .toUpperCase();
 }
 
 /// Round initials avatar tinted by name hue.
@@ -362,14 +401,19 @@ class HiveAvatarStack extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.canvas2,
                   shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: AppColors.surface, spreadRadius: 2)],
+                  boxShadow: [
+                    BoxShadow(color: AppColors.surface, spreadRadius: 2),
+                  ],
                 ),
                 alignment: Alignment.center,
-                child: Text('+$extra',
-                    style: TextStyle(
-                        fontSize: size * 0.36,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.inkSoft)),
+                child: Text(
+                  '+$extra',
+                  style: TextStyle(
+                    fontSize: size * 0.36,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.inkSoft,
+                  ),
+                ),
               ),
             ),
         ],
@@ -417,11 +461,12 @@ class PageHead extends StatelessWidget {
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 4),
-                Text(subtitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 13.5, color: AppColors.inkSoft)),
+                Text(
+                  subtitle!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13.5, color: AppColors.inkSoft),
+                ),
               ],
             ],
           ),
@@ -436,8 +481,12 @@ class PageHead extends StatelessWidget {
 
 /// Navy primary action button.
 class PrimaryButton extends StatelessWidget {
-  const PrimaryButton(
-      {super.key, required this.label, required this.onPressed, this.icon});
+  const PrimaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+  });
 
   final String label;
   final VoidCallback? onPressed;
@@ -453,7 +502,8 @@ class PrimaryButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.radiusControl)),
+          borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        ),
       ),
       icon: Icon(icon ?? Icons.add_rounded, size: 16),
       label: Text(label),
@@ -463,8 +513,12 @@ class PrimaryButton extends StatelessWidget {
 
 /// White hairline-bordered secondary button.
 class GhostButton extends StatelessWidget {
-  const GhostButton(
-      {super.key, required this.label, required this.onPressed, this.icon});
+  const GhostButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+  });
 
   final String label;
   final VoidCallback? onPressed;
@@ -481,7 +535,8 @@ class GhostButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.radiusControl)),
+          borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        ),
       ),
       icon: Icon(icon ?? Icons.tune_rounded, size: 16),
       label: Text(label),
@@ -527,8 +582,10 @@ class SegmentedControl extends StatelessWidget {
               onTap: () => onChanged(i),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: i == selected ? AppColors.navy : Colors.transparent,
                   borderRadius: BorderRadius.circular(7),
@@ -536,17 +593,20 @@ class SegmentedControl extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(items[i].icon,
-                        size: 15,
-                        color: i == selected ? Colors.white : AppColors.inkSoft),
+                    Icon(
+                      items[i].icon,
+                      size: 15,
+                      color: i == selected ? Colors.white : AppColors.inkSoft,
+                    ),
                     const SizedBox(width: 6),
-                    Text(items[i].label,
-                        style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: i == selected
-                                ? Colors.white
-                                : AppColors.inkSoft)),
+                    Text(
+                      items[i].label,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: i == selected ? Colors.white : AppColors.inkSoft,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -571,8 +631,18 @@ class SegmentedControl extends StatelessWidget {
   if (diff == 1) return (text: 'Tomorrow', late: false);
   if (diff <= 7) return (text: '${diff}d', late: false);
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return (text: '${months[d.month - 1]} ${d.day}', late: false);
 }

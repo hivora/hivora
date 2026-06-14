@@ -26,8 +26,10 @@ class _WideDialogType extends WoltDialogType {
   @override
   BoxConstraints layoutModal(Size availableSize) {
     const pad = 48.0;
-    final width =
-        math.min(940.0, math.max(360.0, availableSize.width - pad * 2));
+    final width = math.min(
+      940.0,
+      math.max(360.0, availableSize.width - pad * 2),
+    );
     return BoxConstraints(
       minWidth: width,
       maxWidth: width,
@@ -67,17 +69,20 @@ Future<void> showIssueDetailSheet(
         surfaceTintColor: Colors.transparent,
         hasTopBarLayer: true,
         isTopBarLayerAlwaysVisible: true,
-        topBarTitle: ValueListenableBuilder<Issue?>(
+        leadingNavBarWidget: ValueListenableBuilder<Issue?>(
           valueListenable: header,
           builder: (_, issue, _) => issue == null
               ? const SizedBox.shrink()
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IdMono(issue.readableId, color: AppColors.inkSoft),
-                    const SizedBox(width: 10),
-                    Flexible(child: StateDotBadge(state: issue.state)),
-                  ],
+              : Padding(
+                  padding: const EdgeInsets.only(left: 16.0),
+                  child: Row(
+                    spacing: 10,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TypeGlyph(type: issue.type, size: 24),
+                      IdMono(issue.readableId, color: AppColors.inkSoft, fontSize: 16),
+                    ],
+                  ),
                 ),
         ),
         trailingNavBarWidget: _SheetActions(
@@ -126,15 +131,13 @@ class _SheetActions extends StatelessWidget {
         IconButton(
           tooltip: context.t('issues.copyLink'),
           onPressed: onCopyLink,
-          icon: Icon(Icons.link_rounded,
-              size: 20, color: AppColors.inkSoft),
+          icon: Icon(Icons.link_rounded, size: 20, color: AppColors.inkSoft),
         ),
         _IssueOverflowMenu(onEdit: onEdit, onDelete: onDelete),
         IconButton(
           tooltip: context.t('common.cancel'),
           onPressed: onClose,
-          icon: Icon(Icons.close_rounded,
-              size: 20, color: AppColors.inkSoft),
+          icon: Icon(Icons.close_rounded, size: 20, color: AppColors.inkSoft),
         ),
         const SizedBox(width: 4),
       ],
@@ -153,8 +156,7 @@ class _IssueOverflowMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
       tooltip: '',
-      icon: Icon(Icons.more_horiz_rounded,
-          size: 22, color: AppColors.inkSoft),
+      icon: Icon(Icons.more_horiz_rounded, size: 22, color: AppColors.inkSoft),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
       itemBuilder: (_) => [
@@ -172,11 +174,16 @@ class _IssueOverflowMenu extends StatelessWidget {
           value: 'delete',
           child: Row(
             children: [
-              const Icon(Icons.delete_outline_rounded,
-                  size: 18, color: AppColors.danger),
+              const Icon(
+                Icons.delete_outline_rounded,
+                size: 18,
+                color: AppColors.danger,
+              ),
               const SizedBox(width: 10),
-              Text(context.t('common.delete'),
-                  style: const TextStyle(color: AppColors.danger)),
+              Text(
+                context.t('common.delete'),
+                style: const TextStyle(color: AppColors.danger),
+              ),
             ],
           ),
         ),
@@ -216,10 +223,12 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   Project? _project;
   List<DirectoryUser> _users = const [];
   List<Sprint> _sprints = const [];
-  Map<String, String> get _names =>
-      {for (final u in _users) u.id: u.displayName};
-  Map<String, String> get _sprintNames =>
-      {for (final s in _sprints) s.id: s.name};
+  Map<String, String> get _names => {
+    for (final u in _users) u.id: u.displayName,
+  };
+  Map<String, String> get _sprintNames => {
+    for (final s in _sprints) s.id: s.name,
+  };
 
   bool _loading = true;
   String? _error;
@@ -327,8 +336,9 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
 
   void _toast(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   // ── inline editing + actions (driven by the top-bar / double-tap) ─────────
@@ -397,11 +407,15 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(context.t(_error!),
-                  style: TextStyle(color: AppColors.inkSoft)),
+              Text(
+                context.t(_error!),
+                style: TextStyle(color: AppColors.inkSoft),
+              ),
               const SizedBox(height: 12),
               OutlinedButton(
-                  onPressed: _load, child: Text(context.t('common.retry'))),
+                onPressed: _load,
+                child: Text(context.t('common.retry')),
+              ),
             ],
           ),
         ),
@@ -448,15 +462,17 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                     Expanded(
                       flex: 3,
                       child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: left),
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: left,
+                      ),
                     ),
                     const SizedBox(width: 18),
                     Expanded(
                       flex: 2,
                       child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: right),
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: right,
+                      ),
                     ),
                   ],
                 );
@@ -483,10 +499,11 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
 
   Widget _contentCard(Issue issue) {
     const titleStyle = TextStyle(
-        fontFamily: AppTheme.fontBrand,
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        height: 1.25);
+      fontFamily: AppTheme.fontBrand,
+      fontSize: 20,
+      fontWeight: FontWeight.w700,
+      height: 1.25,
+    );
 
     return SoftCard(
       color: Colors.transparent,
@@ -540,15 +557,18 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                   children: [
                     FilledButton(
                       style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.navy),
+                        backgroundColor: AppColors.navy,
+                      ),
                       onPressed: _saveDesc,
                       child: Text(context.t('common.save')),
                     ),
                     const SizedBox(width: 8),
                     TextButton(
                       onPressed: () => setState(() => _editingDesc = false),
-                      child: Text(context.t('common.cancel'),
-                          style: TextStyle(color: AppColors.inkSoft)),
+                      child: Text(
+                        context.t('common.cancel'),
+                        style: TextStyle(color: AppColors.inkSoft),
+                      ),
                     ),
                   ],
                 ),
@@ -563,8 +583,9 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                   : Text(
                       context.t('issues.noDescription'),
                       style: TextStyle(
-                          color: AppColors.inkFaint,
-                          fontStyle: FontStyle.italic),
+                        color: AppColors.inkFaint,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
             ),
         ],
@@ -573,20 +594,22 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   }
 
   Widget _sectionLabel(String text) => Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-          color: AppColors.inkFaint,
-        ),
-      );
+    text.toUpperCase(),
+    style: TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.8,
+      color: AppColors.inkFaint,
+    ),
+  );
 
   Widget _detailsCard(Issue issue) {
-    final assigneeName =
-        issue.assigneeId != null ? _names[issue.assigneeId!] : null;
-    final reporterName =
-        issue.reporterId != null ? _names[issue.reporterId!] : null;
+    final assigneeName = issue.assigneeId != null
+        ? _names[issue.assigneeId!]
+        : null;
+    final reporterName = issue.reporterId != null
+        ? _names[issue.reporterId!]
+        : null;
     final me = context.read<AuthBloc>().state.user;
     final sprintName = issue.sprintId != null
         ? _sprints.where((s) => s.id == issue.sprintId).firstOrNull?.name
@@ -597,9 +620,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('issues.details'),
-              style: const TextStyle(
-                  fontSize: 14.5, fontWeight: FontWeight.w700)),
+          Text(
+            context.t('issues.details'),
+            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 6),
           // Status
           _DetailRow(
@@ -619,11 +643,14 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                   const SizedBox(height: 2),
                   GestureDetector(
                     onTap: () => _patch({'assigneeId': me.id}),
-                    child: Text(context.t('issues.assignToMe'),
-                        style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.stTodo)),
+                    child: Text(
+                      context.t('issues.assignToMe'),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.stTodo,
+                      ),
+                    ),
                   ),
                 ],
               ],
@@ -648,17 +675,21 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
             child: Text(
               sprintName ?? context.t('issues.noSprint'),
               style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: sprintName != null
-                      ? AppColors.stTodo
-                      : AppColors.inkFaint),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: sprintName != null
+                    ? AppColors.stTodo
+                    : AppColors.inkFaint,
+              ),
             ),
           ),
           // Author / reporter (read-only)
           _DetailRow(
             label: context.t('issues.author'),
-            child: _person(reporterName, fallback: context.t('issues.unassigned')),
+            child: _person(
+              reporterName,
+              fallback: context.t('issues.unassigned'),
+            ),
           ),
           // Start date
           _DetailRow(
@@ -680,8 +711,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
 
   Widget _person(String? name, {required String fallback}) {
     if (name == null || name.isEmpty) {
-      return Text(fallback,
-          style: TextStyle(fontSize: 13, color: AppColors.inkFaint));
+      return Text(
+        fallback,
+        style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
+      );
     }
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -689,11 +722,12 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
         HiveAvatar(name: name, size: 22),
         const SizedBox(width: 8),
         Flexible(
-          child: Text(name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600)),
+          child: Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
         ),
       ],
     );
@@ -701,8 +735,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
 
   Widget _dateValue(DateTime? date, {required bool isStart}) {
     if (date == null) {
-      return Text(context.t('issues.noValue'),
-          style: TextStyle(fontSize: 13, color: AppColors.inkFaint));
+      return Text(
+        context.t('issues.noValue'),
+        style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
+      );
     }
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -710,14 +746,16 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
         Text(
           MaterialLocalizations.of(context).formatMediumDate(date),
           style: TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.ink,
+          ),
         ),
         const SizedBox(width: 6),
         GestureDetector(
-          onTap: () => _patch(
-              {isStart ? 'clearStartDate' : 'clearDueDate': true}),
-          child: Icon(Icons.close_rounded,
-              size: 15, color: AppColors.inkFaint),
+          onTap: () =>
+              _patch({isStart ? 'clearStartDate' : 'clearDueDate': true}),
+          child: Icon(Icons.close_rounded, size: 15, color: AppColors.inkFaint),
         ),
       ],
     );
@@ -731,9 +769,13 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           Row(
             children: [
               Expanded(
-                child: Text(context.t('issues.timeTracking'),
-                    style: const TextStyle(
-                        fontSize: 14.5, fontWeight: FontWeight.w700)),
+                child: Text(
+                  context.t('issues.timeTracking'),
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
               GestureDetector(
                 onTap: () async {
@@ -743,20 +785,26 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                     await _load();
                   }
                 },
-                child: Text(context.t('issues.logTime'),
-                    style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.accentStrong)),
+                child: Text(
+                  context.t('issues.logTime'),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.accentStrong,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            context.t('issues.spent', variables: {
-              'spent': fmtDuration(issue.spentMinutes),
-              'estimate': fmtDuration(issue.estimateMinutes),
-            }),
+            context.t(
+              'issues.spent',
+              variables: {
+                'spent': fmtDuration(issue.spentMinutes),
+                'estimate': fmtDuration(issue.estimateMinutes),
+              },
+            ),
             style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
           ),
           for (final item in _workItems.take(8))
@@ -764,22 +812,29 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
               padding: const EdgeInsets.only(top: 8),
               child: Row(
                 children: [
-                  const Icon(Icons.timelapse_rounded,
-                      size: 16, color: AppColors.accentStrong),
+                  const Icon(
+                    Icons.timelapse_rounded,
+                    size: 16,
+                    color: AppColors.accentStrong,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                        '${fmtDuration(item.durationMinutes)} · ${item.activityType}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13)),
+                      '${fmtDuration(item.durationMinutes)} · ${item.activityType}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13),
+                    ),
                   ),
                   if (item.date != null)
                     Text(
-                      MaterialLocalizations.of(context)
-                          .formatShortDate(item.date!),
+                      MaterialLocalizations.of(
+                        context,
+                      ).formatShortDate(item.date!),
                       style: TextStyle(
-                          fontSize: 11.5, color: AppColors.inkFaint),
+                        fontSize: 11.5,
+                        color: AppColors.inkFaint,
+                      ),
                     ),
                 ],
               ),
@@ -800,9 +855,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('issues.activity'),
-              style: const TextStyle(
-                  fontSize: 14.5, fontWeight: FontWeight.w700)),
+          Text(
+            context.t('issues.activity'),
+            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 12),
           // Filter tabs: All · Comments · History
           _ActivityTabs(
@@ -829,8 +885,11 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                 IconButton.filled(
                   style: IconButton.styleFrom(backgroundColor: AppColors.navy),
                   onPressed: _submitComment,
-                  icon: const Icon(Icons.send_rounded,
-                      color: Colors.white, size: 18),
+                  icon: const Icon(
+                    Icons.send_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
               ],
             ),
@@ -845,18 +904,16 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   ///  • history  → change events newest-first
   ///  • all      → both, merged newest-first
   List<Widget> _activityItems(_ActivityFilter filter) {
-    Widget commentTile(IssueComment c) => _CommentTile(
-          comment: c,
-          authorName: _names[c.authorId] ?? c.authorId,
-        );
+    Widget commentTile(IssueComment c) =>
+        _CommentTile(comment: c, authorName: _names[c.authorId] ?? c.authorId);
     Widget activityTile(IssueActivity a) => _ActivityTile(
-          activity: a,
-          actorName: a.actorId != null
-              ? (_names[a.actorId!] ?? a.actorId!)
-              : context.t('issues.unassigned'),
-          names: _names,
-          sprintNames: _sprintNames,
-        );
+      activity: a,
+      actorName: a.actorId != null
+          ? (_names[a.actorId!] ?? a.actorId!)
+          : context.t('issues.unassigned'),
+      names: _names,
+      sprintNames: _sprintNames,
+    );
 
     switch (filter) {
       case _ActivityFilter.comments:
@@ -886,12 +943,14 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   }
 
   Widget _emptyActivity(String message) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 22),
-        child: Center(
-          child: Text(message,
-              style: TextStyle(color: AppColors.inkFaint, fontSize: 13)),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 22),
+    child: Center(
+      child: Text(
+        message,
+        style: TextStyle(color: AppColors.inkFaint, fontSize: 13),
+      ),
+    ),
+  );
 
   // ── pickers ────────────────────────────────────────────────────────────
 
@@ -900,8 +959,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     final chosen = await _showOptions<String>(
       title: context.t('issues.status'),
       options: [
-        for (final s in states)
-          (value: s, child: StateDotBadge(state: s)),
+        for (final s in states) (value: s, child: StateDotBadge(state: s)),
       ],
     );
     if (chosen != null) await _patch({'state': chosen});
@@ -923,9 +981,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     const types = ['TASK', 'BUG', 'FEATURE', 'EPIC'];
     final chosen = await _showOptions<String>(
       title: context.t('issues.type'),
-      options: [
-        for (final t in types) (value: t, child: TypeBadge(type: t)),
-      ],
+      options: [for (final t in types) (value: t, child: TypeBadge(type: t))],
     );
     if (chosen != null) await _patch({'type': chosen});
   }
@@ -938,8 +994,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       options: [
         (
           value: _noSprint,
-          child: Text(context.t('issues.noSprint'),
-              style: TextStyle(color: AppColors.inkFaint))
+          child: Text(
+            context.t('issues.noSprint'),
+            style: TextStyle(color: AppColors.inkFaint),
+          ),
         ),
         for (final s in _sprints) (value: s.id, child: Text(s.name)),
       ],
@@ -1014,18 +1072,23 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text(title,
-                  style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w700)),
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
             for (final o in options)
               InkWell(
                 onTap: () => Navigator.of(sheetContext).pop(o.value),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 14),
-                  child: Align(
-                      alignment: Alignment.centerLeft, child: o.child),
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                  child: Align(alignment: Alignment.centerLeft, child: o.child),
                 ),
               ),
             const SizedBox(height: 8),
@@ -1041,12 +1104,17 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(dialogContext.t('issues.deleteTitle')),
-        content: Text(dialogContext
-            .t('issues.deleteBody', variables: {'id': issue.readableId})),
+        content: Text(
+          dialogContext.t(
+            'issues.deleteBody',
+            variables: {'id': issue.readableId},
+          ),
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(dialogContext.t('common.cancel'))),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(dialogContext.t('common.cancel')),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -1091,23 +1159,28 @@ class _DetailRow extends StatelessWidget {
         decoration: BoxDecoration(
           border: last
               ? null
-              : Border(
-                  bottom: BorderSide(color: AppColors.hairline2)),
+              : Border(bottom: BorderSide(color: AppColors.hairline2)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
               width: 104,
-              child: Text(label,
-                  style: TextStyle(
-                      fontSize: 12.5, color: AppColors.inkSoft)),
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
+              ),
             ),
             const SizedBox(width: 12),
-            Expanded(child: Align(alignment: Alignment.centerLeft, child: child)),
+            Expanded(
+              child: Align(alignment: Alignment.centerLeft, child: child),
+            ),
             if (onTap != null)
-              Icon(Icons.unfold_more_rounded,
-                  size: 16, color: AppColors.inkFaint),
+              Icon(
+                Icons.unfold_more_rounded,
+                size: 16,
+                color: AppColors.inkFaint,
+              ),
           ],
         ),
       ),
@@ -1138,16 +1211,19 @@ Future<T?> _pickOption<T>(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Text(title,
-                style:
-                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
           ),
           for (final o in options)
             InkWell(
               onTap: () => Navigator.of(sheetContext).pop(o.value),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
                 child: Align(alignment: Alignment.centerLeft, child: o.child),
               ),
             ),
@@ -1160,18 +1236,42 @@ Future<T?> _pickOption<T>(
 
 // ─────────────────────────── Create body ───────────────────────────────────
 
+/// Lifecycle of the create-issue save button, shared between the body (which
+/// drives it) and the wolt sticky action bar (which renders it).
+enum IssueCreatePhase { idle, saving, success }
+
+/// Bridges [IssueCreateBody] and the sticky save bar: the body publishes the
+/// current [phase] and the bar reads it; the bar calls [submit] on tap, which
+/// runs the form validation (so the button stays pressable to surface errors).
+class IssueCreateController extends ChangeNotifier {
+  IssueCreatePhase _phase = IssueCreatePhase.idle;
+  IssueCreatePhase get phase => _phase;
+  set phase(IssueCreatePhase value) {
+    if (value != _phase) {
+      _phase = value;
+      notifyListeners();
+    }
+  }
+
+  /// Wired by the body in initState; invoked by the sticky save button.
+  Future<void> Function()? submit;
+}
+
 /// The same two-column layout as [IssueDetailBody], but for CREATING an issue:
 /// title + Markdown description on the left, an editable details card
 /// (project · status · assignee · priority · type · sprint · dates) on the
-/// right, and a full-width save button at the bottom. Hosted by `showIssueForm`.
+/// right. The save button lives in the wolt sticky action bar and is driven via
+/// [IssueCreateController]. Hosted by `showIssueForm`.
 class IssueCreateBody extends StatefulWidget {
   const IssueCreateBody({
     super.key,
+    required this.controller,
     this.projectId,
     this.initialState,
     required this.onCreated,
   });
 
+  final IssueCreateController controller;
   final String? projectId;
   final String? initialState;
   final ValueChanged<Issue> onCreated;
@@ -1200,21 +1300,27 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
   DateTime? _dueDate;
 
   bool _loading = true;
-  bool _saving = false;
   String? _error;
+
+  // Validation stays silent until the first save attempt, then switches to
+  // live (onUserInteraction) validation — Flutter's standard form pattern.
+  final _formKey = GlobalKey<FormState>();
+  bool _autovalidate = false;
 
   static const _none = '__none__';
 
   Project? get _project =>
       _projects.where((p) => p.id == _projectId).firstOrNull;
-  Map<String, String> get _names =>
-      {for (final u in _users) u.id: u.displayName};
+  Map<String, String> get _names => {
+    for (final u in _users) u.id: u.displayName,
+  };
 
   @override
   void initState() {
     super.initState();
     _projectId = widget.projectId;
     _state = widget.initialState;
+    widget.controller.submit = _save;
     _load();
   }
 
@@ -1275,15 +1381,18 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
   }
 
   Future<void> _save() async {
-    final title = _titleCtrl.text.trim();
-    if (title.isEmpty || _projectId == null) {
-      setState(() => _error = context.t('errors.required'));
+    // Run the form validators; from now on validate live as the user types.
+    final formValid = _formKey.currentState?.validate() ?? false;
+    if (!_autovalidate) setState(() => _autovalidate = true);
+    if (!formValid || _projectId == null) {
+      if (_projectId == null) {
+        setState(() => _error = context.t('errors.required'));
+      }
       return;
     }
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
+    final title = _titleCtrl.text.trim();
+    widget.controller.phase = IssueCreatePhase.saving;
+    setState(() => _error = null);
     try {
       final created = await _repo.createIssue({
         'projectId': _projectId,
@@ -1299,13 +1408,15 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
         if (_dueDate != null)
           'dueDate': _dueDate!.toIso8601String().substring(0, 10),
       });
+      if (!mounted) return;
+      // Hold on the green check briefly before handing off to the detail view.
+      widget.controller.phase = IssueCreatePhase.success;
+      await Future<void>.delayed(const Duration(milliseconds: 750));
       widget.onCreated(created);
     } on ApiFailure catch (failure) {
       if (mounted) {
-        setState(() {
-          _saving = false;
-          _error = failure.message;
-        });
+        widget.controller.phase = IssueCreatePhase.idle;
+        setState(() => _error = failure.message);
       }
     }
   }
@@ -1318,66 +1429,62 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
         child: Center(child: CircularProgressIndicator(color: AppColors.navy)),
       );
     }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          LayoutBuilder(builder: (context, c) {
-            final left = _contentCard();
-            final right = _detailsCard();
-            if (c.maxWidth >= 680) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(flex: 3, child: left),
-                  const SizedBox(width: 18),
-                  Expanded(flex: 2, child: right),
-                ],
-              );
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [left, const SizedBox(height: 14), right],
-            );
-          }),
-          if (_error != null) ...[
-            const SizedBox(height: 14),
-            Text(_error!,
-                style: const TextStyle(color: AppColors.danger),
-                textAlign: TextAlign.center),
-          ],
-          const SizedBox(height: 18),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.navy,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
+    return Form(
+      key: _formKey,
+      autovalidateMode: _autovalidate
+          ? AutovalidateMode.onUserInteraction
+          : AutovalidateMode.disabled,
+      child: Padding(
+        // Bottom clearance for the pinned save bar (which overlays the content):
+        // ~save button + its padding + the device safe-area inset.
+        padding: EdgeInsets.fromLTRB(
+            20, 4, 20, 88 + MediaQuery.viewPaddingOf(context).bottom),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            LayoutBuilder(
+              builder: (context, c) {
+                final left = _contentCard();
+                final right = _detailsCard();
+                if (c.maxWidth >= 680) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 3, child: left),
+                      const SizedBox(width: 18),
+                      Expanded(flex: 2, child: right),
+                    ],
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [left, const SizedBox(height: 14), right],
+                );
+              },
             ),
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
-                  )
-                : Text(context.t('common.save')),
-          ),
-        ],
+            if (_error != null) ...[
+              const SizedBox(height: 14),
+              Text(
+                _error!,
+                style: const TextStyle(color: AppColors.danger),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _sectionLabel(String text) => Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-          color: AppColors.inkFaint,
-        ),
-      );
+    text.toUpperCase(),
+    style: TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.8,
+      color: AppColors.inkFaint,
+    ),
+  );
 
   Widget _contentCard() {
     return Column(
@@ -1385,19 +1492,25 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
       children: [
         _sectionLabel(context.t('issues.title')),
         const SizedBox(height: 8),
-        TextField(
+        TextFormField(
           controller: _titleCtrl,
           maxLines: null,
+          textInputAction: TextInputAction.next,
           style: const TextStyle(
-              fontFamily: AppTheme.fontBrand,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              height: 1.25),
-          decoration: InputDecoration(
-            isCollapsed: true,
-            border: InputBorder.none,
-            hintText: context.t('issues.title'),
+            fontFamily: AppTheme.fontBrand,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            // height: 1.25,
           ),
+          decoration: InputDecoration(
+            hintText: context.t('issues.title'),
+            errorStyle:
+                const TextStyle(color: AppColors.danger, fontSize: 12),
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          ),
+          validator: (value) => (value == null || value.trim().isEmpty)
+              ? context.t('errors.required')
+              : null,
         ),
         const SizedBox(height: 18),
         _sectionLabel(context.t('issues.description')),
@@ -1412,16 +1525,19 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
 
   Widget _detailsCard() {
     final assigneeName = _assigneeId != null ? _names[_assigneeId] : null;
-    final sprintName =
-        _sprints.where((s) => s.id == _sprintId).firstOrNull?.name;
+    final sprintName = _sprints
+        .where((s) => s.id == _sprintId)
+        .firstOrNull
+        ?.name;
     return SoftCard(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t('issues.details'),
-              style:
-                  const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
+          Text(
+            context.t('issues.details'),
+            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 6),
           _DetailRow(
             label: context.t('issues.project'),
@@ -1437,16 +1553,23 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
           ),
           _DetailRow(
             label: context.t('issues.status'),
-            onTap: (_project?.workflowStates.isEmpty ?? true) ? null : _pickStatus,
+            onTap: (_project?.workflowStates.isEmpty ?? true)
+                ? null
+                : _pickStatus,
             child: _state != null
                 ? StateDotBadge(state: _state!)
-                : Text(context.t('issues.noValue'),
-                    style: TextStyle(fontSize: 13, color: AppColors.inkFaint)),
+                : Text(
+                    context.t('issues.noValue'),
+                    style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
+                  ),
           ),
           _DetailRow(
             label: context.t('issues.assignee'),
             onTap: _pickAssignee,
-            child: _person(assigneeName, fallback: context.t('issues.unassigned')),
+            child: _person(
+              assigneeName,
+              fallback: context.t('issues.unassigned'),
+            ),
           ),
           _DetailRow(
             label: context.t('issues.priority'),
@@ -1464,10 +1587,12 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
             child: Text(
               sprintName ?? context.t('issues.noSprint'),
               style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color:
-                      sprintName != null ? AppColors.stTodo : AppColors.inkFaint),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: sprintName != null
+                    ? AppColors.stTodo
+                    : AppColors.inkFaint,
+              ),
             ),
           ),
           _DetailRow(
@@ -1488,8 +1613,10 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
 
   Widget _person(String? name, {required String fallback}) {
     if (name == null || name.isEmpty) {
-      return Text(fallback,
-          style: TextStyle(fontSize: 13, color: AppColors.inkFaint));
+      return Text(
+        fallback,
+        style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
+      );
     }
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1497,11 +1624,12 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
         HiveAvatar(name: name, size: 22),
         const SizedBox(width: 8),
         Flexible(
-          child: Text(name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style:
-                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          child: Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
         ),
       ],
     );
@@ -1509,8 +1637,10 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
 
   Widget _dateValue(DateTime? date, {required bool isStart}) {
     if (date == null) {
-      return Text(context.t('issues.noValue'),
-          style: TextStyle(fontSize: 13, color: AppColors.inkFaint));
+      return Text(
+        context.t('issues.noValue'),
+        style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
+      );
     }
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1518,7 +1648,10 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
         Text(
           MaterialLocalizations.of(context).formatMediumDate(date),
           style: TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.ink,
+          ),
         ),
         const SizedBox(width: 6),
         GestureDetector(
@@ -1529,8 +1662,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
               _dueDate = null;
             }
           }),
-          child:
-              Icon(Icons.close_rounded, size: 15, color: AppColors.inkFaint),
+          child: Icon(Icons.close_rounded, size: 15, color: AppColors.inkFaint),
         ),
       ],
     );
@@ -1544,8 +1676,10 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
         for (final p in _projects)
           (
             value: p.id,
-            child: Text('${p.key} – ${p.name}',
-                overflow: TextOverflow.ellipsis)
+            child: Text(
+              '${p.key} – ${p.name}',
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
       ],
     );
@@ -1557,7 +1691,9 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     final chosen = await _pickOption<String>(
       context,
       title: context.t('issues.status'),
-      options: [for (final s in states) (value: s, child: StateDotBadge(state: s))],
+      options: [
+        for (final s in states) (value: s, child: StateDotBadge(state: s)),
+      ],
     );
     if (chosen != null) setState(() => _state = chosen);
   }
@@ -1592,8 +1728,10 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
       options: [
         (
           value: _none,
-          child: Text(context.t('issues.noSprint'),
-              style: TextStyle(color: AppColors.inkFaint))
+          child: Text(
+            context.t('issues.noSprint'),
+            style: TextStyle(color: AppColors.inkFaint),
+          ),
         ),
         for (final s in _sprints) (value: s.id, child: Text(s.name)),
       ],
@@ -1610,8 +1748,10 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
       options: [
         (
           value: _none,
-          child: Text(context.t('issues.unassigned'),
-              style: TextStyle(color: AppColors.inkFaint))
+          child: Text(
+            context.t('issues.unassigned'),
+            style: TextStyle(color: AppColors.inkFaint),
+          ),
         ),
         for (final u in _users)
           (value: u.id, child: _person(u.displayName, fallback: '')),
@@ -1669,8 +1809,11 @@ class _RouteTopBar extends StatelessWidget {
         children: [
           IconButton(
             onPressed: onClose,
-            icon: Icon(Icons.arrow_back_rounded,
-                size: 20, color: AppColors.inkSoft),
+            icon: Icon(
+              Icons.arrow_back_rounded,
+              size: 20,
+              color: AppColors.inkSoft,
+            ),
           ),
           IdMono(issue.readableId, color: AppColors.inkSoft),
           const SizedBox(width: 10),
@@ -1681,15 +1824,16 @@ class _RouteTopBar extends StatelessWidget {
               width: 14,
               height: 14,
               child: CircularProgressIndicator(
-                  strokeWidth: 2, color: AppColors.accent),
+                strokeWidth: 2,
+                color: AppColors.accent,
+              ),
             ),
           ],
           const Spacer(),
           IconButton(
             tooltip: context.t('issues.copyLink'),
             onPressed: onCopyLink,
-            icon: Icon(Icons.link_rounded,
-                size: 20, color: AppColors.inkSoft),
+            icon: Icon(Icons.link_rounded, size: 20, color: AppColors.inkSoft),
           ),
           _IssueOverflowMenu(onEdit: onEdit, onDelete: onDelete),
         ],
@@ -1722,10 +1866,11 @@ class _InlineTitleEditor extends StatelessWidget {
           autofocus: true,
           maxLines: null,
           style: const TextStyle(
-              fontFamily: AppTheme.fontBrand,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              height: 1.25),
+            fontFamily: AppTheme.fontBrand,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            height: 1.25,
+          ),
           decoration: const InputDecoration(isDense: true),
           onSubmitted: (_) => onSave(),
         ),
@@ -1753,8 +1898,11 @@ class _InlineTitleEditor extends StatelessWidget {
 
 /// Small bordered square action button (✓ / ✕).
 class _SquareButton extends StatelessWidget {
-  const _SquareButton(
-      {required this.icon, required this.color, required this.onTap});
+  const _SquareButton({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
 
   final IconData icon;
   final Color color;
@@ -1805,10 +1953,16 @@ class _ActivityTabs extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _seg(context, _ActivityFilter.all, context.t('issues.filterAll')),
-          _seg(context, _ActivityFilter.comments,
-              context.t('issues.filterComments')),
-          _seg(context, _ActivityFilter.history,
-              context.t('issues.filterHistory')),
+          _seg(
+            context,
+            _ActivityFilter.comments,
+            context.t('issues.filterComments'),
+          ),
+          _seg(
+            context,
+            _ActivityFilter.history,
+            context.t('issues.filterHistory'),
+          ),
         ],
       ),
     );
@@ -1826,7 +1980,8 @@ class _ActivityTabs extends StatelessWidget {
           color: active ? AppColors.surface : Colors.transparent,
           borderRadius: BorderRadius.circular(7),
           border: Border.all(
-              color: active ? AppColors.hairline : Colors.transparent),
+            color: active ? AppColors.hairline : Colors.transparent,
+          ),
         ),
         child: Text(
           label,
@@ -1864,27 +2019,39 @@ class _CommentTile extends StatelessWidget {
                 Row(
                   children: [
                     Flexible(
-                      child: Text(authorName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w700)),
+                      child: Text(
+                        authorName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                     if (comment.createdAt != null) ...[
                       const SizedBox(width: 8),
                       Text(
-                        MaterialLocalizations.of(context)
-                            .formatShortDate(comment.createdAt!.toLocal()),
+                        MaterialLocalizations.of(
+                          context,
+                        ).formatShortDate(comment.createdAt!.toLocal()),
                         style: TextStyle(
-                            fontSize: 11.5, color: AppColors.inkFaint),
+                          fontSize: 11.5,
+                          color: AppColors.inkFaint,
+                        ),
                       ),
                     ],
                   ],
                 ),
                 const SizedBox(height: 3),
-                Text(comment.text,
-                    style: TextStyle(
-                        height: 1.5, fontSize: 13, color: AppColors.inkSoft)),
+                Text(
+                  comment.text,
+                  style: TextStyle(
+                    height: 1.5,
+                    fontSize: 13,
+                    color: AppColors.inkSoft,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1910,16 +2077,25 @@ class _ActivityTile extends StatelessWidget {
 
   // Fields where a before→after value pair is worth showing as chips.
   static const _chipFields = {
-    'STATE', 'ASSIGNEE', 'PRIORITY', 'TYPE', 'SPRINT',
-    'START_DATE', 'DUE_DATE', 'ESTIMATE', 'TAGS',
+    'STATE',
+    'ASSIGNEE',
+    'PRIORITY',
+    'TYPE',
+    'SPRINT',
+    'START_DATE',
+    'DUE_DATE',
+    'ESTIMATE',
+    'TAGS',
   };
 
   @override
   Widget build(BuildContext context) {
     final action = activity.field == 'CREATED'
         ? context.t('issues.act.created')
-        : context.t('issues.act.changed',
-            variables: {'field': _fieldLabel(context, activity.field)});
+        : context.t(
+            'issues.act.changed',
+            variables: {'field': _fieldLabel(context, activity.field)},
+          );
     final showChips = _chipFields.contains(activity.field);
 
     return Padding(
@@ -1934,23 +2110,31 @@ class _ActivityTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text.rich(
-                  TextSpan(children: [
-                    TextSpan(
+                  TextSpan(
+                    children: [
+                      TextSpan(
                         text: actorName,
                         style: TextStyle(
-                            fontWeight: FontWeight.w700, color: AppColors.ink)),
-                    TextSpan(text: ' $action'),
-                  ]),
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                      TextSpan(text: ' $action'),
+                    ],
+                  ),
                   style: TextStyle(
-                      fontSize: 13, height: 1.4, color: AppColors.inkSoft),
+                    fontSize: 13,
+                    height: 1.4,
+                    color: AppColors.inkSoft,
+                  ),
                 ),
                 if (activity.createdAt != null) ...[
                   const SizedBox(height: 2),
                   Text(
-                    MaterialLocalizations.of(context)
-                        .formatShortDate(activity.createdAt!.toLocal()),
-                    style: TextStyle(
-                        fontSize: 11.5, color: AppColors.inkFaint),
+                    MaterialLocalizations.of(
+                      context,
+                    ).formatShortDate(activity.createdAt!.toLocal()),
+                    style: TextStyle(fontSize: 11.5, color: AppColors.inkFaint),
                   ),
                 ],
                 if (showChips) ...[
@@ -1975,8 +2159,11 @@ class _ActivityTile extends StatelessWidget {
       children: [
         if (from != null) _ChangeChip(from),
         if (from != null)
-          Icon(Icons.arrow_forward_rounded,
-              size: 14, color: AppColors.inkFaint),
+          Icon(
+            Icons.arrow_forward_rounded,
+            size: 14,
+            color: AppColors.inkFaint,
+          ),
         if (to != null) _ChangeChip(to),
       ],
     );
@@ -2012,21 +2199,20 @@ class _ActivityTile extends StatelessWidget {
         : raw;
   }
 
-  String _fieldLabel(BuildContext context, String field) =>
-      switch (field) {
-        'TITLE' => context.t('issues.field.title'),
-        'DESCRIPTION' => context.t('issues.field.description'),
-        'STATE' => context.t('issues.field.state'),
-        'ASSIGNEE' => context.t('issues.field.assignee'),
-        'PRIORITY' => context.t('issues.field.priority'),
-        'TYPE' => context.t('issues.field.type'),
-        'SPRINT' => context.t('issues.field.sprint'),
-        'START_DATE' => context.t('issues.field.startDate'),
-        'DUE_DATE' => context.t('issues.field.dueDate'),
-        'ESTIMATE' => context.t('issues.field.estimate'),
-        'TAGS' => context.t('issues.field.tags'),
-        _ => field.toLowerCase(),
-      };
+  String _fieldLabel(BuildContext context, String field) => switch (field) {
+    'TITLE' => context.t('issues.field.title'),
+    'DESCRIPTION' => context.t('issues.field.description'),
+    'STATE' => context.t('issues.field.state'),
+    'ASSIGNEE' => context.t('issues.field.assignee'),
+    'PRIORITY' => context.t('issues.field.priority'),
+    'TYPE' => context.t('issues.field.type'),
+    'SPRINT' => context.t('issues.field.sprint'),
+    'START_DATE' => context.t('issues.field.startDate'),
+    'DUE_DATE' => context.t('issues.field.dueDate'),
+    'ESTIMATE' => context.t('issues.field.estimate'),
+    'TAGS' => context.t('issues.field.tags'),
+    _ => field.toLowerCase(),
+  };
 }
 
 /// Small bordered pill used for before/after values in the history.
@@ -2043,11 +2229,14 @@ class _ChangeChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: AppColors.hairline),
       ),
-      child: Text(text,
-          style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.ink)),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w600,
+          color: AppColors.ink,
+        ),
+      ),
     );
   }
 }
@@ -2082,13 +2271,14 @@ class _PeoplePickerState extends State<_PeoplePicker> {
     final filtered = q.isEmpty
         ? widget.users
         : widget.users
-            .where((u) =>
-                u.displayName.toLowerCase().contains(q) ||
-                u.username.toLowerCase().contains(q))
-            .toList();
+              .where(
+                (u) =>
+                    u.displayName.toLowerCase().contains(q) ||
+                    u.username.toLowerCase().contains(q),
+              )
+              .toList();
     return Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SizedBox(
         height: MediaQuery.sizeOf(context).height * 0.62,
         child: Column(
@@ -2098,8 +2288,9 @@ class _PeoplePickerState extends State<_PeoplePicker> {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                  color: AppColors.hairline,
-                  borderRadius: BorderRadius.circular(99)),
+                color: AppColors.hairline,
+                borderRadius: BorderRadius.circular(99),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
@@ -2131,20 +2322,27 @@ class _PeoplePickerState extends State<_PeoplePicker> {
                     ListTile(
                       leading: CircleAvatar(
                         backgroundColor: AppColors.accentSoft,
-                        child: Icon(Icons.person_rounded,
-                            color: AppColors.accentStrong, size: 18),
+                        child: Icon(
+                          Icons.person_rounded,
+                          color: AppColors.accentStrong,
+                          size: 18,
+                        ),
                       ),
-                      title: Text(context.t('issues.assignToMe'),
-                          style:
-                              const TextStyle(fontWeight: FontWeight.w600)),
+                      title: Text(
+                        context.t('issues.assignToMe'),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
                       onTap: widget.onAssignMe,
                     ),
                   if (q.isEmpty)
                     ListTile(
                       leading: CircleAvatar(
                         backgroundColor: AppColors.canvas2,
-                        child: Icon(Icons.block_rounded,
-                            color: AppColors.inkSoft, size: 18),
+                        child: Icon(
+                          Icons.block_rounded,
+                          color: AppColors.inkSoft,
+                          size: 18,
+                        ),
                       ),
                       title: Text(context.t('issues.unassign')),
                       onTap: widget.onUnassign,
@@ -2153,13 +2351,22 @@ class _PeoplePickerState extends State<_PeoplePicker> {
                   for (final u in filtered)
                     ListTile(
                       leading: HiveAvatar(name: u.displayName, size: 34),
-                      title: Text(u.displayName,
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                      subtitle: Text('@${u.username}',
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      title: Text(
+                        u.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        '@${u.username}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       trailing: u.id == widget.meId
-                          ? const Icon(Icons.star_rounded,
-                              size: 16, color: AppColors.accent)
+                          ? const Icon(
+                              Icons.star_rounded,
+                              size: 16,
+                              color: AppColors.accent,
+                            )
                           : null,
                       onTap: () => widget.onSelect(u.id),
                     ),
@@ -2167,9 +2374,10 @@ class _PeoplePickerState extends State<_PeoplePicker> {
                     Padding(
                       padding: const EdgeInsets.all(24),
                       child: Center(
-                        child: Text(context.t('issues.empty'),
-                            style:
-                                TextStyle(color: AppColors.inkFaint)),
+                        child: Text(
+                          context.t('issues.empty'),
+                          style: TextStyle(color: AppColors.inkFaint),
+                        ),
                       ),
                     ),
                 ],
