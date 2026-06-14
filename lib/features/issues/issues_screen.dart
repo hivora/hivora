@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/api/hivora_repository.dart';
+import '../../core/blocs/auth_bloc.dart';
 import '../../core/blocs/fetch_cubit.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/core_models.dart';
@@ -78,6 +79,10 @@ class _IssuesScreenState extends State<IssuesScreen> {
       case _IssueFilter.bugs:
         list = list.where((i) => i.type.toUpperCase() == 'BUG').toList();
       case _IssueFilter.mine:
+        final myId = context.read<AuthBloc>().state.user?.id;
+        list = myId == null
+            ? const []
+            : list.where((i) => i.assigneeId == myId).toList();
       case _IssueFilter.all:
         break;
     }
@@ -287,6 +292,9 @@ class _SearchField extends StatelessWidget {
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                enabledBorder: InputBorder.none,
                 hintText: hint,
                 hintStyle:
                     TextStyle(fontSize: 13, color: AppColors.inkFaint),
