@@ -174,4 +174,4 @@ Pushing a `v*` tag triggers [release.yml](.github/workflows/release.yml):
 
 **GPL-3.0** — see [LICENSE](LICENSE).
 
-<p align="center"><sub>Made with 🍯 by AStA der Hochschule Niederrhein</sub></p>
+<p align="center"><sub>Made with 🍯 by Rebar Ahmad</sub></p>
