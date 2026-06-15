@@ -325,6 +325,8 @@ class HiveAvatar extends StatelessWidget {
     this.size = 30,
     this.ring = false,
     this.imageUrl,
+    this.glyph,
+    this.background,
   });
 
   final String name;
@@ -332,15 +334,23 @@ class HiveAvatar extends StatelessWidget {
   final bool ring;
   final String? imageUrl;
 
+  /// When set, renders this widget instead of initials — used to mark
+  /// non-human actors such as automated system actions with the brand mark.
+  final Widget? glyph;
+
+  /// Overrides the auto-generated hue. Pair with [glyph] for branded avatars.
+  final Color? background;
+
   @override
   Widget build(BuildContext context) {
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: hiveHueColor(name),
+        color: background ?? hiveHueColor(name),
         shape: BoxShape.circle,
-        image: (imageUrl != null && imageUrl!.isNotEmpty)
+        image: hasImage
             ? DecorationImage(image: NetworkImage(imageUrl!), fit: BoxFit.cover)
             : null,
         boxShadow: ring
@@ -348,16 +358,17 @@ class HiveAvatar extends StatelessWidget {
             : null,
       ),
       alignment: Alignment.center,
-      child: (imageUrl != null && imageUrl!.isNotEmpty)
+      child: hasImage
           ? null
-          : Text(
-              _initials(name),
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: size * 0.4,
-              ),
-            ),
+          : glyph ??
+                Text(
+                  _initials(name),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: size * 0.4,
+                  ),
+                ),
     );
   }
 }

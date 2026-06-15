@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../core/widgets/hex_mark.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -909,7 +910,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       activity: a,
       actorName: a.actorId != null
           ? (_names[a.actorId!] ?? a.actorId!)
-          : context.t('issues.unassigned'),
+          : context.t('issues.systemActor'),
       names: _names,
       sprintNames: _sprintNames,
     );
@@ -2102,7 +2103,14 @@ class _ActivityTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          HiveAvatar(name: actorName, size: 30),
+          HiveAvatar(
+            name: actorName,
+            size: 30,
+            glyph: activity.actorId == null
+                ? const HexMark(size: 18)
+                : null,
+            background: activity.actorId == null ? AppColors.accentSoft : null,
+          ),
           const SizedBox(width: 11),
           Expanded(
             child: Column(
