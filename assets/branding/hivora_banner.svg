@@ -1,0 +1,37 @@
+<svg width="960" height="260" viewBox="0 0 960 260" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hivora — self-hosted project and issue tracking">
+  <title>Hivora</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="960" y2="260" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#211F3D"/>
+      <stop offset="0.55" stop-color="#1A1830"/>
+      <stop offset="1" stop-color="#13111A"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="60" y1="14" x2="60" y2="106" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E4CE96"/>
+      <stop offset="1" stop-color="#D9A032"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5" gradientUnits="objectBoundingBox">
+      <stop stop-color="#D9A032" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#D9A032" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="960" height="260" rx="26" fill="url(#bg)"/>
+  <rect x="-40" y="40" width="320" height="320" fill="url(#glow)"/>
+
+  <!-- amber signet tile -->
+  <rect x="48" y="66" width="128" height="128" rx="32" fill="#D9A032" fill-opacity="0.13" stroke="#E4CE96" stroke-opacity="0.45" stroke-width="1.5"/>
+
+  <!-- hex-mark (viewBox 0 0 120 120 source), centred in the tile -->
+  <g transform="translate(58 76) scale(0.9)" stroke="url(#amber)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M60 14 99.8 37v46L60 106 20.2 83V37Z"/>
+    <path d="M20.2 60h79.6"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="206" y="138" font-family="Sora, 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="92" font-weight="800" letter-spacing="-3" fill="#F4F3EF">Hivora</text>
+  <!-- amber accent underline -->
+  <rect x="210" y="158" width="78" height="5" rx="2.5" fill="#D9A032"/>
+  <!-- tagline -->
+  <text x="210" y="192" font-family="'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" letter-spacing="2.5" fill="#A8A6C2">SELF-HOSTED PROJECT &amp; ISSUE TRACKING</text>
+</svg>
