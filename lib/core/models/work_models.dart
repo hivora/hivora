@@ -337,6 +337,7 @@ class GanttTask extends Equatable {
     required this.state,
     required this.resolved,
     required this.progressPercent,
+    this.type = 'TASK',
     this.startDate,
     this.dueDate,
     this.dependsOnIds = const [],
@@ -346,6 +347,7 @@ class GanttTask extends Equatable {
   final String readableId;
   final String title;
   final String state;
+  final String type;
   final bool resolved;
   final int progressPercent;
   final DateTime? startDate;
@@ -357,6 +359,7 @@ class GanttTask extends Equatable {
         readableId: json['readableId'] as String? ?? '',
         title: json['title'] as String? ?? '',
         state: json['state'] as String? ?? '',
+        type: json['type'] as String? ?? 'TASK',
         resolved: json['resolved'] as bool? ?? false,
         progressPercent: json['progressPercent'] as int? ?? 0,
         startDate: _date(json['startDate']),

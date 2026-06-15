@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/responsive/responsive.dart';
 import 'issue_detail_sheet.dart';
 
 /// Deep-link / route target for `/issues/:id`. Reuses the shared editable
@@ -12,10 +13,18 @@ class IssueDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        child: IssueDetailBody(issueId: issueId),
+    // No SafeArea here: the compact shell injects the glass app-bar and floating
+    // nav footprints into MediaQuery padding, so we add them as scroll padding
+    // (topGutter / bottomGutter) and let content scroll *behind* the bars — the
+    // same convention every other screen follows. A SafeArea would instead eat
+    // those insets as a flat gap, planting a solid band behind the floating nav
+    // instead of letting it float over dissolving content.
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        top: context.topGutter,
+        bottom: context.bottomGutter,
       ),
+      child: IssueDetailBody(issueId: issueId),
     );
   }
 }

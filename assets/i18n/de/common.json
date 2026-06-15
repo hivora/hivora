@@ -248,6 +248,7 @@
   "gantt": {
     "title": "Zeitachse",
     "subtitle": "Gantt-Ansicht mit Abhängigkeiten",
+    "column": "Aufgabe",
     "empty": "Keine geplanten Aufgaben. Setze Start- und Fälligkeitsdatum, um sie auf der Zeitachse zu sehen.",
     "today": "Heute",
     "week": "Woche",

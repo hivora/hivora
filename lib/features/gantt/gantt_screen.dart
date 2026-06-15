@@ -208,125 +208,170 @@ class _GanttScreenState extends State<GanttScreen> {
     return Padding(
       padding: EdgeInsets.fromLTRB(context.pageGutter, 0, context.pageGutter,
           context.pageGutter + context.bottomGutter),
-      child: SoftCard(
-        padding: EdgeInsets.zero,
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                // ---- Header strip: corner + horizontally-synced axis ----
-                SizedBox(
-                  height: _headerHeight,
-                  child: Row(
-                    children: [
-                      SizedBox(width: labelWidth),
-                      Container(width: 1, color: AppColors.hairline),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          controller: _hHeader,
-                          scrollDirection: Axis.horizontal,
-                          physics: const NeverScrollableScrollPhysics(),
-                          child: _TimeAxis(
-                            start: chartStart,
-                            days: totalDays,
-                            pxPerDay: _pxPerDay,
-                            zoom: _zoom,
-                            height: _headerHeight,
-                            width: timelineWidth,
-                            today: inRange ? today : null,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Divider(height: 1, color: AppColors.hairline),
-                // ---- Body: frozen labels + scrollable chart ----
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: labelWidth,
-                        child: SingleChildScrollView(
-                          controller: _vLabels,
-                          physics: const NeverScrollableScrollPhysics(),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // The card is only as tall as its rows, capped at the space we have.
+          // Below the cap the body scrolls vertically; above it the card simply
+          // shrinks to fit — so a single-issue chart no longer stretches its
+          // grid to fill the screen.
+          // SoftCard draws a 1px hairline border on each side, so its inner
+          // height is 2px less than the box — fold that into the budget so the
+          // body never overflows by those two pixels.
+          const cardBorder = 2.0;
+          final availableBody =
+              (constraints.maxHeight - _headerHeight - 1 - cardBorder)
+                  .clamp(0.0, double.infinity);
+          final bodyHeight = rowsHeight < availableBody ? rowsHeight : availableBody;
+          final cardHeight = _headerHeight + 1 + bodyHeight + cardBorder;
+          return Stack(
+            children: [
+              Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  height: cardHeight,
+                  child: SoftCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // ---- Header strip: corner + horizontally-synced axis ----
+                        SizedBox(
+                          height: _headerHeight,
+                          child: Row(
                             children: [
-                              for (final task in _tasks)
-                                _TaskLabel(
-                                  task: task,
-                                  height: _rowHeight,
-                                  onTap: () =>
-                                      context.go('/issues/${task.id}'),
+                              SizedBox(
+                                width: labelWidth,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      context.t('gantt.column').toUpperCase(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.4,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ),
                                 ),
+                              ),
+                              Container(width: 1, color: AppColors.hairline),
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  controller: _hHeader,
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  child: _TimeAxis(
+                                    start: chartStart,
+                                    days: totalDays,
+                                    pxPerDay: _pxPerDay,
+                                    zoom: _zoom,
+                                    height: _headerHeight,
+                                    width: timelineWidth,
+                                    today: inRange ? today : null,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                      ),
-                      Container(width: 1, color: AppColors.hairline),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          controller: _hBody,
-                          scrollDirection: Axis.horizontal,
-                          child: SizedBox(
-                            width: timelineWidth,
-                            child: SingleChildScrollView(
-                              controller: _vBody,
-                              child: SizedBox(
-                                width: timelineWidth,
-                                height: rowsHeight,
-                                child: Stack(
-                                  children: [
-                                    Positioned.fill(
-                                      child: CustomPaint(
-                                        painter: _GridPainter(
-                                          start: chartStart,
-                                          days: totalDays,
-                                          pxPerDay: _pxPerDay,
-                                          zoom: _zoom,
-                                          todayX: todayX,
-                                          rowHeight: _rowHeight,
-                                          rowCount: _tasks.length,
-                                          line: AppColors.hairline2,
-                                          monthLine: AppColors.hairline,
-                                          weekend: AppColors.canvas2,
-                                          todayColor: AppColors.stTodo,
+                        Divider(height: 1, color: AppColors.hairline),
+                        // ---- Body: frozen labels + scrollable chart ----
+                        SizedBox(
+                          height: bodyHeight,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: labelWidth,
+                                child: SingleChildScrollView(
+                                  controller: _vLabels,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      for (final task in _tasks)
+                                        _TaskLabel(
+                                          task: task,
+                                          height: _rowHeight,
+                                          onTap: () =>
+                                              context.go('/issues/${task.id}'),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Container(width: 1, color: AppColors.hairline),
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  controller: _hBody,
+                                  scrollDirection: Axis.horizontal,
+                                  child: SizedBox(
+                                    width: timelineWidth,
+                                    child: SingleChildScrollView(
+                                      controller: _vBody,
+                                      child: SizedBox(
+                                        width: timelineWidth,
+                                        height: rowsHeight,
+                                        child: Stack(
+                                          children: [
+                                            Positioned.fill(
+                                              child: CustomPaint(
+                                                painter: _GridPainter(
+                                                  start: chartStart,
+                                                  days: totalDays,
+                                                  pxPerDay: _pxPerDay,
+                                                  zoom: _zoom,
+                                                  todayX: todayX,
+                                                  rowHeight: _rowHeight,
+                                                  rowCount: _tasks.length,
+                                                  line: AppColors.hairline2,
+                                                  monthLine: AppColors.hairline,
+                                                  weekend: AppColors.canvas2,
+                                                  todayColor: AppColors.stTodo,
+                                                ),
+                                              ),
+                                            ),
+                                            for (var i = 0; i < _tasks.length; i++)
+                                              _positionedBar(
+                                                  context, _tasks[i], i, chartStart),
+                                          ],
                                         ),
                                       ),
                                     ),
-                                    for (var i = 0; i < _tasks.length; i++)
-                                      _positionedBar(
-                                          context, _tasks[i], i, chartStart),
-                                  ],
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
-            // ---- Floating zoom / today switcher ----
-            Positioned(
-              right: 14,
-              bottom: 14,
-              child: _ViewSwitcher(
-                zoom: _zoom,
-                onZoom: (z) {
-                  if (z == _zoom) return;
-                  setState(() => _zoom = z);
-                },
-                onToday: () => _scrollToToday(todayX, timelineWidth),
-                maxWidth: MediaQuery.sizeOf(context).width - 2 * context.pageGutter - 28,
               ),
-            ),
-          ],
-        ),
+              // ---- Floating zoom / today switcher ----
+              Positioned(
+                right: 14,
+                bottom: 14,
+                child: _ViewSwitcher(
+                  zoom: _zoom,
+                  onZoom: (z) {
+                    if (z == _zoom) return;
+                    setState(() => _zoom = z);
+                  },
+                  onToday: () => _scrollToToday(todayX, timelineWidth),
+                  maxWidth:
+                      MediaQuery.sizeOf(context).width - 2 * context.pageGutter - 28,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -456,6 +501,8 @@ class _TaskLabel extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Row(
             children: [
+              TypeGlyph(type: task.type, size: 18),
+              const SizedBox(width: 10),
               Expanded(
                 child: RichText(
                   maxLines: 1,
