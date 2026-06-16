@@ -335,10 +335,17 @@ class _LabelChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              selected ? Icons.check_rounded : Icons.label_outline_rounded,
-              size: 14,
-              color: selected ? AppColors.accentStrong : AppColors.inkFaint,
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 130),
+              child: selected
+                  ? Icon(
+                      Icons.check_rounded,
+                      size: 14,
+                      color: selected
+                          ? AppColors.accentStrong
+                          : AppColors.inkFaint,
+                    )
+                  : SizedBox.shrink(),
             ),
             const SizedBox(width: 6),
             Text(
@@ -359,7 +366,6 @@ class _LabelChip extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
-                      color: AppColors.dangerSoft,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(

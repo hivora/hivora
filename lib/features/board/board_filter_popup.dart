@@ -8,6 +8,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
 import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/hex_mark.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../search/search_tokens.dart';
 import 'board_filter.dart';
@@ -370,17 +371,10 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
                         mainAxisSize: MainAxisSize.min,
                         spacing: 10,
                         children: [
-                          /// Create a compound Icon Widget by adding the Hive logo and a search icon together, to indicate "no results found".
-                          Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Icon(
-                                Icons.search_off_rounded,
-                                size: 32,
-                                color: tokens.inkFaint,
-                              ),
-                            ],
-                          ),
+                          /// The amber Hivora hex-mark with a small "x" badge
+                          /// stacked at its top-right corner, signalling that
+                          /// there is nothing left to filter here.
+                          HexMark(size: 34, color: tokens.inkFaint),
                           Text(
                             context.t('board.filterNoOptions'),
                             textAlign: TextAlign.center,
