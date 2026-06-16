@@ -6,6 +6,7 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_widgets.dart';
+import '../board/board_filter.dart';
 import 'widgets/glass_sprint_header.dart';
 import 'widgets/sprint_widgets.dart';
 
@@ -17,6 +18,7 @@ class SprintActiveSurface extends StatelessWidget {
     required this.sprint,
     required this.columns,
     required this.issues,
+    required this.filter,
     required this.names,
     required this.onOpenIssue,
     required this.onMoveState,
@@ -28,6 +30,7 @@ class SprintActiveSurface extends StatelessWidget {
   final Sprint sprint;
   final List<BoardColumnView> columns;
   final List<Issue> issues;
+  final BoardFilter filter;
   final Map<String, String> names;
   final void Function(Issue) onOpenIssue;
   final void Function(Issue, String) onMoveState;
@@ -106,7 +109,8 @@ class SprintActiveSurface extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final column = boardColumns[index];
                     final colIssues = issues
-                        .where((i) => column.states.contains(i.state))
+                        .where((i) =>
+                            column.states.contains(i.state) && filter.matches(i))
                         .toList();
                     return _SprintColumn(
                       column: column,

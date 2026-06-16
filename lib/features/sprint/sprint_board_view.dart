@@ -10,7 +10,9 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_loader.dart';
-import '../../core/widgets/hive_widgets.dart';
+import '../board/board_filter.dart';
+import '../board/board_filter_popup.dart';
+import '../board/board_people_strip.dart';
 import '../issues/issue_form.dart';
 import 'modals/complete_sprint_dialog.dart';
 import 'modals/create_sprint_dialog.dart';
@@ -72,6 +74,10 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
   late bool _headerCollapsed =
       context.read<AppStorage>().sprintHeaderCollapsed;
 
+  // Shared people/criteria filter for the Planning + Active surfaces.
+  BoardFilter _filter = BoardFilter.empty;
+  final GlobalKey _filterKey = GlobalKey();
+
   // Planning selection / drag.
   final Set<String> _selected = {};
 
@@ -109,6 +115,39 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
   int get _backlogPages =>
       _backlogTotal == 0 ? 1 : ((_backlogTotal + kBacklogPageSize - 1) ~/ kBacklogPageSize);
 
+  /// Every issue currently loaded (all sprint containers + the backlog page) —
+  /// the basis for the filter's facet options and the people strip.
+  List<Issue> get _allLoadedIssues => [
+    for (final list in _bySprint.values) ...list,
+    ..._backlog,
+  ];
+
+  List<String> get _peopleIds {
+    final seen = <String>{};
+    final out = <String>[];
+    for (final issue in _allLoadedIssues) {
+      final a = issue.assigneeId;
+      if (a != null && a.isNotEmpty && seen.add(a)) out.add(a);
+    }
+    return out;
+  }
+
+  Map<String, String> get _sprintNames => {for (final s in _sprints) s.id: s.name};
+
+  void _openFilter() => openBoardFilter(
+    context,
+    anchorKey: _filterKey,
+    filter: _filter,
+    options: BoardFilterOptions.from(
+      issues: _allLoadedIssues,
+      boardSprints: _sprints,
+      projectLabels: const [],
+    ),
+    names: widget.names,
+    sprintNames: _sprintNames,
+    onChanged: (f) => setState(() => _filter = f),
+  );
+
   // ── loading ─────────────────────────────────────────────────────────────
 
   Future<void> _loadAll() async {
@@ -138,6 +177,9 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
         _sprints = sprints;
         _loading = false;
       });
+      // Insights are derived from this data, so keep them in step.
+      // (Done/sprint/add changes all flow through here.)
+      _invalidateReport();
     } on ApiFailure catch (failure) {
       if (!mounted) return;
       setState(() {
@@ -307,9 +349,21 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
     });
     try {
       await _repo.updateIssue(issue.id, patch);
+      // Story points feed committed/velocity/burndown — refresh insights.
+      _invalidateReport();
     } on ApiFailure catch (failure) {
       _toastKey(failure.message);
       await _loadAll();
+    }
+  }
+
+  /// Drops the cached insights report (refreshing it if it's currently shown)
+  /// so it never lags behind a change that affects the numbers.
+  void _invalidateReport() {
+    if (_tab == _Tab.insights) {
+      _loadReport();
+    } else {
+      _report = null;
     }
   }
 
@@ -464,26 +518,65 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
   }
 
   Widget _tabBar() {
-    final items = [
-      SegmentItem(label: context.t('sprint.tab.planning'), icon: Icons.list_alt_rounded),
-      SegmentItem(label: context.t('sprint.tab.active'), icon: Icons.view_column_rounded),
-      SegmentItem(label: context.t('sprint.tab.insights'), icon: Icons.show_chart_rounded),
-    ];
-    final control = SegmentedControl(
-      items: items,
+    final compact = context.isCompact;
+    // Labels are hidden on phones (icons only) to leave room for the filter.
+    final switcher = _SprintTabSwitcher(
+      iconsOnly: compact,
       selected: _tab.index,
       onChanged: (i) {
         setState(() => _tab = _Tab.values[i]);
         if (_tab == _Tab.insights && _report == null) _loadReport();
       },
     );
-    // Scroll horizontally on narrow widths so the three labels never overflow.
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: control,
-      ),
+
+    // The filter applies to Planning + Active sprint (not Insights). The
+    // people strip only appears on wide layouts (plenty of room); narrower
+    // screens rely on the filter popup's assignee facet.
+    final showFilter = _tab != _Tab.insights;
+    final showPeople = context.isExpanded && _peopleIds.isNotEmpty;
+    // A right-aligned cluster: the Expanded fills the space after the switcher
+    // and the Align pins the people strip + filter button flush right.
+    return Row(
+      children: [
+        switcher,
+        Expanded(
+          child: !showFilter
+              ? const SizedBox.shrink()
+              : Align(
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (showPeople) ...[
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 360),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            reverse: true,
+                            child: BoardPeopleStrip(
+                              userIds: _peopleIds,
+                              names: widget.names,
+                              selected: _filter.assignees,
+                              onToggle: (id) => setState(
+                                () => _filter = _filter
+                                    .toggle(BoardFilterFacet.assignee, id),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      _SprintFilterButton(
+                        key: _filterKey,
+                        count: _filter.activeCount,
+                        compact: compact,
+                        onTap: _openFilter,
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      ],
     );
   }
 
@@ -494,6 +587,7 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
           sprints: _planningSprints,
           activeSprintId: _activeSprintId,
           issuesBySprint: _bySprint,
+          filter: _filter,
           backlog: _backlog,
           backlogTotal: _backlogTotal,
           backlogPage: _backlogPage,
@@ -538,6 +632,7 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
           sprint: sprint,
           columns: widget.view.columns,
           issues: _activeIssues,
+          filter: _filter,
           names: widget.names,
           onOpenIssue: widget.onOpenIssue,
           onMoveState: _moveIssueState,
@@ -562,6 +657,157 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
           onRetry: _loadReport,
         );
     }
+  }
+}
+
+/// Planning · Active sprint · Insights switcher. Shows labels on wide layouts
+/// and icons only on phones (so the filter cluster fits on the same row).
+class _SprintTabSwitcher extends StatelessWidget {
+  const _SprintTabSwitcher({
+    required this.iconsOnly,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final bool iconsOnly;
+  final int selected;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <({IconData icon, String label})>[
+      (icon: Icons.list_alt_rounded, label: context.t('sprint.tab.planning')),
+      (icon: Icons.view_column_rounded, label: context.t('sprint.tab.active')),
+      (icon: Icons.show_chart_rounded, label: context.t('sprint.tab.insights')),
+    ];
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        border: Border.all(color: AppColors.hairline),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < items.length; i++)
+            GestureDetector(
+              onTap: () => onChanged(i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: EdgeInsets.symmetric(
+                  horizontal: iconsOnly ? 11 : 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: i == selected ? AppColors.navy : Colors.transparent,
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      items[i].icon,
+                      size: 15,
+                      color: i == selected ? Colors.white : AppColors.inkSoft,
+                    ),
+                    if (!iconsOnly) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        items[i].label,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              i == selected ? Colors.white : AppColors.inkSoft,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// White pill that opens the glass filter popup; shows an amber count badge.
+/// Collapses to an icon-only button on phones.
+class _SprintFilterButton extends StatelessWidget {
+  const _SprintFilterButton({
+    super.key,
+    required this.count,
+    required this.compact,
+    required this.onTap,
+  });
+
+  final int count;
+  final bool compact;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = count > 0;
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 11 : 14,
+            vertical: 10,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+            border: Border.all(
+              color: active ? AppColors.accentLine : AppColors.hairline,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.tune_rounded, size: 16, color: AppColors.inkSoft),
+              if (!compact) ...[
+                const SizedBox(width: 7),
+                Text(
+                  context.t('board.filterButton'),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              if (active) ...[
+                const SizedBox(width: 7),
+                Container(
+                  constraints: const BoxConstraints(minWidth: 18),
+                  height: 18,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  decoration: const BoxDecoration(
+                    color: AppColors.accent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '$count',
+                    style: const TextStyle(
+                      fontFamily: AppTheme.fontMono,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2A2410),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

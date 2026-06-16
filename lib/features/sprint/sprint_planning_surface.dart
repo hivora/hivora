@@ -6,6 +6,7 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_widgets.dart';
+import '../board/board_filter.dart';
 import '../board/board_screen.dart' show DottedAddButton;
 import 'sprint_format.dart';
 import 'widgets/plan_row.dart';
@@ -20,6 +21,7 @@ class SprintPlanningSurface extends StatelessWidget {
     required this.sprints,
     required this.activeSprintId,
     required this.issuesBySprint,
+    required this.filter,
     required this.backlog,
     required this.backlogTotal,
     required this.backlogPage,
@@ -44,6 +46,7 @@ class SprintPlanningSurface extends StatelessWidget {
   final List<Sprint> sprints;
   final String? activeSprintId;
   final Map<String, List<Issue>> issuesBySprint;
+  final BoardFilter filter;
   final List<Issue> backlog;
   final int backlogTotal;
   final int backlogPage;
@@ -83,7 +86,9 @@ class SprintPlanningSurface extends StatelessWidget {
               _SprintGroup(
                 sprint: s,
                 isActive: s.id == activeSprintId,
-                issues: issuesBySprint[s.id] ?? const [],
+                issues: (issuesBySprint[s.id] ?? const [])
+                    .where(filter.matches)
+                    .toList(),
                 selected: selected,
                 onToggleSelect: onToggleSelect,
                 onOpenIssue: onOpenIssue,
@@ -107,7 +112,7 @@ class SprintPlanningSurface extends StatelessWidget {
               const SizedBox(height: 16),
             ],
             _BacklogGroup(
-              issues: backlog,
+              issues: backlog.where(filter.matches).toList(),
               total: backlogTotal,
               page: backlogPage,
               pages: backlogPages,
