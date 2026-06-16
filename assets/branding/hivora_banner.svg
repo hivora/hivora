@@ -29,7 +29,7 @@
   </g>
 
   <!-- wordmark -->
-  <text x="206" y="138" font-family="Sora, 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="92" font-weight="800" letter-spacing="-3" fill="#F4F3EF">Hivora</text>
+  <text x="206" y="138" font-family="Sora, 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="92" font-weight="800" letter-spacing="-3" fill="#F4F3EF">hivora</text>
   <!-- amber accent underline -->
   <rect x="210" y="158" width="78" height="5" rx="2.5" fill="#D9A032"/>
   <!-- tagline -->
