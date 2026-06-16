@@ -54,7 +54,8 @@ class _MarkdownTextState extends State<MarkdownText> {
   @override
   Widget build(BuildContext context) {
     _disposeRecognizers();
-    final base = widget.baseStyle ??
+    final base =
+        widget.baseStyle ??
         TextStyle(fontSize: 14, height: 1.55, color: AppColors.ink);
     final blocks = <Widget>[];
     final lines = widget.data.replaceAll('\r\n', '\n').split('\n');
@@ -88,10 +89,12 @@ class _MarkdownTextState extends State<MarkdownText> {
 
       // Horizontal rule.
       if (RegExp(r'^(-{3,}|\*{3,}|_{3,})$').hasMatch(trimmed)) {
-        blocks.add(Padding(
-          padding: EdgeInsets.symmetric(vertical: 10),
-          child: Divider(height: 1, color: AppColors.hairline),
-        ));
+        blocks.add(
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Divider(height: 1, color: AppColors.hairline),
+          ),
+        );
         i++;
         continue;
       }
@@ -100,29 +103,34 @@ class _MarkdownTextState extends State<MarkdownText> {
       final heading = RegExp(r'^(#{1,3})\s+(.*)$').firstMatch(trimmed);
       if (heading != null) {
         final level = heading.group(1)!.length;
-        final size = switch (level) { 1 => 19.0, 2 => 16.5, _ => 14.5 };
-        blocks.add(Padding(
-          padding: EdgeInsets.only(top: blocks.isEmpty ? 0 : 8, bottom: 4),
-          child: RichText(
-            text: _inline(
-              heading.group(2)!,
-              base.copyWith(
-                fontFamily: AppTheme.fontBrand,
-                fontSize: size,
-                fontWeight: FontWeight.w700,
-                height: 1.3,
+        final size = switch (level) {
+          1 => 19.0,
+          2 => 16.5,
+          _ => 14.5,
+        };
+        blocks.add(
+          Padding(
+            padding: EdgeInsets.only(top: blocks.isEmpty ? 0 : 8, bottom: 4),
+            child: RichText(
+              text: _inline(
+                heading.group(2)!,
+                base.copyWith(
+                  fontFamily: AppTheme.fontBrand,
+                  fontSize: size,
+                  fontWeight: FontWeight.w700,
+                  height: 1.3,
+                ),
               ),
             ),
           ),
-        ));
+        );
         i++;
         continue;
       }
 
       // Bullet list (consume consecutive items).
       if (RegExp(r'^[-*]\s+').hasMatch(trimmed)) {
-        while (i < lines.length &&
-            RegExp(r'^\s*[-*]\s+').hasMatch(lines[i])) {
+        while (i < lines.length && RegExp(r'^\s*[-*]\s+').hasMatch(lines[i])) {
           final content = lines[i].replaceFirst(RegExp(r'^\s*[-*]\s+'), '');
           blocks.add(_listItem(context, '•', content, base));
           i++;
@@ -133,8 +141,7 @@ class _MarkdownTextState extends State<MarkdownText> {
       // Ordered list.
       if (RegExp(r'^\d+\.\s+').hasMatch(trimmed)) {
         var n = 1;
-        while (i < lines.length &&
-            RegExp(r'^\s*\d+\.\s+').hasMatch(lines[i])) {
+        while (i < lines.length && RegExp(r'^\s*\d+\.\s+').hasMatch(lines[i])) {
           final content = lines[i].replaceFirst(RegExp(r'^\s*\d+\.\s+'), '');
           blocks.add(_listItem(context, '$n.', content, base));
           n++;
@@ -163,10 +170,12 @@ class _MarkdownTextState extends State<MarkdownText> {
       }
 
       // Paragraph.
-      blocks.add(Padding(
-        padding: const EdgeInsets.only(bottom: 2),
-        child: RichText(text: _inline(trimmed, base)),
-      ));
+      blocks.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: RichText(text: _inline(trimmed, base)),
+        ),
+      );
       i++;
     }
 
@@ -178,7 +187,11 @@ class _MarkdownTextState extends State<MarkdownText> {
   }
 
   Widget _listItem(
-      BuildContext context, String marker, String content, TextStyle base) {
+    BuildContext context,
+    String marker,
+    String content,
+    TextStyle base,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(top: 3, bottom: 3),
       child: Row(
@@ -186,9 +199,13 @@ class _MarkdownTextState extends State<MarkdownText> {
         children: [
           SizedBox(
             width: 20,
-            child: Text(marker,
-                style: base.copyWith(
-                    color: AppColors.inkSoft, fontWeight: FontWeight.w600)),
+            child: Text(
+              marker,
+              style: base.copyWith(
+                color: AppColors.inkSoft,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           Expanded(child: RichText(text: _inline(content, base))),
         ],
@@ -226,14 +243,19 @@ class _MarkdownTextState extends State<MarkdownText> {
 
   /// Renders a Markdown table. Columns share the available width (so it never
   /// overflows on a narrow screen); cell text wraps and supports inline syntax.
-  Widget _table(List<String> header, List<List<String>> rows,
-      List<TextAlign> aligns, TextStyle base) {
+  Widget _table(
+    List<String> header,
+    List<List<String>> rows,
+    List<TextAlign> aligns,
+    TextStyle base,
+  ) {
     final cols = header.length;
     TextAlign alignFor(int c) => c < aligns.length ? aligns[c] : TextAlign.left;
 
     TableRow buildRow(List<String> cells, {required bool isHeader}) {
-      final style =
-          isHeader ? base.copyWith(fontWeight: FontWeight.w700) : base;
+      final style = isHeader
+          ? base.copyWith(fontWeight: FontWeight.w700)
+          : base;
       return TableRow(
         decoration: isHeader
             ? BoxDecoration(color: AppColors.surfaceMuted)
@@ -291,37 +313,47 @@ class _MarkdownTextState extends State<MarkdownText> {
         spans.add(TextSpan(text: text.substring(last, m.start), style: base));
       }
       if (m.group(2) != null || m.group(4) != null) {
-        spans.add(TextSpan(
+        spans.add(
+          TextSpan(
             text: m.group(2) ?? m.group(4),
-            style: base.copyWith(fontWeight: FontWeight.w700)));
-      } else if (m.group(6) != null || m.group(8) != null) {
-        spans.add(TextSpan(
-            text: m.group(6) ?? m.group(8),
-            style: base.copyWith(fontStyle: FontStyle.italic)));
-      } else if (m.group(10) != null) {
-        spans.add(TextSpan(
-          text: ' ${m.group(10)} ',
-          style: base.copyWith(
-            fontFamily: AppTheme.fontMono,
-            fontSize: (base.fontSize ?? 14) - 1,
-            color: AppColors.ink,
-            backgroundColor: AppColors.surfaceMuted,
+            style: base.copyWith(fontWeight: FontWeight.w700),
           ),
-        ));
+        );
+      } else if (m.group(6) != null || m.group(8) != null) {
+        spans.add(
+          TextSpan(
+            text: m.group(6) ?? m.group(8),
+            style: base.copyWith(fontStyle: FontStyle.italic),
+          ),
+        );
+      } else if (m.group(10) != null) {
+        spans.add(
+          TextSpan(
+            text: ' ${m.group(10)} ',
+            style: base.copyWith(
+              fontFamily: AppTheme.fontMono,
+              fontSize: (base.fontSize ?? 14) - 1,
+              color: AppColors.ink,
+              backgroundColor: AppColors.surfaceMuted,
+            ),
+          ),
+        );
       } else if (m.group(12) != null) {
         // Link: accent text that opens the target URL on tap.
         final url = m.group(13)!;
         final recognizer = TapGestureRecognizer()..onTap = () => _openUrl(url);
         _recognizers.add(recognizer);
-        spans.add(TextSpan(
-          text: m.group(12),
-          recognizer: recognizer,
-          style: base.copyWith(
-            color: AppColors.stTodo,
-            decoration: TextDecoration.underline,
-            decorationColor: AppColors.stTodo,
+        spans.add(
+          TextSpan(
+            text: m.group(12),
+            recognizer: recognizer,
+            style: base.copyWith(
+              color: AppColors.stTodo,
+              decoration: TextDecoration.underline,
+              decorationColor: AppColors.stTodo,
+            ),
           ),
-        ));
+        );
       }
       last = m.end;
     }
@@ -416,8 +448,7 @@ class MarkdownEditorField extends StatelessWidget {
           // Toolbar
           Container(
             decoration: BoxDecoration(
-              border:
-                  Border(bottom: BorderSide(color: AppColors.hairline2)),
+              border: Border(bottom: BorderSide(color: AppColors.hairline2)),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: Row(
@@ -484,12 +515,16 @@ class MarkdownEditorField extends StatelessWidget {
     final start = sel.start < 0 ? value.text.length : sel.start;
     final end = sel.end < 0 ? value.text.length : sel.end;
     final selected = value.text.substring(start, end);
-    final newText =
-        value.text.replaceRange(start, end, '$before$selected$after');
+    final newText = value.text.replaceRange(
+      start,
+      end,
+      '$before$selected$after',
+    );
     controller.value = value.copyWith(
       text: newText,
       selection: TextSelection.collapsed(
-          offset: start + before.length + selected.length),
+        offset: start + before.length + selected.length,
+      ),
     );
   }
 
@@ -508,8 +543,11 @@ class MarkdownEditorField extends StatelessWidget {
 }
 
 class _ToolBtn extends StatelessWidget {
-  const _ToolBtn(
-      {required this.icon, required this.onTap, required this.tooltip});
+  const _ToolBtn({
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+  });
 
   final IconData icon;
   final VoidCallback onTap;

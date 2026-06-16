@@ -83,7 +83,11 @@ Future<void> showIssueDetailSheet(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       TypeGlyph(type: issue.type, size: 24),
-                      IdMono(issue.readableId, color: AppColors.inkSoft, fontSize: 16),
+                      IdMono(
+                        issue.readableId,
+                        color: AppColors.inkSoft,
+                        fontSize: 16,
+                      ),
                     ],
                   ),
                 ),
@@ -224,6 +228,9 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   List<IssueActivity> _activity = const [];
   List<WorkItem> _workItems = const [];
   Project? _project;
+  // Labels deleted this session — guards against the stale _project list
+  // re-suggesting a label that was just removed from the project.
+  final Set<String> _deletedLabels = {};
   List<DirectoryUser> _users = const [];
   List<Sprint> _sprints = const [];
   Map<String, String> get _names => {
@@ -398,10 +405,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   @override
   Widget build(BuildContext context) {
     if (_loading && _issue == null) {
-      return const SizedBox(
-        height: 260,
-        child: Center(child: HiveLoader()),
-      );
+      return const SizedBox(height: 260, child: Center(child: HiveLoader()));
     }
     if (_error != null && _issue == null) {
       return SizedBox(
@@ -1008,13 +1012,30 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     final available = <String>{
       ...?_project?.labels,
       ...issue.tags,
-    }.toList();
+    }.where((l) => !_deletedLabels.contains(l)).toList();
+    var didDelete = false;
     final result = await showLabelPicker(
       context,
       available: available,
-      selected: issue.tags,
+      selected: issue.tags.where((l) => !_deletedLabels.contains(l)).toList(),
+      onDelete: (l) async {
+        await _repo.deleteProjectLabel(issue.projectId, l);
+        _deletedLabels.add(l);
+        didDelete = true;
+      },
     );
-    if (result != null) await _patch({'tags': result});
+    if (result != null) {
+      await _patch({'tags': result});
+    } else if (didDelete && mounted) {
+      // Dismissed without saving, but a label was deleted server-side — pull
+      // the fresh issue so its tag chips reflect the removal.
+      try {
+        final fresh = await _repo.issue(widget.issueId);
+        if (mounted) setState(() => _issue = fresh);
+      } catch (_) {
+        /* next full load reflects server truth */
+      }
+    }
   }
 
   static const _noSprint = '__none__';
@@ -1330,6 +1351,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
   DateTime? _startDate;
   DateTime? _dueDate;
   List<String> _labels = const [];
+  final Set<String> _deletedLabels = {};
 
   bool _loading = true;
   String? _error;
@@ -1471,7 +1493,11 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
         // Bottom clearance for the pinned save bar (which overlays the content):
         // ~save button + its padding + the device safe-area inset.
         padding: EdgeInsets.fromLTRB(
-            20, 16, 20, 88 + MediaQuery.viewPaddingOf(context).bottom),
+          20,
+          16,
+          20,
+          88 + MediaQuery.viewPaddingOf(context).bottom,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1537,8 +1563,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
           ),
           decoration: InputDecoration(
             hintText: context.t('issues.title'),
-            errorStyle:
-                const TextStyle(color: AppColors.danger, fontSize: 12),
+            errorStyle: const TextStyle(color: AppColors.danger, fontSize: 12),
             contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           ),
           validator: (value) => (value == null || value.trim().isEmpty)
@@ -1769,11 +1794,24 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
   }
 
   Future<void> _pickLabels() async {
-    final available = <String>{...?_project?.labels, ..._labels}.toList();
+    final pid = _projectId;
+    final available = <String>{
+      ...?_project?.labels,
+      ..._labels,
+    }.where((l) => !_deletedLabels.contains(l)).toList();
     final result = await showLabelPicker(
       context,
       available: available,
-      selected: _labels,
+      selected: _labels.where((l) => !_deletedLabels.contains(l)).toList(),
+      onDelete: pid == null
+          ? null
+          : (l) async {
+              await _repo.deleteProjectLabel(pid, l);
+              _deletedLabels.add(l);
+              if (mounted) {
+                setState(() => _labels = _labels.where((x) => x != l).toList());
+              }
+            },
     );
     if (result != null) setState(() => _labels = result);
   }
@@ -1880,10 +1918,7 @@ class _RouteTopBar extends StatelessWidget {
             const SizedBox(
               width: 14,
               height: 14,
-              child: HiveLoader(
-                strokeWidth: 2,
-                color: AppColors.accent,
-              ),
+              child: HiveLoader(strokeWidth: 2, color: AppColors.accent),
             ),
           ],
           const Spacer(),
@@ -2163,9 +2198,7 @@ class _ActivityTile extends StatelessWidget {
           HiveAvatar(
             name: actorName,
             size: 30,
-            glyph: activity.actorId == null
-                ? const HexMark(size: 18)
-                : null,
+            glyph: activity.actorId == null ? const HexMark(size: 18) : null,
             background: activity.actorId == null ? AppColors.accentSoft : null,
           ),
           const SizedBox(width: 11),

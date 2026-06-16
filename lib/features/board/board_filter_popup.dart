@@ -15,15 +15,16 @@ import 'board_filter.dart';
 const double _kCompactBreakpoint = 610;
 
 /// Opens the board filter as a liquid-glass popover anchored to the filter
-/// button (read from [anchorKey]). Mirrors the global-search glass look but is
-/// a button-anchored popover, not a centered modal. Every chip toggle applies
-/// live through [onChanged].
+/// button (read from [anchorKey]). Mirrors the global-search palette: a search
+/// field, scope chips (one per filter criterion) and a searchable, multi-select
+/// option list. Every toggle applies live through [onChanged].
 Future<void> openBoardFilter(
   BuildContext context, {
   required GlobalKey anchorKey,
   required BoardFilter filter,
   required BoardFilterOptions options,
   required Map<String, String> names,
+  required Map<String, String> sprintNames,
   required ValueChanged<BoardFilter> onChanged,
 }) {
   final box = anchorKey.currentContext?.findRenderObject() as RenderBox?;
@@ -42,10 +43,19 @@ Future<void> openBoardFilter(
       initial: filter,
       options: options,
       names: names,
+      sprintNames: sprintNames,
       onChanged: onChanged,
     ),
     transitionBuilder: (_, _, _, child) => child,
   );
+}
+
+/// One selectable option within a scope.
+class _Opt {
+  const _Opt({required this.value, required this.label, required this.leading});
+  final String value;
+  final String label;
+  final Widget leading;
 }
 
 class _BoardFilterDialog extends StatefulWidget {
@@ -54,6 +64,7 @@ class _BoardFilterDialog extends StatefulWidget {
     required this.initial,
     required this.options,
     required this.names,
+    required this.sprintNames,
     required this.onChanged,
   });
 
@@ -61,6 +72,7 @@ class _BoardFilterDialog extends StatefulWidget {
   final BoardFilter initial;
   final BoardFilterOptions options;
   final Map<String, String> names;
+  final Map<String, String> sprintNames;
   final ValueChanged<BoardFilter> onChanged;
 
   @override
@@ -69,9 +81,22 @@ class _BoardFilterDialog extends StatefulWidget {
 
 class _BoardFilterDialogState extends State<_BoardFilterDialog> {
   late BoardFilter _filter = widget.initial;
+  BoardFilterFacet _scope = BoardFilterFacet.state;
+  String _query = '';
 
-  void _toggle(BoardFilterFacet facet, String value) {
-    setState(() => _filter = _filter.toggle(facet, value));
+  /// The scopes shown as chips, in the order the user requested.
+  static const _facets = [
+    BoardFilterFacet.state,
+    BoardFilterFacet.assignee,
+    BoardFilterFacet.priority,
+    BoardFilterFacet.type,
+    BoardFilterFacet.sprint,
+    BoardFilterFacet.author,
+    BoardFilterFacet.label,
+  ];
+
+  void _toggle(String value) {
+    setState(() => _filter = _filter.toggle(_scope, value));
     widget.onChanged(_filter);
   }
 
@@ -85,6 +110,116 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
     if (Navigator.of(context).canPop()) Navigator.of(context).pop();
   }
 
+  String _scopeLabel(BoardFilterFacet f) => switch (f) {
+    BoardFilterFacet.state => context.t('board.filterSection.status'),
+    BoardFilterFacet.assignee => context.t('board.filterSection.assignee'),
+    BoardFilterFacet.priority => context.t('board.filterSection.priority'),
+    BoardFilterFacet.type => context.t('board.filterSection.type'),
+    BoardFilterFacet.sprint => context.t('board.filterSection.sprint'),
+    BoardFilterFacet.author => context.t('board.filterSection.author'),
+    BoardFilterFacet.label => context.t('board.filterSection.label'),
+  };
+
+  IconData _scopeIcon(BoardFilterFacet f) => switch (f) {
+    BoardFilterFacet.state => Icons.radio_button_checked_rounded,
+    BoardFilterFacet.assignee => Icons.person_rounded,
+    BoardFilterFacet.priority => Icons.flag_rounded,
+    BoardFilterFacet.type => Icons.category_rounded,
+    BoardFilterFacet.sprint => Icons.bolt_rounded,
+    BoardFilterFacet.author => Icons.edit_note_rounded,
+    BoardFilterFacet.label => Icons.sell_rounded,
+  };
+
+  /// Builds the option list for the active scope.
+  List<_Opt> _optionsFor(BoardFilterFacet f) {
+    String name(String id) => widget.names[id] ?? id;
+    switch (f) {
+      case BoardFilterFacet.state:
+        return [
+          for (final s in widget.options.states)
+            _Opt(
+              value: s,
+              label: stateLabel(s),
+              leading: _StateDot(state: s),
+            ),
+        ];
+      case BoardFilterFacet.type:
+        return [
+          for (final t in widget.options.types)
+            _Opt(
+              value: t,
+              label: _facetLabel(context, 'type', t),
+              leading: TypeGlyph(type: t, size: 18),
+            ),
+        ];
+      case BoardFilterFacet.priority:
+        return [
+          for (final p in widget.options.priorities)
+            _Opt(
+              value: p,
+              label: _facetLabel(context, 'priority', p),
+              leading: SizedBox(
+                width: 18,
+                child: Center(child: PriorityFlag(priority: p)),
+              ),
+            ),
+        ];
+      case BoardFilterFacet.assignee:
+        return [
+          for (final id in widget.options.assignees)
+            _Opt(
+              value: id,
+              label: name(id),
+              leading: HiveAvatar(name: name(id), size: 20),
+            ),
+        ];
+      case BoardFilterFacet.author:
+        return [
+          for (final id in widget.options.authors)
+            _Opt(
+              value: id,
+              label: name(id),
+              leading: HiveAvatar(name: name(id), size: 20),
+            ),
+        ];
+      case BoardFilterFacet.sprint:
+        return [
+          _Opt(
+            value: BoardFilter.noSprint,
+            label: context.t('issues.noSprint'),
+            leading: Icon(
+              Icons.block_rounded,
+              size: 18,
+              color: AppColors.inkFaint,
+            ),
+          ),
+          for (final id in widget.options.sprints)
+            _Opt(
+              value: id,
+              label: widget.sprintNames[id] ?? id,
+              leading: Icon(
+                Icons.bolt_rounded,
+                size: 18,
+                color: AppColors.accentStrong,
+              ),
+            ),
+        ];
+      case BoardFilterFacet.label:
+        return [
+          for (final l in widget.options.labels)
+            _Opt(
+              value: l,
+              label: l,
+              leading: Icon(
+                Icons.sell_outlined,
+                size: 16,
+                color: AppColors.inkFaint,
+              ),
+            ),
+        ];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = SearchTokens.of(Theme.of(context).brightness);
@@ -96,11 +231,10 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
 
     const margin = 12.0;
     final panelWidth = compact
-        ? math.min(360.0, size.width - margin * 2)
-        : 340.0;
+        ? math.min(380.0, size.width - margin * 2)
+        : 360.0;
 
     final anchor = widget.anchorRect;
-    // Right-align the panel to the button, clamped on-screen.
     double left = anchor.right - panelWidth;
     left = left.clamp(
       margin,
@@ -110,8 +244,8 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
     final belowTop = anchor.bottom + 8;
     final roomBelow = size.height - belowTop - margin - pad.bottom;
     final roomAbove = anchor.top - 8 - margin - pad.top;
-    final placeAbove = roomBelow < 240 && roomAbove > roomBelow;
-    final maxHeight = (placeAbove ? roomAbove : roomBelow).clamp(180.0, 520.0);
+    final placeAbove = roomBelow < 280 && roomAbove > roomBelow;
+    final maxHeight = (placeAbove ? roomAbove : roomBelow).clamp(220.0, 560.0);
     final top = placeAbove ? null : belowTop;
     final bottom = placeAbove ? (size.height - anchor.top + 8) : null;
 
@@ -122,7 +256,6 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
 
     return Stack(
       children: [
-        // Tap-catcher to dismiss; popover keeps the app visible (no heavy blur).
         Positioned.fill(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -210,130 +343,182 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
   }
 
   Widget _column(SearchTokens tokens) {
-    final o = widget.options;
+    final all = _optionsFor(_scope);
+    final q = _query.trim().toLowerCase();
+    final shown = q.isEmpty
+        ? all
+        : all.where((o) => o.label.toLowerCase().contains(q)).toList();
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _header(tokens),
+        _field(tokens),
+        _scopes(tokens),
         Flexible(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (o.states.isNotEmpty)
-                  _section(
-                    tokens,
-                    label: context.t('board.filterSection.status'),
-                    children: [
-                      for (final s in o.states)
-                        _chip(
-                          tokens,
-                          selected: _filter.states.contains(s),
-                          onTap: () => _toggle(BoardFilterFacet.state, s),
-                          child: _StateChipBody(state: s),
-                        ),
-                    ],
-                  ),
-                if (o.types.isNotEmpty)
-                  _section(
-                    tokens,
-                    label: context.t('board.filterSection.type'),
-                    children: [
-                      for (final ty in o.types)
-                        _chip(
-                          tokens,
-                          selected: _filter.types.contains(ty),
-                          onTap: () => _toggle(BoardFilterFacet.type, ty),
-                          child: _TypeChipBody(type: ty),
-                        ),
-                    ],
-                  ),
-                if (o.priorities.isNotEmpty)
-                  _section(
-                    tokens,
-                    label: context.t('board.filterSection.priority'),
-                    children: [
-                      for (final p in o.priorities)
-                        _chip(
-                          tokens,
-                          selected: _filter.priorities.contains(p),
-                          onTap: () => _toggle(BoardFilterFacet.priority, p),
-                          child: _PriorityChipBody(priority: p),
-                        ),
-                    ],
-                  ),
-                if (o.assignees.isNotEmpty)
-                  _section(
-                    tokens,
-                    label: context.t('board.filterSection.assignee'),
-                    children: [
-                      for (final id in o.assignees)
-                        _chip(
-                          tokens,
-                          selected: _filter.assignees.contains(id),
-                          onTap: () => _toggle(BoardFilterFacet.assignee, id),
-                          child: _AssigneeChipBody(
-                            name: widget.names[id] ?? id,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 150),
+            child: shown.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 28,
+                      horizontal: 18,
+                    ),
+                    child: Container(
+                      alignment: Alignment.center,
+                      height: 72,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 10,
+                        children: [
+                          /// Create a compound Icon Widget by adding the Hive logo and a search icon together, to indicate "no results found".
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off_rounded,
+                                size: 32,
+                                color: tokens.inkFaint,
+                              ),
+                            ],
                           ),
-                        ),
-                    ],
+                          Text(
+                            context.t('board.filterNoOptions'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: tokens.inkFaint,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 6,
+                      horizontal: 8,
+                    ),
+                    shrinkWrap: true,
+                    itemCount: shown.length,
+                    itemBuilder: (_, i) {
+                      final o = shown[i];
+                      return _OptionRow(
+                        tokens: tokens,
+                        option: o,
+                        selected: _filter.facet(_scope).contains(o.value),
+                        onTap: () => _toggle(o.value),
+                      );
+                    },
                   ),
-              ],
-            ),
           ),
         ),
+        _footer(tokens),
       ],
     );
   }
 
-  Widget _header(SearchTokens tokens) {
-    final count = _filter.activeCount;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
+  Widget _field(SearchTokens tokens) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: tokens.hairline)),
+      ),
       child: Row(
         children: [
-          Icon(Icons.tune_rounded, size: 16, color: tokens.inkSoft),
-          const SizedBox(width: 8),
-          Text(
-            context.t('board.filterTitle'),
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w700,
-              color: tokens.ink,
-            ),
-          ),
-          if (count > 0) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-              decoration: BoxDecoration(
-                color: AppColors.accentSoft,
-                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          Icon(Icons.search_rounded, size: 18, color: tokens.inkSoft),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              autofocus: true,
+              cursorColor: tokens.ink,
+              onChanged: (v) => setState(() => _query = v),
+              style: TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w500,
+                color: tokens.ink,
               ),
-              child: Text(
-                '$count',
-                style: const TextStyle(
-                  fontFamily: AppTheme.fontMono,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.accentStrong,
+              decoration: InputDecoration(
+                isCollapsed: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                hintText: context.t(
+                  'board.filterSearch',
+                  variables: {'scope': _scopeLabel(_scope)},
+                ),
+                hintStyle: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w400,
+                  color: tokens.inkFaint,
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scopes(SearchTokens tokens) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: tokens.hairline)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        child: Row(
+          children: [
+            for (final f in _facets) ...[
+              _ScopeChip(
+                tokens: tokens,
+                icon: _scopeIcon(f),
+                label: _scopeLabel(f),
+                count: _filter.facet(f).length,
+                active: _scope == f,
+                onTap: () => setState(() {
+                  _scope = f;
+                  _query = '';
+                }),
+              ),
+              const SizedBox(width: 7),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _footer(SearchTokens tokens) {
+    final count = _filter.activeCount;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
+      decoration: BoxDecoration(
+        color: tokens.field,
+        border: Border(top: BorderSide(color: tokens.hairline)),
+      ),
+      child: Row(
+        children: [
+          Text(
+            context.t('board.activeFilters', variables: {'count': '$count'}),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: tokens.inkSoft,
+            ),
+          ),
           const Spacer(),
           if (count > 0)
             TextButton(
               onPressed: _clear,
               style: TextButton.styleFrom(
-                foregroundColor: tokens.inkSoft,
+                foregroundColor: AppColors.accentStrong,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 minimumSize: const Size(0, 30),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 textStyle: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               child: Text(context.t('board.clearFilters')),
@@ -342,86 +527,144 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
       ),
     );
   }
+}
 
-  Widget _section(
-    SearchTokens tokens, {
-    required String label,
-    required List<Widget> children,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-              color: tokens.inkFaint,
-            ),
+class _OptionRow extends StatefulWidget {
+  const _OptionRow({
+    required this.tokens,
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final SearchTokens tokens;
+  final _Opt option;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  State<_OptionRow> createState() => _OptionRowState();
+}
+
+class _OptionRowState extends State<_OptionRow> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.tokens;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          decoration: BoxDecoration(
+            color: widget.selected
+                ? t.selTint
+                : (_hover ? t.rowHover : Colors.transparent),
+            borderRadius: BorderRadius.circular(10),
           ),
-          const SizedBox(height: 8),
-          Wrap(spacing: 7, runSpacing: 7, children: children),
-        ],
+          child: Row(
+            children: [
+              SizedBox(width: 22, child: Center(child: widget.option.leading)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  widget.option.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: t.ink,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                widget.selected
+                    ? Icons.check_circle_rounded
+                    : Icons.circle_outlined,
+                size: 18,
+                color: widget.selected ? AppColors.accentStrong : t.inkFaint,
+              ),
+            ],
+          ),
+        ),
       ),
-    );
-  }
-
-  Widget _chip(
-    SearchTokens tokens, {
-    required bool selected,
-    required VoidCallback onTap,
-    required Widget child,
-  }) {
-    return _FilterChipShell(
-      tokens: tokens,
-      selected: selected,
-      onTap: onTap,
-      child: child,
     );
   }
 }
 
-/// Pill chip used inside the glass popup; honey-amber fill when selected.
-class _FilterChipShell extends StatelessWidget {
-  const _FilterChipShell({
+class _ScopeChip extends StatelessWidget {
+  const _ScopeChip({
     required this.tokens,
-    required this.selected,
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.active,
     required this.onTap,
-    required this.child,
   });
 
   final SearchTokens tokens;
-  final bool selected;
+  final IconData icon;
+  final String label;
+  final int count;
+  final bool active;
   final VoidCallback onTap;
-  final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    final fg = active ? AppColors.accentStrong : tokens.inkSoft;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 130),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
         decoration: BoxDecoration(
-          color: selected ? AppColors.accentSoft : tokens.field,
+          color: active ? AppColors.accentSoft : tokens.field,
           borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           border: Border.all(
-            color: selected ? AppColors.accentLine : tokens.hairline,
+            color: active ? AppColors.accentLine : tokens.hairline,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            child,
-            if (selected) ...[
-              const SizedBox(width: 5),
-              const Icon(
-                Icons.check_rounded,
-                size: 13,
-                color: AppColors.accentStrong,
+            Icon(icon, size: 14, color: fg),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: active ? AppColors.accentStrong : tokens.ink,
+              ),
+            ),
+            if (count > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                constraints: const BoxConstraints(minWidth: 16),
+                height: 16,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: const BoxDecoration(
+                  color: AppColors.accent,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontMono,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF2A2410),
+                  ),
+                ),
               ),
             ],
           ],
@@ -431,105 +674,19 @@ class _FilterChipShell extends StatelessWidget {
   }
 }
 
-// ── chip bodies ───────────────────────────────────────────────────────────
-
-class _StateChipBody extends StatelessWidget {
-  const _StateChipBody({required this.state});
+class _StateDot extends StatelessWidget {
+  const _StateDot({required this.state});
   final String state;
 
   @override
   Widget build(BuildContext context) {
-    final color = AppColors.stateColor(state.toUpperCase());
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          stateLabel(state),
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TypeChipBody extends StatelessWidget {
-  const _TypeChipBody({required this.type});
-  final String type;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        TypeGlyph(type: type, size: 16),
-        const SizedBox(width: 6),
-        Text(
-          _facetLabel(context, 'type', type),
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.ink,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PriorityChipBody extends StatelessWidget {
-  const _PriorityChipBody({required this.priority});
-  final String priority;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        PriorityFlag(priority: priority),
-        const SizedBox(width: 6),
-        Text(
-          _facetLabel(context, 'priority', priority),
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.ink,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AssigneeChipBody extends StatelessWidget {
-  const _AssigneeChipBody({required this.name});
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        HiveAvatar(name: name, size: 18),
-        const SizedBox(width: 6),
-        Text(
-          name,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.ink,
-          ),
-        ),
-      ],
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: AppColors.stateColor(state.toUpperCase()),
+        shape: BoxShape.circle,
+      ),
     );
   }
 }
@@ -547,8 +704,7 @@ String _facetLabel(BuildContext context, String prefix, String code) {
       .join(' ');
 }
 
-/// 1px specular rim (bright top-left → dim → bright) — matches the global
-/// search panel's rim.
+/// 1px specular rim — matches the global search panel's rim.
 class _RimPainter extends CustomPainter {
   _RimPainter({
     required this.radius,

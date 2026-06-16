@@ -18,7 +18,11 @@ import '../../core/widgets/status_widgets.dart';
 import 'issue_detail_sheet.dart';
 import 'issue_form.dart';
 
-typedef _IssuesData = ({List<Issue> issues, int total, Map<String, String> names});
+typedef _IssuesData = ({
+  List<Issue> issues,
+  int total,
+  Map<String, String> names,
+});
 
 class IssuesScreen extends StatefulWidget {
   const IssuesScreen({super.key, this.projectId});
@@ -51,8 +55,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
       final users = results[1] as List<DirectoryUser>;
       final names = {for (final u in users) u.id: u.displayName};
       return (issues: page.issues, total: page.total, names: names);
-    })
-      ..load();
+    })..load();
   }
 
   @override
@@ -87,9 +90,12 @@ class _IssuesScreenState extends State<IssuesScreen> {
         break;
     }
     const rank = {'URGENT': 4, 'HIGH': 3, 'NORMAL': 2, 'LOW': 1};
-    list = [...list]..sort((a, b) =>
-        (rank[b.priority.toUpperCase()] ?? 2)
-            .compareTo(rank[a.priority.toUpperCase()] ?? 2));
+    list = [...list]
+      ..sort(
+        (a, b) => (rank[b.priority.toUpperCase()] ?? 2).compareTo(
+          rank[a.priority.toUpperCase()] ?? 2,
+        ),
+      );
     return list;
   }
 
@@ -115,19 +121,27 @@ class _IssuesScreenState extends State<IssuesScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   SliverPadding(
-                    padding: EdgeInsets.fromLTRB(context.pageGutter,
-                        24 + context.topGutter, context.pageGutter, 16),
+                    padding: EdgeInsets.fromLTRB(
+                      context.pageGutter,
+                      24 + context.topGutter,
+                      context.pageGutter,
+                      16,
+                    ),
                     sliver: SliverToBoxAdapter(
                       child: PageHead(
                         title: context.t('nav.issues'),
-                        subtitle: context.t('issues.countSummary',
-                            variables: {'count': '${list.length}'}),
+                        subtitle: context.t(
+                          'issues.countSummary',
+                          variables: {'count': '${list.length}'},
+                        ),
                         actions: [
                           PrimaryButton(
                             label: context.t('issues.new'),
                             onPressed: () async {
-                              final created = await showIssueForm(context,
-                                  projectId: widget.projectId);
+                              final created = await showIssueForm(
+                                context,
+                                projectId: widget.projectId,
+                              );
                               if (created != null) _cubit.load();
                             },
                           ),
@@ -138,7 +152,11 @@ class _IssuesScreenState extends State<IssuesScreen> {
                   // filter chips + search
                   SliverPadding(
                     padding: EdgeInsets.fromLTRB(
-                        context.pageGutter, 0, context.pageGutter, 14),
+                      context.pageGutter,
+                      0,
+                      context.pageGutter,
+                      14,
+                    ),
                     sliver: SliverToBoxAdapter(
                       child: Wrap(
                         spacing: 10,
@@ -169,28 +187,34 @@ class _IssuesScreenState extends State<IssuesScreen> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 80),
                         child: Center(
-                          child: Text(context.t('issues.empty'),
-                              style:
-                                  TextStyle(color: AppColors.inkSoft)),
+                          child: Text(
+                            context.t('issues.empty'),
+                            style: TextStyle(color: AppColors.inkSoft),
+                          ),
                         ),
                       ),
                     )
                   else
                     SliverPadding(
-                      padding: EdgeInsets.fromLTRB(context.pageGutter, 0,
-                          context.pageGutter,
-                          context.pageGutter + context.bottomGutter),
-                      sliver: SliverList.list(children: [
-                        if (!context.isCompact) const _IssueTableHeader(),
-                        for (final issue in list)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 7),
-                            child: IssueRow(
-                              issue: issue,
-                              assignee: names[issue.assigneeId],
+                      padding: EdgeInsets.fromLTRB(
+                        context.pageGutter,
+                        0,
+                        context.pageGutter,
+                        context.pageGutter + context.bottomGutter,
+                      ),
+                      sliver: SliverList.list(
+                        children: [
+                          if (!context.isCompact) const _IssueTableHeader(),
+                          for (final issue in list)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 7),
+                              child: IssueRow(
+                                issue: issue,
+                                assignee: names[issue.assigneeId],
+                              ),
                             ),
-                          ),
-                      ]),
+                        ],
+                      ),
                     ),
                 ],
               ),
@@ -202,18 +226,18 @@ class _IssuesScreenState extends State<IssuesScreen> {
   }
 
   IconData _filterIcon(_IssueFilter f) => switch (f) {
-        _IssueFilter.all => Icons.layers_rounded,
-        _IssueFilter.mine => Icons.person_rounded,
-        _IssueFilter.open => Icons.radio_button_unchecked_rounded,
-        _IssueFilter.bugs => Icons.bug_report_outlined,
-      };
+    _IssueFilter.all => Icons.layers_rounded,
+    _IssueFilter.mine => Icons.person_rounded,
+    _IssueFilter.open => Icons.radio_button_unchecked_rounded,
+    _IssueFilter.bugs => Icons.bug_report_outlined,
+  };
 
   String _filterKey(_IssueFilter f) => switch (f) {
-        _IssueFilter.all => 'issues.filterAll',
-        _IssueFilter.mine => 'issues.filterMine',
-        _IssueFilter.open => 'issues.filterOpen',
-        _IssueFilter.bugs => 'issues.filterBugs',
-      };
+    _IssueFilter.all => 'issues.filterAll',
+    _IssueFilter.mine => 'issues.filterMine',
+    _IssueFilter.open => 'issues.filterOpen',
+    _IssueFilter.bugs => 'issues.filterBugs',
+  };
 }
 
 // ───────────────────────────── filter chip / search ─────────────────────
@@ -242,20 +266,26 @@ class _FilterChip extends StatelessWidget {
           color: active ? AppColors.accentSoft : AppColors.surface,
           borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           border: Border.all(
-              color: active ? AppColors.accentLine : AppColors.hairline),
+            color: active ? AppColors.accentLine : AppColors.hairline,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon,
-                size: 14,
-                color: active ? AppColors.ink : AppColors.inkSoft),
+            Icon(
+              icon,
+              size: 14,
+              color: active ? AppColors.ink : AppColors.inkSoft,
+            ),
             const SizedBox(width: 7),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w500,
-                    color: active ? AppColors.ink : AppColors.inkSoft)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+                color: active ? AppColors.ink : AppColors.inkSoft,
+              ),
+            ),
           ],
         ),
       ),
@@ -264,8 +294,11 @@ class _FilterChip extends StatelessWidget {
 }
 
 class _SearchField extends StatelessWidget {
-  const _SearchField(
-      {required this.controller, required this.hint, required this.onChanged});
+  const _SearchField({
+    required this.controller,
+    required this.hint,
+    required this.onChanged,
+  });
 
   final TextEditingController controller;
   final String hint;
@@ -296,8 +329,7 @@ class _SearchField extends StatelessWidget {
                 focusedBorder: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 hintText: hint,
-                hintStyle:
-                    TextStyle(fontSize: 13, color: AppColors.inkFaint),
+                hintStyle: TextStyle(fontSize: 13, color: AppColors.inkFaint),
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
               ),
             ),
@@ -322,8 +354,12 @@ class _IssueTableHeader extends StatelessWidget {
       color: AppColors.inkFaint,
     );
     Widget cell(String key, {int? flex, double? width}) {
-      final text = Text(context.t(key).toUpperCase(),
-          maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
+      final text = Text(
+        context.t(key).toUpperCase(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: style,
+      );
       if (width != null) return SizedBox(width: width, child: text);
       return Expanded(flex: flex!, child: text);
     }
@@ -363,13 +399,13 @@ class IssueRow extends StatelessWidget {
     final compact = context.isCompact;
     final name = assignee ?? '';
 
-    final tap = onTap ??
+    final tap =
+        onTap ??
         () => showIssueDetailSheet(
-              context,
-              issueId: issue.id,
-              onChanged: () =>
-                  context.read<FetchCubit<_IssuesData>>().load(),
-            );
+          context,
+          issueId: issue.id,
+          onChanged: () => context.read<FetchCubit<_IssuesData>>().load(),
+        );
 
     if (compact) {
       return SoftCard(
@@ -384,7 +420,10 @@ class IssueRow extends StatelessWidget {
                 const Spacer(),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 180),
-                  child: PriorityFlag(priority: issue.priority, withLabel: true),
+                  child: PriorityFlag(
+                    priority: issue.priority,
+                    withLabel: true,
+                  ),
                 ),
               ],
             ),
@@ -395,11 +434,15 @@ class IssueRow extends StatelessWidget {
                 TypeGlyph(type: issue.type),
                 const SizedBox(width: 9),
                 Expanded(
-                  child: Text(issue.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 13.5, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    issue.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -411,11 +454,14 @@ class IssueRow extends StatelessWidget {
                 if (name.isNotEmpty) HiveAvatar(name: name, size: 22),
                 if (due != null) ...[
                   const SizedBox(width: 10),
-                  Text(due.text,
-                      style: TextStyle(
-                          fontFamily: AppTheme.fontMono,
-                          fontSize: 12,
-                          color: due.late ? AppColors.danger : AppColors.inkSoft)),
+                  Text(
+                    due.text,
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontMono,
+                      fontSize: 12,
+                      color: due.late ? AppColors.danger : AppColors.inkSoft,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -439,11 +485,15 @@ class IssueRow extends StatelessWidget {
                 TypeGlyph(type: issue.type),
                 const SizedBox(width: 9),
                 Flexible(
-                  child: Text(issue.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 13.5, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    issue.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 if (issue.tags.isNotEmpty) ...[
                   const SizedBox(width: 8),
@@ -454,10 +504,12 @@ class IssueRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-              flex: 3,
-              child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: StateDotBadge(state: issue.state))),
+            flex: 3,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: StateDotBadge(state: issue.state),
+            ),
+          ),
           const SizedBox(width: 8),
           Expanded(
             flex: 3,
@@ -476,11 +528,15 @@ class IssueRow extends StatelessWidget {
                       HiveAvatar(name: name, size: 24),
                       const SizedBox(width: 8),
                       Flexible(
-                        child: Text(name.split(' ').first,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 12.5, color: AppColors.inkSoft)),
+                        child: Text(
+                          name.split(' ').first,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.inkSoft,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -502,8 +558,11 @@ class IssueRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 18),
-          Icon(Icons.chevron_right_rounded,
-              size: 18, color: AppColors.inkFaint),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 18,
+            color: AppColors.inkFaint,
+          ),
         ],
       ),
     );

@@ -12,6 +12,7 @@ Future<List<String>?> showLabelPicker(
   BuildContext context, {
   required List<String> available,
   required List<String> selected,
+  Future<void> Function(String label)? onDelete,
 }) {
   return showModalBottomSheet<List<String>>(
     context: context,
@@ -21,16 +22,27 @@ Future<List<String>?> showLabelPicker(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (sheetContext) =>
-        _LabelPickerSheet(available: available, selected: selected),
+    builder: (sheetContext) => _LabelPickerSheet(
+      available: available,
+      selected: selected,
+      onDelete: onDelete,
+    ),
   );
 }
 
 class _LabelPickerSheet extends StatefulWidget {
-  const _LabelPickerSheet({required this.available, required this.selected});
+  const _LabelPickerSheet({
+    required this.available,
+    required this.selected,
+    this.onDelete,
+  });
 
   final List<String> available;
   final List<String> selected;
+
+  /// Permanently deletes a label from the project (and all its issues). When
+  /// null, the per-chip delete affordance is hidden.
+  final Future<void> Function(String label)? onDelete;
 
   @override
   State<_LabelPickerSheet> createState() => _LabelPickerSheetState();
@@ -78,7 +90,51 @@ class _LabelPickerSheetState extends State<_LabelPickerSheet> {
   }
 
   void _confirm() {
-    Navigator.of(context).pop([for (final l in _all) if (_selected.contains(l)) l]);
+    Navigator.of(context).pop([
+      for (final l in _all)
+        if (_selected.contains(l)) l,
+    ]);
+  }
+
+  // Unselecting a label only removes it from the issue; it stays in the
+  // vocabulary. Permanent removal goes through this confirmed delete instead.
+  Future<void> _delete(String label) async {
+    final onDelete = widget.onDelete;
+    if (onDelete == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('issues.deleteLabel')),
+        content: Text(
+          context.t('issues.deleteLabelConfirm', variables: {'name': label}),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.t('common.cancel')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.t('common.delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await onDelete(label);
+      if (!mounted) return;
+      setState(() {
+        _all.remove(label);
+        _selected.remove(label);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.t('errors.unexpected'))));
+    }
   }
 
   @override
@@ -92,7 +148,9 @@ class _LabelPickerSheetState extends State<_LabelPickerSheet> {
 
     return SafeArea(
       child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -104,13 +162,16 @@ class _LabelPickerSheetState extends State<_LabelPickerSheet> {
                   Text(
                     context.t('issues.labels'),
                     style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const Spacer(),
                   TextButton(
                     onPressed: _confirm,
                     style: TextButton.styleFrom(
-                        foregroundColor: AppColors.accentStrong),
+                      foregroundColor: AppColors.accentStrong,
+                    ),
                     child: Text(
                       context.t('common.save'),
                       style: const TextStyle(fontWeight: FontWeight.w700),
@@ -129,10 +190,16 @@ class _LabelPickerSheetState extends State<_LabelPickerSheet> {
                 textInputAction: TextInputAction.done,
                 decoration: InputDecoration(
                   isDense: true,
-                  prefixIcon:
-                      Icon(Icons.search_rounded, size: 18, color: AppColors.inkFaint),
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    size: 18,
+                    color: AppColors.inkFaint,
+                  ),
                   hintText: context.t('issues.addLabel'),
-                  hintStyle: TextStyle(color: AppColors.inkFaint, fontSize: 13.5),
+                  hintStyle: TextStyle(
+                    color: AppColors.inkFaint,
+                    fontSize: 13.5,
+                  ),
                   filled: true,
                   fillColor: AppColors.surfaceMuted,
                   contentPadding: const EdgeInsets.symmetric(vertical: 10),
@@ -182,6 +249,9 @@ class _LabelPickerSheetState extends State<_LabelPickerSheet> {
                               label: l,
                               selected: _selected.contains(l),
                               onTap: () => _toggle(l),
+                              onDelete: widget.onDelete == null
+                                  ? null
+                                  : () => _delete(l),
                             ),
                         ],
                       ),
@@ -240,11 +310,13 @@ class _LabelChip extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.onDelete,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -252,7 +324,7 @@ class _LabelChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 130),
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        padding: EdgeInsets.fromLTRB(11, 7, onDelete != null ? 5 : 11, 7),
         decoration: BoxDecoration(
           color: selected ? AppColors.accentSoft : AppColors.surfaceMuted,
           borderRadius: BorderRadius.circular(AppTheme.radiusPill),
@@ -277,6 +349,28 @@ class _LabelChip extends StatelessWidget {
                 color: selected ? AppColors.accentStrong : AppColors.inkSoft,
               ),
             ),
+            if (onDelete != null) ...[
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: onDelete,
+                behavior: HitTestBehavior.opaque,
+                child: Tooltip(
+                  message: context.t('issues.deleteLabel'),
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: AppColors.dangerSoft,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 13,
+                      color: AppColors.danger,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

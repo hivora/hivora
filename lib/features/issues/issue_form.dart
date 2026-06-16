@@ -20,8 +20,10 @@ class _CreateDialogType extends WoltDialogType {
   @override
   BoxConstraints layoutModal(Size availableSize) {
     const pad = 48.0;
-    final width =
-        math.min(940.0, math.max(360.0, availableSize.width - pad * 2));
+    final width = math.min(
+      940.0,
+      math.max(360.0, availableSize.width - pad * 2),
+    );
     return BoxConstraints(
       minWidth: width,
       maxWidth: width,
@@ -37,8 +39,11 @@ class _CreateDialogType extends WoltDialogType {
 /// pinned (sticky) save button that gates on validation, shows a loading state,
 /// then an animated check. On success the freshly created issue is opened in
 /// the detail sheet.
-Future<Issue?> showIssueForm(BuildContext context,
-    {String? projectId, String? initialState}) async {
+Future<Issue?> showIssueForm(
+  BuildContext context, {
+  String? projectId,
+  String? initialState,
+}) async {
   final repository = context.read<HivoraRepository>();
   final controller = IssueCreateController();
 
@@ -58,9 +63,10 @@ Future<Issue?> showIssueForm(BuildContext context,
         topBarTitle: Text(
           context.t('issues.new'),
           style: const TextStyle(
-              fontFamily: AppTheme.fontBrand,
-              fontSize: 16,
-              fontWeight: FontWeight.w700),
+            fontFamily: AppTheme.fontBrand,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         trailingNavBarWidget: Container(
           margin: const EdgeInsets.only(right: 12),
@@ -136,25 +142,29 @@ class _CreateSaveBar extends StatelessWidget {
                       ),
                       child: switch (phase) {
                         IssueCreatePhase.saving => const SizedBox(
-                            key: ValueKey('saving'),
-                            width: 22,
-                            height: 22,
-                            child: HiveLoader(
-                                strokeWidth: 2, color: Colors.white),
+                          key: ValueKey('saving'),
+                          width: 22,
+                          height: 22,
+                          child: HiveLoader(
+                            strokeWidth: 2,
+                            color: Colors.white,
                           ),
+                        ),
                         IssueCreatePhase.success => const Icon(
-                            Icons.check_rounded,
-                            key: ValueKey('success'),
-                            size: 26,
-                            color: Colors.white),
+                          Icons.check_rounded,
+                          key: ValueKey('success'),
+                          size: 26,
+                          color: Colors.white,
+                        ),
                         IssueCreatePhase.idle => Text(
-                            context.t('common.save'),
-                            key: const ValueKey('idle'),
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15),
+                          context.t('common.save'),
+                          key: const ValueKey('idle'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
                           ),
+                        ),
                       },
                     ),
                   ),

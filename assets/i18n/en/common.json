@@ -194,6 +194,8 @@
     "noLabels": "No labels",
     "addLabel": "Search or create a label…",
     "createLabel": "Create \"{{name}}\"",
+    "deleteLabel": "Delete label",
+    "deleteLabelConfirm": "Delete \"{{name}}\" from this project? It will be removed from every issue that uses it.",
     "startDate": "Start date",
     "dueDate": "Due date",
     "noValue": "No value",

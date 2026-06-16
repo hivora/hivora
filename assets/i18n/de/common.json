@@ -194,6 +194,8 @@
     "noLabels": "Keine Stichwörter",
     "addLabel": "Stichwort suchen oder erstellen…",
     "createLabel": "\"{{name}}\" erstellen",
+    "deleteLabel": "Stichwort löschen",
+    "deleteLabelConfirm": "\"{{name}}\" aus diesem Projekt löschen? Es wird von allen Vorgängen entfernt, die es verwenden.",
     "startDate": "Startdatum",
     "dueDate": "Fälligkeitsdatum",
     "noValue": "Kein Wert",

@@ -74,10 +74,9 @@ class _WorkLogBodyState extends State<_WorkLogBody> {
           children: [
             Text(
               context.t('issues.logTime'),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 20),
             Row(
@@ -86,8 +85,9 @@ class _WorkLogBodyState extends State<_WorkLogBody> {
                   child: TextFormField(
                     controller: _hours,
                     keyboardType: TextInputType.number,
-                    decoration:
-                        InputDecoration(labelText: context.t('time.hours')),
+                    decoration: InputDecoration(
+                      labelText: context.t('time.hours'),
+                    ),
                     validator: _numberValidator,
                   ),
                 ),
@@ -96,8 +96,9 @@ class _WorkLogBodyState extends State<_WorkLogBody> {
                   child: TextFormField(
                     controller: _minutes,
                     keyboardType: TextInputType.number,
-                    decoration:
-                        InputDecoration(labelText: context.t('time.minutes')),
+                    decoration: InputDecoration(
+                      labelText: context.t('time.minutes'),
+                    ),
                     validator: _numberValidator,
                   ),
                 ),
@@ -106,8 +107,9 @@ class _WorkLogBodyState extends State<_WorkLogBody> {
             const SizedBox(height: 14),
             DropdownButtonFormField<String>(
               initialValue: _activity,
-              decoration:
-                  InputDecoration(labelText: context.t('time.activityType')),
+              decoration: InputDecoration(
+                labelText: context.t('time.activityType'),
+              ),
               items: [
                 for (final activity in _activities)
                   DropdownMenuItem(value: activity, child: Text(activity)),
@@ -118,7 +120,9 @@ class _WorkLogBodyState extends State<_WorkLogBody> {
             const SizedBox(height: 14),
             OutlinedButton.icon(
               icon: const Icon(Icons.event_rounded, size: 18),
-              label: Text(MaterialLocalizations.of(context).formatShortDate(_date)),
+              label: Text(
+                MaterialLocalizations.of(context).formatShortDate(_date),
+              ),
               onPressed: () async {
                 final picked = await showDatePicker(
                   context: context,
@@ -136,9 +140,11 @@ class _WorkLogBodyState extends State<_WorkLogBody> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!,
-                  style: const TextStyle(color: AppColors.danger),
-                  textAlign: TextAlign.center),
+              Text(
+                _error!,
+                style: const TextStyle(color: AppColors.danger),
+                textAlign: TextAlign.center,
+              ),
             ],
             const SizedBox(height: 24),
             FilledButton(
@@ -147,8 +153,7 @@ class _WorkLogBodyState extends State<_WorkLogBody> {
                   ? const SizedBox(
                       width: 22,
                       height: 22,
-                      child: HiveLoader(
-                          strokeWidth: 2, color: Colors.white),
+                      child: HiveLoader(strokeWidth: 2, color: Colors.white),
                     )
                   : Text(context.t('common.save')),
             ),
@@ -166,7 +171,8 @@ class _WorkLogBodyState extends State<_WorkLogBody> {
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    final total = (int.tryParse(_hours.text) ?? 0) * 60 +
+    final total =
+        (int.tryParse(_hours.text) ?? 0) * 60 +
         (int.tryParse(_minutes.text) ?? 0);
     if (total <= 0) {
       setState(() => _error = context.t('errors.invalidNumber'));
@@ -178,12 +184,12 @@ class _WorkLogBodyState extends State<_WorkLogBody> {
     });
     try {
       await context.read<HivoraRepository>().addWorkItem(
-            widget.issueId,
-            minutes: total,
-            activityType: _activity,
-            description: _note.text.trim().isEmpty ? null : _note.text.trim(),
-            date: _date,
-          );
+        widget.issueId,
+        minutes: total,
+        activityType: _activity,
+        description: _note.text.trim().isEmpty ? null : _note.text.trim(),
+        date: _date,
+      );
       if (mounted) Navigator.of(context).pop(true);
     } on ApiFailure catch (failure) {
       setState(() {

@@ -262,6 +262,7 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
   BoardViewMode _mode = BoardViewMode.board;
   Map<String, String> _names = const {};
   Map<String, String> _projectNames = const {};
+  List<String> _projectLabels = const [];
   List<Issue> _backlog = const [];
   BoardFilter _filter = BoardFilter.empty;
 
@@ -290,10 +291,15 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
       final projects = results[2] as List<Project>;
       final backlog = await _loadBacklog(repo, view.board.projectIds);
       if (!mounted) return;
+      final boardProjectIds = view.board.projectIds.toSet();
       setState(() {
         _view = view;
         _names = {for (final u in users) u.id: u.displayName};
         _projectNames = {for (final p in projects) p.id: p.name};
+        _projectLabels = [
+          for (final p in projects)
+            if (boardProjectIds.contains(p.id)) ...p.labels,
+        ];
         _backlog = backlog;
         _loading = false;
       });
@@ -350,8 +356,15 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
     return out;
   }
 
-  BoardFilterOptions get _options =>
-      BoardFilterOptions.fromIssues([..._allBoardIssues, ..._backlog]);
+  BoardFilterOptions get _options => BoardFilterOptions.from(
+    issues: [..._allBoardIssues, ..._backlog],
+    boardSprints: _view?.sprints ?? const [],
+    projectLabels: _projectLabels,
+  );
+
+  Map<String, String> get _sprintNames => {
+    for (final s in _view?.sprints ?? const <Sprint>[]) s.id: s.name,
+  };
 
   Sprint? get _activeSprint {
     final view = _view;
@@ -405,6 +418,7 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
     filter: _filter,
     options: _options,
     names: _names,
+    sprintNames: _sprintNames,
     onChanged: (f) => setState(() => _filter = f),
   );
 

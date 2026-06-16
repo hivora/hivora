@@ -76,7 +76,8 @@ class BoardFilter {
       return false;
     }
     if (sprints.isNotEmpty) {
-      final inSprint = issue.sprintId != null && sprints.contains(issue.sprintId);
+      final inSprint =
+          issue.sprintId != null && sprints.contains(issue.sprintId);
       final inNone = issue.sprintId == null && sprints.contains(noSprint);
       if (!inSprint && !inNone) return false;
     }
