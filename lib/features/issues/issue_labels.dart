@@ -1,0 +1,285 @@
+import 'package:flutter/material.dart';
+
+import '../../core/i18n/i18n.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
+
+/// Multi-select label ("Stichwort") picker shown as a bottom sheet. Lets the
+/// user toggle existing project labels, filter by typing, create a new label
+/// on the fly, and remove assigned ones. Returns the new selection (in
+/// vocabulary order), or null if dismissed without confirming.
+Future<List<String>?> showLabelPicker(
+  BuildContext context, {
+  required List<String> available,
+  required List<String> selected,
+}) {
+  return showModalBottomSheet<List<String>>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    backgroundColor: AppColors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetContext) =>
+        _LabelPickerSheet(available: available, selected: selected),
+  );
+}
+
+class _LabelPickerSheet extends StatefulWidget {
+  const _LabelPickerSheet({required this.available, required this.selected});
+
+  final List<String> available;
+  final List<String> selected;
+
+  @override
+  State<_LabelPickerSheet> createState() => _LabelPickerSheetState();
+}
+
+class _LabelPickerSheetState extends State<_LabelPickerSheet> {
+  final _controller = TextEditingController();
+  late final List<String> _all; // vocabulary, mutable (created labels append)
+  late final Set<String> _selected;
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // Union of available + selected, preserving first-seen order.
+    final seen = <String>{};
+    _all = [
+      for (final l in [...widget.available, ...widget.selected])
+        if (l.trim().isNotEmpty && seen.add(l)) l,
+    ];
+    _selected = {...widget.selected};
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _toggle(String label) {
+    setState(() {
+      if (!_selected.remove(label)) _selected.add(label);
+    });
+  }
+
+  void _create(String raw) {
+    final label = raw.trim();
+    if (label.isEmpty) return;
+    setState(() {
+      if (!_all.contains(label)) _all.add(label);
+      _selected.add(label);
+      _controller.clear();
+      _query = '';
+    });
+  }
+
+  void _confirm() {
+    Navigator.of(context).pop([for (final l in _all) if (_selected.contains(l)) l]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _query.trim().toLowerCase();
+    final filtered = q.isEmpty
+        ? _all
+        : _all.where((l) => l.toLowerCase().contains(q)).toList();
+    final exists = _all.any((l) => l.toLowerCase() == q);
+    final canCreate = q.isNotEmpty && !exists;
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
+              child: Row(
+                children: [
+                  Text(
+                    context.t('issues.labels'),
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: _confirm,
+                    style: TextButton.styleFrom(
+                        foregroundColor: AppColors.accentStrong),
+                    child: Text(
+                      context.t('common.save'),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: TextField(
+                controller: _controller,
+                autofocus: true,
+                onChanged: (v) => setState(() => _query = v),
+                onSubmitted: canCreate ? _create : null,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  isDense: true,
+                  prefixIcon:
+                      Icon(Icons.search_rounded, size: 18, color: AppColors.inkFaint),
+                  hintText: context.t('issues.addLabel'),
+                  hintStyle: TextStyle(color: AppColors.inkFaint, fontSize: 13.5),
+                  filled: true,
+                  fillColor: AppColors.surfaceMuted,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+                    borderSide: BorderSide(color: AppColors.hairline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+                    borderSide: BorderSide(color: AppColors.hairline),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+                    borderSide: BorderSide(color: AppColors.accentLine),
+                  ),
+                ),
+              ),
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (canCreate)
+                      _CreateRow(
+                        label: _query.trim(),
+                        onTap: () => _create(_query),
+                      ),
+                    if (filtered.isEmpty && !canCreate)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text(
+                            context.t('issues.noLabels'),
+                            style: TextStyle(color: AppColors.inkFaint),
+                          ),
+                        ),
+                      )
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final l in filtered)
+                            _LabelChip(
+                              label: l,
+                              selected: _selected.contains(l),
+                              onTap: () => _toggle(l),
+                            ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CreateRow extends StatelessWidget {
+  const _CreateRow({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              Icon(Icons.add_rounded, size: 18, color: AppColors.accentStrong),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  context.t('issues.createLabel', variables: {'name': label}),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.accentStrong,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LabelChip extends StatelessWidget {
+  const _LabelChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 130),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.accentSoft : AppColors.surfaceMuted,
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          border: Border.all(
+            color: selected ? AppColors.accentLine : AppColors.hairline2,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              selected ? Icons.check_rounded : Icons.label_outline_rounded,
+              size: 14,
+              color: selected ? AppColors.accentStrong : AppColors.inkFaint,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: selected ? AppColors.accentStrong : AppColors.inkSoft,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

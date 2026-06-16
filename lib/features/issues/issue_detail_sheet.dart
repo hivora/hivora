@@ -17,6 +17,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
+import 'issue_labels.dart';
 import 'issue_markdown.dart';
 import 'work_log_sheet.dart';
 
@@ -668,6 +669,21 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
             onTap: _pickType,
             child: TypeBadge(type: issue.type),
           ),
+          // Labels ("Stichwort")
+          _DetailRow(
+            label: context.t('issues.label'),
+            onTap: _pickLabels,
+            child: issue.tags.isEmpty
+                ? Text(
+                    context.t('issues.noLabels'),
+                    style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
+                  )
+                : Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [for (final t in issue.tags) LabelTag(t)],
+                  ),
+          ),
           // Sprint
           _DetailRow(
             label: context.t('issues.sprint'),
@@ -986,6 +1002,21 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     if (chosen != null) await _patch({'type': chosen});
   }
 
+  Future<void> _pickLabels() async {
+    final issue = _issue;
+    if (issue == null) return;
+    final available = <String>{
+      ...?_project?.labels,
+      ...issue.tags,
+    }.toList();
+    final result = await showLabelPicker(
+      context,
+      available: available,
+      selected: issue.tags,
+    );
+    if (result != null) await _patch({'tags': result});
+  }
+
   static const _noSprint = '__none__';
 
   Future<void> _pickSprint() async {
@@ -1298,6 +1329,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
   String? _sprintId;
   DateTime? _startDate;
   DateTime? _dueDate;
+  List<String> _labels = const [];
 
   bool _loading = true;
   String? _error;
@@ -1407,6 +1439,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
           'startDate': _startDate!.toIso8601String().substring(0, 10),
         if (_dueDate != null)
           'dueDate': _dueDate!.toIso8601String().substring(0, 10),
+        if (_labels.isNotEmpty) 'tags': _labels,
       });
       if (!mounted) return;
       // Hold on the green check briefly before handing off to the detail view.
@@ -1582,6 +1615,20 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
             child: TypeBadge(type: _type),
           ),
           _DetailRow(
+            label: context.t('issues.label'),
+            onTap: _pickLabels,
+            child: _labels.isEmpty
+                ? Text(
+                    context.t('issues.noLabels'),
+                    style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
+                  )
+                : Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [for (final t in _labels) LabelTag(t)],
+                  ),
+          ),
+          _DetailRow(
             label: context.t('issues.sprint'),
             onTap: _sprints.isEmpty ? null : _pickSprint,
             child: Text(
@@ -1719,6 +1766,16 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
       options: [for (final t in types) (value: t, child: TypeBadge(type: t))],
     );
     if (chosen != null) setState(() => _type = chosen);
+  }
+
+  Future<void> _pickLabels() async {
+    final available = <String>{...?_project?.labels, ..._labels}.toList();
+    final result = await showLabelPicker(
+      context,
+      available: available,
+      selected: _labels,
+    );
+    if (result != null) setState(() => _labels = result);
   }
 
   Future<void> _pickSprint() async {

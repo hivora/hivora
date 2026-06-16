@@ -10,6 +10,7 @@ class Project extends Equatable {
     this.memberIds = const [],
     this.workflowStates = const [],
     this.resolvedStates = const [],
+    this.labels = const [],
     this.color = '#AEC6F4',
     this.archived = false,
   });
@@ -22,6 +23,9 @@ class Project extends Equatable {
   final List<String> memberIds;
   final List<String> workflowStates;
   final List<String> resolvedStates;
+
+  /// Reusable issue labels ("Stichworte") for this project.
+  final List<String> labels;
   final String color;
   final bool archived;
 
@@ -34,6 +38,7 @@ class Project extends Equatable {
     memberIds: _stringList(json['memberIds']),
     workflowStates: _stringList(json['workflowStates']),
     resolvedStates: _stringList(json['resolvedStates']),
+    labels: _stringList(json['labels']),
     color: json['color'] as String? ?? '#AEC6F4',
     archived: json['archived'] as bool? ?? false,
   );

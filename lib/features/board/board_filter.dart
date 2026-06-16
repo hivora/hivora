@@ -4,9 +4,10 @@ import '../../core/models/work_models.dart';
 
 /// Multi-criteria board filter. Empty sets mean "no restriction" for that
 /// facet. State / type / priority are stored as UPPER-CASE backend codes;
-/// [assignees] holds user ids. The same instance backs both the people strip
-/// (which toggles [assignees]) and the glass filter popup, so selection stays
-/// in lockstep across the board.
+/// [assignees]/[authors] hold user ids, [sprints] hold sprint ids (or
+/// [noSprint] for "Kein Sprint"), [labels] hold tag names. The same instance
+/// backs both the people strip (which toggles [assignees]) and the glass filter
+/// popup, so selection stays in lockstep across the board.
 @immutable
 class BoardFilter {
   const BoardFilter({
@@ -14,21 +15,49 @@ class BoardFilter {
     this.types = const {},
     this.priorities = const {},
     this.assignees = const {},
+    this.sprints = const {},
+    this.authors = const {},
+    this.labels = const {},
   });
 
   final Set<String> states;
   final Set<String> types;
   final Set<String> priorities;
   final Set<String> assignees;
+  final Set<String> sprints;
+  final Set<String> authors;
+  final Set<String> labels;
+
+  /// Sentinel value used in [sprints] to match issues with no sprint.
+  static const noSprint = '__none__';
 
   bool get isEmpty =>
       states.isEmpty &&
       types.isEmpty &&
       priorities.isEmpty &&
-      assignees.isEmpty;
+      assignees.isEmpty &&
+      sprints.isEmpty &&
+      authors.isEmpty &&
+      labels.isEmpty;
 
   int get activeCount =>
-      states.length + types.length + priorities.length + assignees.length;
+      states.length +
+      types.length +
+      priorities.length +
+      assignees.length +
+      sprints.length +
+      authors.length +
+      labels.length;
+
+  Set<String> facet(BoardFilterFacet f) => switch (f) {
+    BoardFilterFacet.state => states,
+    BoardFilterFacet.type => types,
+    BoardFilterFacet.priority => priorities,
+    BoardFilterFacet.assignee => assignees,
+    BoardFilterFacet.sprint => sprints,
+    BoardFilterFacet.author => authors,
+    BoardFilterFacet.label => labels,
+  };
 
   /// Whether [issue] passes every active facet (AND across facets, OR within).
   bool matches(Issue issue) {
@@ -46,6 +75,18 @@ class BoardFilter {
         (issue.assigneeId == null || !assignees.contains(issue.assigneeId))) {
       return false;
     }
+    if (sprints.isNotEmpty) {
+      final inSprint = issue.sprintId != null && sprints.contains(issue.sprintId);
+      final inNone = issue.sprintId == null && sprints.contains(noSprint);
+      if (!inSprint && !inNone) return false;
+    }
+    if (authors.isNotEmpty &&
+        (issue.reporterId == null || !authors.contains(issue.reporterId))) {
+      return false;
+    }
+    if (labels.isNotEmpty && !issue.tags.any(labels.contains)) {
+      return false;
+    }
     return true;
   }
 
@@ -54,11 +95,17 @@ class BoardFilter {
     Set<String>? types,
     Set<String>? priorities,
     Set<String>? assignees,
+    Set<String>? sprints,
+    Set<String>? authors,
+    Set<String>? labels,
   }) => BoardFilter(
     states: states ?? this.states,
     types: types ?? this.types,
     priorities: priorities ?? this.priorities,
     assignees: assignees ?? this.assignees,
+    sprints: sprints ?? this.sprints,
+    authors: authors ?? this.authors,
+    labels: labels ?? this.labels,
   );
 
   /// Returns a copy with [value] toggled in the facet named [facet].
@@ -74,23 +121,30 @@ class BoardFilter {
       BoardFilterFacet.type => copyWith(types: next(types)),
       BoardFilterFacet.priority => copyWith(priorities: next(priorities)),
       BoardFilterFacet.assignee => copyWith(assignees: next(assignees)),
+      BoardFilterFacet.sprint => copyWith(sprints: next(sprints)),
+      BoardFilterFacet.author => copyWith(authors: next(authors)),
+      BoardFilterFacet.label => copyWith(labels: next(labels)),
     };
   }
 
   static const empty = BoardFilter();
 }
 
-enum BoardFilterFacet { state, type, priority, assignee }
+enum BoardFilterFacet { state, type, priority, assignee, sprint, author, label }
 
 /// The distinct facet values available to filter on, derived from the issues
-/// currently loaded for a board so custom workflow states resolve without
-/// hardcoding. Preserves first-seen order.
+/// currently loaded for a board (plus the board's sprints and project labels)
+/// so custom workflow states / labels resolve without hardcoding. Preserves
+/// first-seen order.
 class BoardFilterOptions {
   BoardFilterOptions({
     required this.states,
     required this.types,
     required this.priorities,
     required this.assignees,
+    required this.authors,
+    required this.sprints,
+    required this.labels,
   });
 
   /// UPPER-CASE workflow-state codes.
@@ -105,17 +159,35 @@ class BoardFilterOptions {
   /// Assignee user ids.
   final List<String> assignees;
 
+  /// Reporter (author) user ids.
+  final List<String> authors;
+
+  /// Sprint ids in board order (the "Kein Sprint" sentinel is added by the UI).
+  final List<String> sprints;
+
+  /// Label / tag names.
+  final List<String> labels;
+
   bool get isEmpty =>
       states.isEmpty &&
       types.isEmpty &&
       priorities.isEmpty &&
-      assignees.isEmpty;
+      assignees.isEmpty &&
+      authors.isEmpty &&
+      sprints.isEmpty &&
+      labels.isEmpty;
 
-  factory BoardFilterOptions.fromIssues(Iterable<Issue> issues) {
+  factory BoardFilterOptions.from({
+    required Iterable<Issue> issues,
+    required List<Sprint> boardSprints,
+    required Iterable<String> projectLabels,
+  }) {
     final states = <String>{};
     final types = <String>{};
     final priorities = <String>{};
     final assignees = <String>{};
+    final authors = <String>{};
+    final labels = <String>{};
     for (final issue in issues) {
       if (issue.state.isNotEmpty) states.add(issue.state.toUpperCase());
       if (issue.type.isNotEmpty) types.add(issue.type.toUpperCase());
@@ -124,12 +196,21 @@ class BoardFilterOptions {
       }
       final a = issue.assigneeId;
       if (a != null && a.isNotEmpty) assignees.add(a);
+      final r = issue.reporterId;
+      if (r != null && r.isNotEmpty) authors.add(r);
+      for (final t in issue.tags) {
+        if (t.isNotEmpty) labels.add(t);
+      }
     }
+    labels.addAll(projectLabels.where((l) => l.isNotEmpty));
     return BoardFilterOptions(
       states: states.toList(),
       types: types.toList(),
       priorities: priorities.toList(),
       assignees: assignees.toList(),
+      authors: authors.toList(),
+      sprints: [for (final s in boardSprints) s.id],
+      labels: labels.toList(),
     );
   }
 }
