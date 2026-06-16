@@ -1370,12 +1370,14 @@ class IssueCreateBody extends StatefulWidget {
     required this.controller,
     this.projectId,
     this.initialState,
+    this.initialSprintId,
     required this.onCreated,
   });
 
   final IssueCreateController controller;
   final String? projectId;
   final String? initialState;
+  final String? initialSprintId;
   final ValueChanged<Issue> onCreated;
 
   @override
@@ -1425,6 +1427,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     super.initState();
     _projectId = widget.projectId;
     _state = widget.initialState;
+    _sprintId = widget.initialSprintId;
     widget.controller.submit = _save;
     _load();
   }

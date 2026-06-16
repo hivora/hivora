@@ -75,6 +75,7 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
   CancelToken? _sseCancel;
   StreamSubscription<SseEvent>? _sseSub;
   Timer? _reconnect;
+  int _reconnectAttempts = 0;
 
   HivoraRepository get _repo => context.read<HivoraRepository>();
 
@@ -114,6 +115,7 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
         widget.issueId,
         cancelToken: _sseCancel,
       );
+      _reconnectAttempts = 0; // connected — reset the backoff
       _sseSub = parseSse(bytes).listen(
         _onSseEvent,
         onDone: _scheduleReconnect,
@@ -130,7 +132,11 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
     _sseSub = null;
     if (_disposed) return;
     _reconnect?.cancel();
-    _reconnect = Timer(const Duration(seconds: 3), _connectSse);
+    // Exponential backoff (3s → 30s cap) so a persistently failing stream
+    // (e.g. SSE not streamable on the web platform) doesn't hammer the server.
+    final secs = (3 * (1 << _reconnectAttempts)).clamp(3, 30);
+    _reconnectAttempts = (_reconnectAttempts + 1).clamp(0, 4);
+    _reconnect = Timer(Duration(seconds: secs), _connectSse);
   }
 
   void _onSseEvent(SseEvent ev) {
@@ -165,9 +171,15 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
       withData: kIsWeb, // web has no file path; we need the bytes
     );
     if (result == null) return;
+    // On web `PlatformFile.path` throws — only the bytes are available there.
     _enqueue([
       for (final f in result.files)
-        _Src(name: f.name, size: f.size, path: f.path, bytes: f.bytes),
+        _Src(
+          name: f.name,
+          size: f.size,
+          path: kIsWeb ? null : f.path,
+          bytes: f.bytes,
+        ),
     ]);
   }
 

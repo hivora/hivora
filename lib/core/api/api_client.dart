@@ -148,12 +148,18 @@ class ApiClient {
     String path, {
     CancelToken? cancelToken,
   }) async {
+    final token = _storage.accessToken;
     final response = await _dio.get<ResponseBody>(
       '$baseUrl$path',
       options: Options(
         responseType: ResponseType.stream,
         receiveTimeout: Duration.zero,
-        headers: {'Accept': 'text/event-stream'},
+        headers: {
+          'Accept': 'text/event-stream',
+          // Attach the bearer explicitly: the streamed request must carry auth
+          // even on the web adapter, which handles stream responses specially.
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       ),
       cancelToken: cancelToken,
     );

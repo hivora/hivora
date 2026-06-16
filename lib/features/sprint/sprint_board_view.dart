@@ -338,15 +338,14 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
 
   Future<void> _addIssue(String? sprintId) async {
     final projectId = _board.projectIds.isNotEmpty ? _board.projectIds.first : null;
-    final created = await showIssueForm(context, projectId: projectId);
+    // Pre-select the target sprint so the issue is created straight into it
+    // (the server starts it in the working state, not the backlog).
+    final created = await showIssueForm(
+      context,
+      projectId: projectId,
+      initialSprintId: sprintId,
+    );
     if (created == null) return;
-    if (sprintId != null) {
-      try {
-        await _repo.updateIssue(created.id, {'sprintId': sprintId});
-      } on ApiFailure catch (failure) {
-        _toastKey(failure.message);
-      }
-    }
     await _loadAll();
   }
 

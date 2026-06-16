@@ -43,6 +43,7 @@ Future<Issue?> showIssueForm(
   BuildContext context, {
   String? projectId,
   String? initialState,
+  String? initialSprintId,
 }) async {
   final repository = context.read<HivoraRepository>();
   final controller = IssueCreateController();
@@ -82,6 +83,7 @@ Future<Issue?> showIssueForm(
             controller: controller,
             projectId: projectId,
             initialState: initialState,
+            initialSprintId: initialSprintId,
             onCreated: (issue) => Navigator.of(modalContext).pop(issue),
           ),
         ),
