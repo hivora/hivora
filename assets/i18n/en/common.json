@@ -243,7 +243,21 @@
     "projects": "{{count}} project(s)",
     "create": "Create board",
     "needsProject": "Create a project first.",
-    "defaultName": "Team Board"
+    "defaultName": "Team Board",
+    "view": { "board": "Board", "backlog": "Backlog", "timeline": "Timeline" },
+    "active": "Active",
+    "sprintDay": "Day {{day}}/{{total}}",
+    "people": "People",
+    "filterButton": "Filter",
+    "filterTitle": "Filter",
+    "filterSection": { "status": "Status", "type": "Type", "priority": "Priority", "assignee": "Assignee" },
+    "clearFilters": "Clear all",
+    "activeFilters": "{{count}} active",
+    "noAssignee": "Unassigned",
+    "backlogEmpty": "No backlog items.",
+    "backlogSubtitle": "{{count}} item(s) without a sprint",
+    "timelineEmpty": "Nothing to show on the timeline.",
+    "timelineNoDates": "No start or due date"
   },
   "gantt": {
     "title": "Timeline",

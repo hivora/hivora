@@ -37,7 +37,8 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
   void initState() {
     super.initState();
     _cubit = FetchCubit(
-      () => context.read<HivoraRepository>().boards(projectId: widget.projectId),
+      () =>
+          context.read<HivoraRepository>().boards(projectId: widget.projectId),
     )..load();
   }
 
@@ -75,136 +76,163 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
           ? widget.projectName
           : context.t('board.boards'),
       child: BlocProvider.value(
-      value: _cubit,
-      child: BlocBuilder<FetchCubit<List<AgileBoard>>, FetchState<List<AgileBoard>>>(
-        builder: (context, state) {
-          final boardList = state.data ?? const <AgileBoard>[];
-          return RefreshIndicator(
-            onRefresh: _cubit.load,
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(context.pageGutter,
-                      16 + context.topGutter, context.pageGutter, 8),
-                  sliver: SliverToBoxAdapter(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
+        value: _cubit,
+        child:
+            BlocBuilder<
+              FetchCubit<List<AgileBoard>>,
+              FetchState<List<AgileBoard>>
+            >(
+              builder: (context, state) {
+                final boardList = state.data ?? const <AgileBoard>[];
+                return RefreshIndicator(
+                  onRefresh: _cubit.load,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(
+                          context.pageGutter,
+                          16 + context.topGutter,
+                          context.pageGutter,
+                          8,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: Row(
                             children: [
-                              Text(
-                                widget.projectName,
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.inkSoft,
-                                    fontWeight: FontWeight.w500),
-                                overflow: TextOverflow.ellipsis,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      widget.projectName,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.inkSoft,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      context.t('board.boards'),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
                               ),
-                              Text(
-                                context.t('board.boards'),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w700),
-                                overflow: TextOverflow.ellipsis,
+                              FilledButton.icon(
+                                onPressed: _showCreate,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.accent,
+                                  foregroundColor: const Color(0xFF2A2410),
+                                  textStyle: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                icon: const Icon(Icons.add_rounded, size: 18),
+                                label: Text(context.t('board.newBoard')),
                               ),
                             ],
                           ),
                         ),
-                        FilledButton.icon(
-                          onPressed: _showCreate,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.accent,
-                            foregroundColor: const Color(0xFF2A2410),
-                            textStyle: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 13),
-                          ),
-                          icon: const Icon(Icons.add_rounded, size: 18),
-                          label: Text(context.t('board.newBoard')),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (state.isLoading && boardList.isEmpty)
-                  const SliverFillRemaining(
-                    child: Center(
-                        child:
-                            HiveLoader()),
-                  )
-                else if (state.errorKey != null && boardList.isEmpty)
-                  SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(context.t(state.errorKey!),
-                              style: TextStyle(
-                                  color: AppColors.textSecondary)),
-                          const SizedBox(height: 12),
-                          OutlinedButton(
-                              onPressed: _cubit.load,
-                              child: Text(context.t('common.retry'))),
-                        ],
                       ),
-                    ),
-                  )
-                else if (boardList.isEmpty)
-                  SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.view_kanban_rounded,
-                              size: 56, color: AppColors.textSecondary),
-                          const SizedBox(height: 12),
-                          Text(context.t('board.emptyProject'),
-                              style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 15)),
-                          const SizedBox(height: 20),
-                          FilledButton.icon(
-                            onPressed: _showCreate,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.accent,
-                              foregroundColor: const Color(0xFF2A2410),
+                      if (state.isLoading && boardList.isEmpty)
+                        const SliverFillRemaining(
+                          child: Center(child: HiveLoader()),
+                        )
+                      else if (state.errorKey != null && boardList.isEmpty)
+                        SliverFillRemaining(
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  context.t(state.errorKey!),
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                OutlinedButton(
+                                  onPressed: _cubit.load,
+                                  child: Text(context.t('common.retry')),
+                                ),
+                              ],
                             ),
-                            icon: const Icon(Icons.add_rounded, size: 18),
-                            label: Text(context.t('board.newBoard')),
                           ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(
-                        context.pageGutter,
-                        context.pageGutter,
-                        context.pageGutter,
-                        context.pageGutter + context.bottomGutter),
-                    sliver: SliverGrid(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: context.gridColumns(minTileWidth: 280),
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                        mainAxisExtent: 140,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) =>
-                            _BoardCard(board: boardList[index], index: index),
-                        childCount: boardList.length,
-                      ),
-                    ),
+                        )
+                      else if (boardList.isEmpty)
+                        SliverFillRemaining(
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.view_kanban_rounded,
+                                  size: 56,
+                                  color: AppColors.textSecondary,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  context.t('board.emptyProject'),
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                FilledButton.icon(
+                                  onPressed: _showCreate,
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: AppColors.accent,
+                                    foregroundColor: const Color(0xFF2A2410),
+                                  ),
+                                  icon: const Icon(Icons.add_rounded, size: 18),
+                                  label: Text(context.t('board.newBoard')),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(
+                            context.pageGutter,
+                            context.pageGutter,
+                            context.pageGutter,
+                            context.pageGutter + context.bottomGutter,
+                          ),
+                          sliver: SliverGrid(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: context.gridColumns(
+                                    minTileWidth: 280,
+                                  ),
+                                  mainAxisSpacing: 16,
+                                  crossAxisSpacing: 16,
+                                  mainAxisExtent: 140,
+                                ),
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) => _BoardCard(
+                                board: boardList[index],
+                                index: index,
+                              ),
+                              childCount: boardList.length,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-              ],
+                );
+              },
             ),
-          );
-        },
-      ),
       ),
     );
   }
@@ -228,8 +256,10 @@ class _BoardCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(100),
@@ -237,15 +267,19 @@ class _BoardCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.view_kanban_rounded,
-                        size: 13, color: AppColors.navy),
+                    const Icon(
+                      Icons.view_kanban_rounded,
+                      size: 13,
+                      color: AppColors.navy,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       context.t('board.boardLabel'),
                       style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11,
-                          color: AppColors.navy),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        color: AppColors.navy,
+                      ),
                     ),
                   ],
                 ),
@@ -263,14 +297,19 @@ class _BoardCard extends StatelessWidget {
           Row(
             children: [
               PillChip(
-                label: context.t('board.projects',
-                    variables: {'count': '${board.projectIds.length}'}),
+                label: context.t(
+                  'board.projects',
+                  variables: {'count': '${board.projectIds.length}'},
+                ),
                 background: Colors.white.withValues(alpha: 0.5),
                 foreground: AppColors.textSecondary,
               ),
               const Spacer(),
-              Icon(Icons.arrow_forward_rounded,
-                  size: 14, color: AppColors.inkSoft),
+              Icon(
+                Icons.arrow_forward_rounded,
+                size: 14,
+                color: AppColors.inkSoft,
+              ),
             ],
           ),
         ],
@@ -280,10 +319,7 @@ class _BoardCard extends StatelessWidget {
 }
 
 class _CreateBoardBody extends StatefulWidget {
-  const _CreateBoardBody({
-    required this.projectId,
-    required this.projectName,
-  });
+  const _CreateBoardBody({required this.projectId, required this.projectName});
 
   final String projectId;
   final String projectName;
@@ -308,7 +344,11 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          24, 24, 24, 32 + MediaQuery.viewInsetsOf(context).bottom),
+        24,
+        24,
+        24,
+        32 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: Form(
         key: _formKey,
         child: Column(
@@ -317,34 +357,34 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
           children: [
             Text(
               context.t('board.newBoard'),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
             Text(
-              context.t('board.forProject',
-                  variables: {'project': widget.projectName}),
-              style: TextStyle(
-                  fontSize: 13, color: AppColors.textSecondary),
+              context.t(
+                'board.forProject',
+                variables: {'project': widget.projectName},
+              ),
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 20),
             TextFormField(
               controller: _name,
               autofocus: true,
-              decoration:
-                  InputDecoration(labelText: context.t('board.name')),
-              validator: (value) =>
-                  (value == null || value.trim().isEmpty)
-                      ? context.t('errors.required')
-                      : null,
+              decoration: InputDecoration(labelText: context.t('board.name')),
+              validator: (value) => (value == null || value.trim().isEmpty)
+                  ? context.t('errors.required')
+                  : null,
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!,
-                  style: const TextStyle(color: AppColors.danger),
-                  textAlign: TextAlign.center),
+              Text(
+                _error!,
+                style: const TextStyle(color: AppColors.danger),
+                textAlign: TextAlign.center,
+              ),
             ],
             const SizedBox(height: 24),
             FilledButton(
@@ -358,8 +398,9 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
                       width: 22,
                       height: 22,
                       child: HiveLoader(
-                          strokeWidth: 2,
-                          color: Color(0xFF2A2410)),
+                        strokeWidth: 2,
+                        color: Color(0xFF2A2410),
+                      ),
                     )
                   : Text(context.t('common.create')),
             ),
@@ -377,9 +418,9 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
     });
     try {
       final board = await context.read<HivoraRepository>().createBoard(
-            _name.text.trim(),
-            [widget.projectId],
-          );
+        _name.text.trim(),
+        [widget.projectId],
+      );
       if (mounted) Navigator.of(context).pop(board);
     } on ApiFailure catch (failure) {
       setState(() {

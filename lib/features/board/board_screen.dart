@@ -9,6 +9,7 @@ import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/hivora_repository.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/models/core_models.dart';
 import '../../core/models/work_models.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
@@ -17,7 +18,12 @@ import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
 import '../issues/issue_detail_sheet.dart';
 import '../issues/issue_form.dart';
+import '../issues/issues_screen.dart' show IssueRow;
 import '../shell/page_chrome.dart';
+import 'board_filter.dart';
+import 'board_filter_popup.dart';
+import 'board_people_strip.dart';
+import 'board_timeline.dart';
 
 // ─────────────────────────── BoardScreen ──────────────────────────────────
 // Shown at /board — lists all boards across projects; can filter by project.
@@ -67,8 +73,9 @@ class _BoardScreenState extends State<BoardScreen> {
 
   Future<void> _showCreate() async {
     if (_projects.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.t('board.needsProject'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.t('board.needsProject'))));
       return;
     }
     final repo = context.read<HivoraRepository>();
@@ -96,19 +103,22 @@ class _BoardScreenState extends State<BoardScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading && _boards.isEmpty && _error == null) {
-      return const Center(
-          child: HiveLoader());
+      return const Center(child: HiveLoader());
     }
     if (_error != null && _boards.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(context.t(_error!),
-                style: TextStyle(color: AppColors.textSecondary)),
+            Text(
+              context.t(_error!),
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
             const SizedBox(height: 12),
             OutlinedButton(
-                onPressed: _load, child: Text(context.t('common.retry'))),
+              onPressed: _load,
+              child: Text(context.t('common.retry')),
+            ),
           ],
         ),
       );
@@ -118,18 +128,21 @@ class _BoardScreenState extends State<BoardScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverPadding(
-          padding: EdgeInsets.fromLTRB(context.pageGutter,
-              16 + context.topGutter, context.pageGutter, 8),
+          padding: EdgeInsets.fromLTRB(
+            context.pageGutter,
+            16 + context.topGutter,
+            context.pageGutter,
+            8,
+          ),
           sliver: SliverToBoxAdapter(
             child: Row(
               children: [
                 Expanded(
                   child: Text(
                     context.t('board.title'),
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -151,7 +164,9 @@ class _BoardScreenState extends State<BoardScreen> {
                     backgroundColor: AppColors.accent,
                     foregroundColor: const Color(0xFF2A2410),
                     textStyle: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 13),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
                   icon: const Icon(Icons.add_rounded, size: 18),
                   label: Text(context.t('board.newBoard')),
@@ -166,12 +181,19 @@ class _BoardScreenState extends State<BoardScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.view_kanban_rounded,
-                      size: 56, color: AppColors.textSecondary),
+                  Icon(
+                    Icons.view_kanban_rounded,
+                    size: 56,
+                    color: AppColors.textSecondary,
+                  ),
                   const SizedBox(height: 12),
-                  Text(context.t('board.empty'),
-                      style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 15)),
+                  Text(
+                    context.t('board.empty'),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 15,
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   FilledButton.icon(
                     onPressed: _showCreate,
@@ -188,8 +210,12 @@ class _BoardScreenState extends State<BoardScreen> {
           )
         else
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(context.pageGutter, context.pageGutter,
-                context.pageGutter, context.pageGutter + context.bottomGutter),
+            padding: EdgeInsets.fromLTRB(
+              context.pageGutter,
+              context.pageGutter,
+              context.pageGutter,
+              context.pageGutter + context.bottomGutter,
+            ),
             sliver: SliverGrid(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: context.gridColumns(minTileWidth: 280),
@@ -224,11 +250,22 @@ class KanbanBoardScreen extends StatefulWidget {
   State<KanbanBoardScreen> createState() => _KanbanBoardScreenState();
 }
 
+/// Which view the kanban screen is showing.
+enum BoardViewMode { board, backlog, timeline }
+
 class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
   String? _sprintId;
   BoardView? _view;
   bool _loading = true;
   String? _error;
+
+  BoardViewMode _mode = BoardViewMode.board;
+  Map<String, String> _names = const {};
+  Map<String, String> _projectNames = const {};
+  List<Issue> _backlog = const [];
+  BoardFilter _filter = BoardFilter.empty;
+
+  final GlobalKey _filterKey = GlobalKey();
 
   @override
   void initState() {
@@ -241,15 +278,27 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
       _loading = true;
       _error = null;
     });
+    final repo = context.read<HivoraRepository>();
     try {
-      final view = await context
-          .read<HivoraRepository>()
-          .boardView(widget.boardId, sprintId: _sprintId);
+      final results = await Future.wait([
+        repo.boardView(widget.boardId, sprintId: _sprintId),
+        repo.users(),
+        repo.projects(),
+      ]);
+      final view = results[0] as BoardView;
+      final users = results[1] as List<DirectoryUser>;
+      final projects = results[2] as List<Project>;
+      final backlog = await _loadBacklog(repo, view.board.projectIds);
+      if (!mounted) return;
       setState(() {
         _view = view;
+        _names = {for (final u in users) u.id: u.displayName};
+        _projectNames = {for (final p in projects) p.id: p.name};
+        _backlog = backlog;
         _loading = false;
       });
     } on ApiFailure catch (failure) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = failure.message;
@@ -257,17 +306,81 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
     }
   }
 
+  /// Backlog = issues of the board's projects that aren't in any sprint.
+  Future<List<Issue>> _loadBacklog(
+    HivoraRepository repo,
+    List<String> projectIds,
+  ) async {
+    if (projectIds.isEmpty) return const [];
+    final pages = await Future.wait(
+      projectIds.map((p) => repo.issues(projectId: p, size: 500)),
+    );
+    final seen = <String>{};
+    final out = <Issue>[];
+    for (final page in pages) {
+      for (final issue in page.issues) {
+        if (issue.sprintId == null && seen.add(issue.id)) out.add(issue);
+      }
+    }
+    return out;
+  }
+
+  // ---- derived views ----
+
+  List<Issue> get _allBoardIssues => [
+    for (final c in _view?.columns ?? const <BoardColumnView>[]) ...c.issues,
+  ];
+
+  bool _isBacklogColumn(BoardColumnView c) =>
+      c.name.trim().toLowerCase() == 'backlog' ||
+      c.states.any((s) => s.toUpperCase() == 'BACKLOG');
+
+  List<BoardColumnView> get _kanbanColumns =>
+      (_view?.columns ?? const <BoardColumnView>[])
+          .where((c) => !_isBacklogColumn(c))
+          .toList();
+
+  List<String> get _peopleIds {
+    final seen = <String>{};
+    final out = <String>[];
+    for (final issue in [..._allBoardIssues, ..._backlog]) {
+      final a = issue.assigneeId;
+      if (a != null && a.isNotEmpty && seen.add(a)) out.add(a);
+    }
+    return out;
+  }
+
+  BoardFilterOptions get _options =>
+      BoardFilterOptions.fromIssues([..._allBoardIssues, ..._backlog]);
+
+  Sprint? get _activeSprint {
+    final view = _view;
+    if (view == null) return null;
+    if (_sprintId != null) {
+      return view.sprints.where((s) => s.id == _sprintId).firstOrNull;
+    }
+    final active = view.board.activeSprintId;
+    if (active != null) {
+      return view.sprints.where((s) => s.id == active).firstOrNull;
+    }
+    return null;
+  }
+
+  void _openIssue(Issue issue) =>
+      showIssueDetailSheet(context, issueId: issue.id, onChanged: _load);
+
   Future<void> _moveIssue(Issue issue, BoardColumnView column) async {
     if (column.states.contains(issue.state) || column.states.isEmpty) return;
     try {
-      await context
-          .read<HivoraRepository>()
-          .updateIssue(issue.id, {'state': column.states.first});
+      await context.read<HivoraRepository>().updateIssue(issue.id, {
+        'state': column.states.first,
+      });
       await _load();
     } on ApiFailure catch (failure) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(failure.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(failure.message)));
       }
     }
   }
@@ -275,8 +388,9 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
   Future<void> _addIssue(BoardColumnView column) async {
     final view = _view;
     if (view == null) return;
-    final projectId =
-        view.board.projectIds.isNotEmpty ? view.board.projectIds.first : null;
+    final projectId = view.board.projectIds.isNotEmpty
+        ? view.board.projectIds.first
+        : null;
     final created = await showIssueForm(
       context,
       projectId: projectId,
@@ -285,102 +399,579 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
     if (created != null) await _load();
   }
 
+  void _openFilter() => openBoardFilter(
+    context,
+    anchorKey: _filterKey,
+    filter: _filter,
+    options: _options,
+    names: _names,
+    onChanged: (f) => setState(() => _filter = f),
+  );
+
   @override
   Widget build(BuildContext context) {
     if (_loading && _view == null) {
-      return const Center(
-          child: HiveLoader());
+      return const Center(child: HiveLoader());
     }
     if (_error != null && _view == null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(context.t(_error!),
-                style: TextStyle(color: AppColors.textSecondary)),
+            Text(
+              context.t(_error!),
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
             const SizedBox(height: 12),
             OutlinedButton(
-                onPressed: _load, child: Text(context.t('common.retry'))),
+              onPressed: _load,
+              child: Text(context.t('common.retry')),
+            ),
           ],
         ),
       );
     }
     final view = _view!;
-    final activeSprint = _sprintId != null
-        ? view.sprints.where((s) => s.id == _sprintId).firstOrNull
-        : view.sprints.firstOrNull;
     // Back navigation is handled by the shell app bar (via PageChrome), which
     // also shows the board name as the title.
     return PageChrome(
       title: view.board.name,
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(context.pageGutter,
-              22 + context.topGutter, context.pageGutter, 8),
-          child: PageHead(
-            title: view.board.name,
-            subtitle: context.t('board.agileBoard'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              context.pageGutter,
+              22 + context.topGutter,
+              context.pageGutter,
+              10,
+            ),
+            child: _header(view),
           ),
-        ),
-        // sprint chip + sprint selector
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: context.pageGutter),
-          child: Row(
-            children: [
-              if (activeSprint != null)
-                Flexible(child: _SprintChip(sprint: activeSprint)),
-              const Spacer(),
-              if (view.sprints.isNotEmpty)
-                _SprintSelector(
-                  sprints: view.sprints,
-                  selected: _sprintId,
-                  onChanged: (value) {
-                    _sprintId = value;
-                    _load();
-                  },
-                ),
-            ],
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              context.pageGutter,
+              0,
+              context.pageGutter,
+              10,
+            ),
+            child: _metaArea(view),
           ),
-        ),
-        const SizedBox(height: 14),
-        Expanded(
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.fromLTRB(context.pageGutter, 0,
-                context.pageGutter, context.pageGutter + context.bottomGutter),
-            itemCount: view.columns.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 16),
-            itemBuilder: (context, index) {
-              final column = view.columns[index];
-              return _BoardColumn(
-                column: column,
-                onAccept: (issue) => _moveIssue(issue, column),
-                onAddIssue: () => _addIssue(column),
-                onOpenIssue: (issue) => showIssueDetailSheet(
-                  context,
-                  issueId: issue.id,
-                  onChanged: _load,
-                ),
-              );
-            },
+          Expanded(child: _body()),
+        ],
+      ),
+    );
+  }
+
+  // ---- header: title + view switcher ----
+
+  Widget _header(BoardView view) {
+    final projectLabel = view.board.projectIds
+        .map((id) => _projectNames[id] ?? '')
+        .where((s) => s.isNotEmpty)
+        .join(', ');
+    final subtitle = projectLabel.isEmpty
+        ? context.t('board.agileBoard')
+        : '$projectLabel · ${context.t('board.agileBoard')}';
+
+    if (context.isCompact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PageHead(title: view.board.name, subtitle: subtitle),
+          const SizedBox(height: 12),
+          // Right-aligned, collapsible, responsive-label switcher (mobile).
+          _CompactViewSwitcher(
+            items: _switcherItems(),
+            selected: _mode.index,
+            onChanged: (i) => setState(() => _mode = BoardViewMode.values[i]),
           ),
+        ],
+      );
+    }
+    return PageHead(
+      title: view.board.name,
+      subtitle: subtitle,
+      actions: [
+        SegmentedControl(
+          items: _switcherItems(),
+          selected: _mode.index,
+          onChanged: (i) => setState(() => _mode = BoardViewMode.values[i]),
         ),
       ],
+    );
+  }
+
+  List<SegmentItem> _switcherItems() => [
+    SegmentItem(
+      label: context.t('board.view.board'),
+      icon: Icons.view_kanban_outlined,
+    ),
+    SegmentItem(
+      label: context.t('board.view.backlog'),
+      icon: Icons.list_rounded,
+    ),
+    SegmentItem(
+      label: context.t('board.view.timeline'),
+      icon: Icons.timeline_rounded,
+    ),
+  ];
+
+  // ---- meta area: sprint header + people strip + filter ----
+
+  Widget _metaArea(BoardView view) {
+    final sprint = _activeSprint;
+    final children = <Widget>[];
+    if (sprint != null) {
+      children.add(
+        Row(
+          children: [
+            Expanded(child: _SprintHeader(sprint: sprint)),
+            if (view.sprints.length > 1) ...[
+              const SizedBox(width: 12),
+              _SprintSelector(
+                sprints: view.sprints,
+                selected: _sprintId,
+                onChanged: (value) {
+                  _sprintId = value;
+                  _load();
+                },
+              ),
+            ],
+          ],
+        ),
+      );
+      children.add(const SizedBox(height: 10));
+    }
+    children.add(_controlsRow());
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
+    );
+  }
+
+  Widget _controlsRow() {
+    final people = BoardPeopleStrip(
+      userIds: _peopleIds,
+      names: _names,
+      selected: _filter.assignees,
+      onToggle: (id) => setState(
+        () => _filter = _filter.toggle(BoardFilterFacet.assignee, id),
+      ),
+    );
+    return Row(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            reverse: true,
+            child: people,
+          ),
+        ),
+        const SizedBox(width: 10),
+        _BoardFilterButton(
+          key: _filterKey,
+          count: _filter.activeCount,
+          onTap: _openFilter,
+        ),
+      ],
+    );
+  }
+
+  // ---- body ----
+
+  Widget _body() {
+    switch (_mode) {
+      case BoardViewMode.board:
+        return _kanban();
+      case BoardViewMode.backlog:
+        return _backlogList();
+      case BoardViewMode.timeline:
+        return BoardTimeline(
+          issues: _allBoardIssues.where(_filter.matches).toList(),
+          onOpen: _openIssue,
+          padding: EdgeInsets.fromLTRB(
+            context.pageGutter,
+            0,
+            context.pageGutter,
+            context.pageGutter + context.bottomGutter,
+          ),
+        );
+    }
+  }
+
+  Widget _kanban() {
+    final columns = _kanbanColumns;
+    if (columns.isEmpty) {
+      return Center(
+        child: Text(
+          context.t('board.empty'),
+          style: TextStyle(color: AppColors.inkSoft),
+        ),
+      );
+    }
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      padding: EdgeInsets.fromLTRB(
+        context.pageGutter,
+        0,
+        context.pageGutter,
+        context.pageGutter + context.bottomGutter,
+      ),
+      itemCount: columns.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 16),
+      itemBuilder: (context, index) {
+        final column = columns[index];
+        final issues = column.issues.where(_filter.matches).toList();
+        return _BoardColumn(
+          column: column,
+          issues: issues,
+          onAccept: (issue) => _moveIssue(issue, column),
+          onAddIssue: () => _addIssue(column),
+          onOpenIssue: _openIssue,
+        );
+      },
+    );
+  }
+
+  Widget _backlogList() {
+    const rank = {'URGENT': 4, 'HIGH': 3, 'NORMAL': 2, 'LOW': 1};
+    int prio(Issue i) => switch (i.priority.toUpperCase()) {
+      'SHOWSTOPPER' || 'CRITICAL' || 'URGENT' => 5,
+      'MAJOR' || 'HIGH' => 3,
+      'MINOR' || 'LOW' => 1,
+      _ => rank[i.priority.toUpperCase()] ?? 2,
+    };
+    final items = _backlog.where(_filter.matches).toList()
+      ..sort((a, b) => prio(b).compareTo(prio(a)));
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: AppColors.accent,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(
+          context.pageGutter,
+          0,
+          context.pageGutter,
+          context.pageGutter + context.bottomGutter,
+        ),
+        children: [
+          if (items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 72),
+              child: Center(
+                child: Text(
+                  context.t('board.backlogEmpty'),
+                  style: TextStyle(color: AppColors.inkSoft),
+                ),
+              ),
+            )
+          else ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text(
+                context.t(
+                  'board.backlogSubtitle',
+                  variables: {'count': '${items.length}'},
+                ),
+                style: TextStyle(fontSize: 13, color: AppColors.inkSoft),
+              ),
+            ),
+            if (!context.isCompact) const _BacklogTableHeader(),
+            for (final issue in items)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 7),
+                child: IssueRow(
+                  issue: issue,
+                  assignee: _names[issue.assigneeId],
+                  onTap: () => _openIssue(issue),
+                ),
+              ),
+          ],
+        ],
       ),
     );
   }
 }
 
-// ─────────────────────────── Sprint chip & selector ───────────────────────
+// ─────────────────────────── Filter button ────────────────────────────────
 
-class _SprintChip extends StatelessWidget {
-  const _SprintChip({required this.sprint});
+/// White pill that opens the glass filter popup; shows an amber badge with the
+/// active-criteria count. Its [key] anchors the popup's position.
+class _BoardFilterButton extends StatelessWidget {
+  const _BoardFilterButton({
+    super.key,
+    required this.count,
+    required this.onTap,
+  });
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+            border: Border.all(
+              color: count > 0 ? AppColors.accentLine : AppColors.hairline,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.tune_rounded, size: 16, color: AppColors.inkSoft),
+              const SizedBox(width: 7),
+              Text(
+                context.t('board.filterButton'),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (count > 0) ...[
+                const SizedBox(width: 7),
+                Container(
+                  constraints: const BoxConstraints(minWidth: 18),
+                  height: 18,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  decoration: const BoxDecoration(
+                    color: AppColors.accent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '$count',
+                    style: const TextStyle(
+                      fontFamily: AppTheme.fontMono,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2A2410),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────── Compact view switcher ────────────────────────
+
+/// Mobile Board/Backlog/Timeline switcher: right-aligned, manually
+/// collapsible (a chevron handle, expanded initially), with labels that
+/// animate in/out as horizontal space allows, and an animated selection fill.
+class _CompactViewSwitcher extends StatefulWidget {
+  const _CompactViewSwitcher({
+    required this.items,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<SegmentItem> items;
+  final int selected;
+  final ValueChanged<int> onChanged;
+
+  @override
+  State<_CompactViewSwitcher> createState() => _CompactViewSwitcherState();
+}
+
+class _CompactViewSwitcherState extends State<_CompactViewSwitcher> {
+  static const _labelStyle = TextStyle(
+    fontSize: 12.5,
+    fontWeight: FontWeight.w600,
+  );
+  static const _dur = Duration(milliseconds: 240);
+
+  bool _expanded = true;
+
+  /// Whether the handle + all three labelled segments fit within [maxWidth].
+  bool _labelsFit(double maxWidth) {
+    final scaler = MediaQuery.textScalerOf(context);
+    var total = 6.0 + 30.0; // outer pill padding + handle (12 pad + 18 icon)
+    for (final item in widget.items) {
+      final tp = TextPainter(
+        text: TextSpan(text: item.label, style: _labelStyle),
+        maxLines: 1,
+        textDirection: TextDirection.ltr,
+        textScaler: scaler,
+      )..layout();
+      total += 24 + 15 + 6 + tp.width; // segment: h-padding + icon + gap + text
+    }
+    // Comfortable slack so labels never appear right at the overflow boundary.
+    return total + 8 <= maxWidth;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxW = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        final showLabels = _expanded && _labelsFit(maxW);
+        return Align(
+          alignment: Alignment.centerRight,
+          child: Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+              border: Border.all(color: AppColors.hairline),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _handle(),
+                for (var i = 0; i < widget.items.length; i++)
+                  _segment(i, showLabels),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _handle() {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() => _expanded = !_expanded),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
+        child: AnimatedRotation(
+          duration: _dur,
+          curve: hiveEase,
+          turns: _expanded ? 0 : 0.5,
+          child: Icon(
+            Icons.chevron_right_rounded,
+            size: 18,
+            color: AppColors.inkFaint,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _segment(int i, bool showLabels) {
+    final selected = i == widget.selected;
+    final fg = selected ? Colors.white : AppColors.inkSoft;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => widget.onChanged(i),
+      child: AnimatedContainer(
+        duration: _dur,
+        curve: hiveEase,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.navy : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TweenAnimationBuilder<Color?>(
+              duration: _dur,
+              curve: hiveEase,
+              tween: ColorTween(end: fg),
+              builder: (_, color, _) =>
+                  Icon(widget.items[i].icon, size: 15, color: color),
+            ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              switchInCurve: hiveEase,
+              switchOutCurve: hiveEase,
+              transitionBuilder: (child, anim) => SizeTransition(
+                axis: Axis.horizontal,
+                alignment: Alignment.centerLeft,
+                sizeFactor: anim,
+                child: FadeTransition(opacity: anim, child: child),
+              ),
+              child: showLabels
+                  ? Padding(
+                      key: const ValueKey('label'),
+                      padding: const EdgeInsets.only(left: 6),
+                      child: AnimatedDefaultTextStyle(
+                        duration: _dur,
+                        curve: hiveEase,
+                        style: _labelStyle.copyWith(color: fg),
+                        child: Text(
+                          widget.items[i].label,
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.clip,
+                        ),
+                      ),
+                    )
+                  : const SizedBox(key: ValueKey('empty')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────── Sprint header & selector ─────────────────────
+
+/// Sprint info card: "Active" pill, sprint name + goal, and a linear
+/// day-progress ("Day X/Y") when the sprint has start & end dates. Stacks the
+/// progress under the name on compact widths so it never overflows.
+class _SprintHeader extends StatelessWidget {
+  const _SprintHeader({required this.sprint});
   final Sprint sprint;
 
   @override
   Widget build(BuildContext context) {
+    final start = sprint.startDate;
+    final end = sprint.endDate;
+    Widget? progress;
+    if (start != null && end != null && !end.isBefore(start)) {
+      final total = end.difference(start).inDays + 1;
+      final today = DateTime.now();
+      final dayRaw =
+          DateTime(
+            today.year,
+            today.month,
+            today.day,
+          ).difference(start).inDays +
+          1;
+      final day = dayRaw.clamp(1, total);
+      progress = _SprintProgress(value: day / total, day: day, total: total);
+    }
+
+    final compact = context.isCompact;
+    final nameBlock = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          sprint.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+        ),
+        if ((sprint.goal ?? '').isNotEmpty)
+          Text(
+            sprint.goal!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+          ),
+      ],
+    );
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
@@ -388,48 +979,148 @@ class _SprintChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppTheme.radiusCard),
         border: Border.all(color: AppColors.hairline),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-            decoration: BoxDecoration(
-              color: AppColors.accentSoft,
-              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.bolt_rounded, size: 13, color: AppColors.accentStrong),
-                SizedBox(width: 4),
-                Text('Active',
-                    style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.accentStrong)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Column(
+      child: compact
+          ? Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(sprint.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 13.5)),
-                if ((sprint.goal ?? '').isNotEmpty)
-                  Text(sprint.goal!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 11.5, color: AppColors.inkSoft)),
+                Row(
+                  children: [
+                    const _ActivePill(),
+                    const SizedBox(width: 12),
+                    Expanded(child: nameBlock),
+                  ],
+                ),
+                if (progress != null) ...[const SizedBox(height: 12), progress],
+              ],
+            )
+          : Row(
+              children: [
+                const _ActivePill(),
+                const SizedBox(width: 12),
+                Expanded(child: nameBlock),
+                if (progress != null) ...[
+                  const SizedBox(width: 16),
+                  SizedBox(width: 170, child: progress),
+                ],
               ],
             ),
+    );
+  }
+}
+
+class _ActivePill extends StatelessWidget {
+  const _ActivePill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.accentSoft,
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.bolt_rounded,
+            size: 13,
+            color: AppColors.accentStrong,
           ),
+          const SizedBox(width: 4),
+          Text(
+            context.t('board.active'),
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.accentStrong,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SprintProgress extends StatelessWidget {
+  const _SprintProgress({
+    required this.value,
+    required this.day,
+    required this.total,
+  });
+  final double value;
+  final int day;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Expanded(child: HiveProgress(value: value, height: 6)),
+        const SizedBox(width: 10),
+        Text(
+          context.t(
+            'board.sprintDay',
+            variables: {'day': '$day', 'total': '$total'},
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.clip,
+          softWrap: false,
+          style: TextStyle(
+            fontFamily: AppTheme.fontMono,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.inkSoft,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────── Backlog table header ─────────────────────────
+
+/// Column header for the Backlog list, mirroring the Issues page columns.
+class _BacklogTableHeader extends StatelessWidget {
+  const _BacklogTableHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.6,
+      color: AppColors.inkFaint,
+    );
+    Widget cell(String key, {int? flex, double? width}) {
+      final text = Text(
+        context.t(key).toUpperCase(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: style,
+      );
+      if (width != null) return SizedBox(width: width, child: text);
+      return Expanded(flex: flex!, child: text);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Row(
+        children: [
+          cell('issues.colId', width: 76),
+          const SizedBox(width: 12),
+          cell('issues.colTitle', flex: 5),
+          const SizedBox(width: 12),
+          cell('issues.colStatus', flex: 3),
+          const SizedBox(width: 8),
+          cell('issues.colPriority', flex: 3),
+          const SizedBox(width: 8),
+          cell('issues.colAssignee', flex: 3),
+          const SizedBox(width: 8),
+          cell('issues.colDue', width: 60),
+          const SizedBox(width: 18),
         ],
       ),
     );
@@ -451,7 +1142,7 @@ class _SprintSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = selected != null
         ? sprints.where((s) => s.id == selected).firstOrNull?.name ??
-            context.t('board.allSprints')
+              context.t('board.allSprints')
         : context.t('board.allSprints');
     return PopupMenuButton<String?>(
       initialValue: selected,
@@ -475,12 +1166,15 @@ class _SprintSelector extends StatelessWidget {
           children: [
             Icon(Icons.bolt_outlined, size: 15, color: AppColors.inkSoft),
             const SizedBox(width: 7),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 12.5, fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(width: 4),
-            Icon(Icons.expand_more_rounded,
-                size: 16, color: AppColors.inkSoft),
+            Icon(Icons.expand_more_rounded, size: 16, color: AppColors.inkSoft),
           ],
         ),
       ),
@@ -491,8 +1185,11 @@ class _SprintSelector extends StatelessWidget {
 // ─────────────────────────── Board list card ──────────────────────────────
 
 class _BoardListCard extends StatelessWidget {
-  const _BoardListCard(
-      {required this.board, required this.index, required this.projects});
+  const _BoardListCard({
+    required this.board,
+    required this.index,
+    required this.projects,
+  });
 
   final AgileBoard board;
   final int index;
@@ -501,8 +1198,12 @@ class _BoardListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final projectNames = board.projectIds
-        .map((id) => projects.firstWhere((p) => p.id == id,
-            orElse: () => Project(id: id, key: id, name: id)))
+        .map(
+          (id) => projects.firstWhere(
+            (p) => p.id == id,
+            orElse: () => Project(id: id, key: id, name: id),
+          ),
+        )
         .map((p) => p.name)
         .join(', ');
 
@@ -522,15 +1223,19 @@ class _BoardListCard extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.view_kanban_rounded,
-                    size: 13, color: AppColors.navy),
+                const Icon(
+                  Icons.view_kanban_rounded,
+                  size: 13,
+                  color: AppColors.navy,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   context.t('board.boardLabel'),
                   style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 11,
-                      color: AppColors.navy),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    color: AppColors.navy,
+                  ),
                 ),
               ],
             ),
@@ -541,8 +1246,7 @@ class _BoardListCard extends StatelessWidget {
               board.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
           ),
           if (projectNames.isNotEmpty)
@@ -550,14 +1254,16 @@ class _BoardListCard extends StatelessWidget {
               projectNames,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 11, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
             ),
           const SizedBox(height: 4),
           Align(
             alignment: Alignment.centerRight,
-            child:
-                Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.inkSoft),
+            child: Icon(
+              Icons.arrow_forward_rounded,
+              size: 14,
+              color: AppColors.inkSoft,
+            ),
           ),
         ],
       ),
@@ -581,25 +1287,19 @@ class _ProjectFilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = selected != null
-        ? projects.firstWhere((p) => p.id == selected,
-                orElse: () => projects.first)
-            .name
+        ? projects
+              .firstWhere((p) => p.id == selected, orElse: () => projects.first)
+              .name
         : context.t('board.allProjects');
 
     return PopupMenuButton<String?>(
       initialValue: selected,
       onSelected: onChanged,
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       offset: const Offset(0, 36),
       itemBuilder: (_) => [
-        PopupMenuItem(
-          value: null,
-          child: Text(context.t('board.allProjects')),
-        ),
-        ...projects.map(
-          (p) => PopupMenuItem(value: p.id, child: Text(p.name)),
-        ),
+        PopupMenuItem(value: null, child: Text(context.t('board.allProjects'))),
+        ...projects.map((p) => PopupMenuItem(value: p.id, child: Text(p.name))),
       ],
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -611,11 +1311,12 @@ class _ProjectFilterChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(label,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
             const SizedBox(width: 4),
-            Icon(Icons.expand_more_rounded,
-                size: 16, color: AppColors.inkSoft),
+            Icon(Icons.expand_more_rounded, size: 16, color: AppColors.inkSoft),
           ],
         ),
       ),
@@ -645,8 +1346,7 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
   @override
   void initState() {
     super.initState();
-    _selectedProjectId =
-        widget.initialProjectId ?? widget.projects.first.id;
+    _selectedProjectId = widget.initialProjectId ?? widget.projects.first.id;
   }
 
   @override
@@ -659,7 +1359,11 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          24, 24, 24, 32 + MediaQuery.viewInsetsOf(context).bottom),
+        24,
+        24,
+        24,
+        32 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: Form(
         key: _formKey,
         child: Column(
@@ -668,30 +1372,29 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
           children: [
             Text(
               context.t('board.newBoard'),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 20),
             TextFormField(
               controller: _name,
               autofocus: true,
-              decoration:
-                  InputDecoration(labelText: context.t('board.name')),
-              validator: (value) =>
-                  (value == null || value.trim().isEmpty)
-                      ? context.t('errors.required')
-                      : null,
+              decoration: InputDecoration(labelText: context.t('board.name')),
+              validator: (value) => (value == null || value.trim().isEmpty)
+                  ? context.t('errors.required')
+                  : null,
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<String>(
               initialValue: _selectedProjectId,
-              decoration:
-                  InputDecoration(labelText: context.t('board.project')),
+              decoration: InputDecoration(
+                labelText: context.t('board.project'),
+              ),
               items: widget.projects
-                  .map((p) =>
-                      DropdownMenuItem(value: p.id, child: Text(p.name)))
+                  .map(
+                    (p) => DropdownMenuItem(value: p.id, child: Text(p.name)),
+                  )
                   .toList(),
               onChanged: (value) {
                 if (value != null) {
@@ -701,9 +1404,11 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!,
-                  style: const TextStyle(color: AppColors.danger),
-                  textAlign: TextAlign.center),
+              Text(
+                _error!,
+                style: const TextStyle(color: AppColors.danger),
+                textAlign: TextAlign.center,
+              ),
             ],
             const SizedBox(height: 24),
             FilledButton(
@@ -717,7 +1422,9 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
                       width: 22,
                       height: 22,
                       child: HiveLoader(
-                          strokeWidth: 2, color: Color(0xFF2A2410)),
+                        strokeWidth: 2,
+                        color: Color(0xFF2A2410),
+                      ),
                     )
                   : Text(context.t('common.create')),
             ),
@@ -735,9 +1442,9 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
     });
     try {
       final board = await context.read<HivoraRepository>().createBoard(
-            _name.text.trim(),
-            [_selectedProjectId],
-          );
+        _name.text.trim(),
+        [_selectedProjectId],
+      );
       if (mounted) Navigator.of(context).pop(board);
     } on ApiFailure catch (failure) {
       setState(() {
@@ -750,143 +1457,188 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
 
 // ─────────────────────────── Kanban column ────────────────────────────────
 
-class _BoardColumn extends StatelessWidget {
+class _BoardColumn extends StatefulWidget {
   const _BoardColumn({
     required this.column,
+    required this.issues,
     required this.onAccept,
     required this.onAddIssue,
     required this.onOpenIssue,
   });
 
   final BoardColumnView column;
+  final List<Issue> issues;
   final void Function(Issue) onAccept;
   final VoidCallback onAddIssue;
   final void Function(Issue) onOpenIssue;
 
   @override
+  State<_BoardColumn> createState() => _BoardColumnState();
+}
+
+class _BoardColumnState extends State<_BoardColumn> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    final overWip =
-        column.wipLimit != null && column.issues.length > column.wipLimit!;
+    final column = widget.column;
+    final issues = widget.issues;
+    final overWip = column.wipLimit != null && issues.length > column.wipLimit!;
     // Tint from the column's first workflow state, falling back to its display
     // name so the header dot still matches the theme when `states` is empty.
     // stateColor normalises case/separators, so either form resolves correctly.
     final dotColor = AppColors.stateColor(
-        column.states.isNotEmpty ? column.states.first : column.name);
+      column.states.isNotEmpty ? column.states.first : column.name,
+    );
     final countLabel = column.wipLimit != null
-        ? '${column.issues.length}/${column.wipLimit}'
-        : '${column.issues.length}';
+        ? '${issues.length}/${column.wipLimit}'
+        : '${issues.length}';
+
+    // On mouse-driven platforms the "add issue" button stays hidden until the
+    // column is hovered; on touch platforms (no hover) it's always visible.
+    final platform = Theme.of(context).platform;
+    final isTouch =
+        platform == TargetPlatform.iOS ||
+        platform == TargetPlatform.android ||
+        platform == TargetPlatform.fuchsia;
+    final revealAdd = isTouch || _hovered;
 
     return SizedBox(
       width: 300,
-      child: DragTarget<Issue>(
-        onAcceptWithDetails: (details) => onAccept(details.data),
-        builder: (context, candidates, rejected) {
-          final dropping = candidates.isNotEmpty;
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: dropping ? AppColors.accentSoft : AppColors.canvas2,
-              borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-              border: dropping
-                  ? Border.all(color: AppColors.accentLine, width: 2)
-                  : Border.all(color: Colors.transparent, width: 2),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 9,
-                        height: 9,
-                        decoration: BoxDecoration(
-                            color: dotColor, shape: BoxShape.circle),
-                      ),
-                      const SizedBox(width: 9),
-                      Expanded(
-                        child: Text(
-                          column.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 13),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: DragTarget<Issue>(
+          onAcceptWithDetails: (details) => widget.onAccept(details.data),
+          builder: (context, candidates, rejected) {
+            final dropping = candidates.isNotEmpty;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: dropping ? AppColors.accentSoft : AppColors.canvas2,
+                borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                border: dropping
+                    ? Border.all(color: AppColors.accentLine, width: 2)
+                    : Border.all(color: Colors.transparent, width: 2),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: dotColor,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: overWip
-                              ? AppColors.dangerSoft
-                              : AppColors.surface,
-                          borderRadius: BorderRadius.circular(99),
-                          border: Border.all(
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Text(
+                            column.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: overWip
+                                ? AppColors.dangerSoft
+                                : AppColors.surface,
+                            borderRadius: BorderRadius.circular(99),
+                            border: Border.all(
                               color: overWip
                                   ? AppColors.danger.withValues(alpha: 0.3)
-                                  : AppColors.hairline),
-                        ),
-                        child: Text(
-                          countLabel,
-                          style: TextStyle(
+                                  : AppColors.hairline,
+                            ),
+                          ),
+                          child: Text(
+                            countLabel,
+                            style: TextStyle(
                               fontFamily: AppTheme.fontMono,
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
                               color: overWip
                                   ? AppColors.danger
-                                  : AppColors.inkSoft),
+                                  : AppColors.inkSoft,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Flexible(
+                    child: issues.isEmpty
+                        ? const SizedBox(height: 8)
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            itemCount: issues.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 9),
+                            itemBuilder: (context, index) {
+                              final issue = issues[index];
+                              return Draggable<Issue>(
+                                data: issue,
+                                dragAnchorStrategy: childDragAnchorStrategy,
+                                maxSimultaneousDrags: 1,
+                                feedback: Material(
+                                  color: Colors.transparent,
+                                  child: SizedBox(
+                                    width: 276,
+                                    child: _BoardCard(
+                                      issue: issue,
+                                      dragging: true,
+                                    ),
+                                  ),
+                                ),
+                                childWhenDragging: Opacity(
+                                  opacity: 0.35,
+                                  child: _BoardCard(issue: issue),
+                                ),
+                                child: _BoardCard(
+                                  issue: issue,
+                                  onOpen: () => widget.onOpenIssue(issue),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Reveal the add button on hover (mouse) / always (touch); keep
+                  // its space reserved so columns don't resize.
+                  SizedBox(
+                    width: double.infinity,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOut,
+                      opacity: revealAdd ? 1 : 0,
+                      child: IgnorePointer(
+                        ignoring: !revealAdd,
+                        child: DottedAddButton(
+                          label: context.t('board.addIssue'),
+                          onTap: widget.onAddIssue,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-                Flexible(
-                  child: column.issues.isEmpty
-                      ? const SizedBox(height: 8)
-                      : ListView.separated(
-                          shrinkWrap: true,
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          itemCount: column.issues.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: 9),
-                          itemBuilder: (context, index) {
-                            final issue = column.issues[index];
-                            return Draggable<Issue>(
-                              data: issue,
-                              dragAnchorStrategy:
-                                  childDragAnchorStrategy,
-                              maxSimultaneousDrags: 1,
-                              feedback: Material(
-                                color: Colors.transparent,
-                                child: SizedBox(
-                                  width: 276,
-                                  child: _BoardCard(
-                                      issue: issue, dragging: true),
-                                ),
-                              ),
-                              childWhenDragging: Opacity(
-                                  opacity: 0.35,
-                                  child: _BoardCard(issue: issue)),
-                              child: _BoardCard(
-                                  issue: issue,
-                                  onOpen: () => onOpenIssue(issue)),
-                            );
-                          },
-                        ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: DottedAddButton(
-                    label: context.t('board.addIssue'),
-                    onTap: onAddIssue,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -910,9 +1662,10 @@ class _BoardCard extends StatelessWidget {
         border: Border.all(color: AppColors.hairline),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x0D191637),
-              blurRadius: 2,
-              offset: Offset(0, 1)),
+            color: Color(0x0D191637),
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          ),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -946,9 +1699,10 @@ class _BoardCard extends StatelessWidget {
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                          height: 1.4),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
                     ),
                     if (issue.tags.isNotEmpty) ...[
                       const SizedBox(height: 10),
@@ -1008,9 +1762,14 @@ class _MiniMeta extends StatelessWidget {
       children: [
         Icon(icon, size: 13, color: c),
         const SizedBox(width: 4),
-        Text(text,
-            style: TextStyle(
-                fontFamily: AppTheme.fontMono, fontSize: 11, color: c)),
+        Text(
+          text,
+          style: TextStyle(
+            fontFamily: AppTheme.fontMono,
+            fontSize: 11,
+            color: c,
+          ),
+        ),
       ],
     );
   }
@@ -1059,11 +1818,14 @@ class _DottedAddButtonState extends State<DottedAddButton> {
                 children: [
                   Icon(Icons.add_rounded, size: 15, color: accent),
                   const SizedBox(width: 7),
-                  Text(widget.label,
-                      style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: accent)),
+                  Text(
+                    widget.label,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: accent,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1094,8 +1856,12 @@ class _DashedBorderPainter extends CustomPainter {
 
     final inset = strokeWidth / 2;
     final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(inset, inset, size.width - strokeWidth,
-          size.height - strokeWidth),
+      Rect.fromLTWH(
+        inset,
+        inset,
+        size.width - strokeWidth,
+        size.height - strokeWidth,
+      ),
       Radius.circular(radius),
     );
 

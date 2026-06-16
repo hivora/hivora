@@ -243,7 +243,21 @@
     "projects": "{{count}} Projekt(e)",
     "create": "Board erstellen",
     "needsProject": "Bitte zuerst ein Projekt anlegen.",
-    "defaultName": "Team-Board"
+    "defaultName": "Team-Board",
+    "view": { "board": "Board", "backlog": "Backlog", "timeline": "Timeline" },
+    "active": "Aktiv",
+    "sprintDay": "Tag {{day}}/{{total}}",
+    "people": "Personen",
+    "filterButton": "Filter",
+    "filterTitle": "Filter",
+    "filterSection": { "status": "Status", "type": "Typ", "priority": "Priorität", "assignee": "Zugewiesen" },
+    "clearFilters": "Zurücksetzen",
+    "activeFilters": "{{count}} aktiv",
+    "noAssignee": "Nicht zugewiesen",
+    "backlogEmpty": "Keine Backlog-Einträge.",
+    "backlogSubtitle": "{{count}} Eintrag/Einträge ohne Sprint",
+    "timelineEmpty": "Nichts auf der Zeitachse anzuzeigen.",
+    "timelineNoDates": "Kein Start- oder Fälligkeitsdatum"
   },
   "gantt": {
     "title": "Zeitachse",

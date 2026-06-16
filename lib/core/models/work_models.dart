@@ -26,17 +26,17 @@ class Project extends Equatable {
   final bool archived;
 
   factory Project.fromJson(Map<String, dynamic> json) => Project(
-        id: json['id'] as String,
-        key: json['key'] as String,
-        name: json['name'] as String,
-        description: json['description'] as String?,
-        leadId: json['leadId'] as String?,
-        memberIds: _stringList(json['memberIds']),
-        workflowStates: _stringList(json['workflowStates']),
-        resolvedStates: _stringList(json['resolvedStates']),
-        color: json['color'] as String? ?? '#AEC6F4',
-        archived: json['archived'] as bool? ?? false,
-      );
+    id: json['id'] as String,
+    key: json['key'] as String,
+    name: json['name'] as String,
+    description: json['description'] as String?,
+    leadId: json['leadId'] as String?,
+    memberIds: _stringList(json['memberIds']),
+    workflowStates: _stringList(json['workflowStates']),
+    resolvedStates: _stringList(json['resolvedStates']),
+    color: json['color'] as String? ?? '#AEC6F4',
+    archived: json['archived'] as bool? ?? false,
+  );
 
   @override
   List<Object?> get props => [id, key, name, archived];
@@ -94,34 +94,42 @@ class Issue extends Equatable {
   bool get resolved => resolvedAt != null;
 
   factory Issue.fromJson(Map<String, dynamic> json) => Issue(
-        id: json['id'] as String,
-        projectId: json['projectId'] as String,
-        readableId: json['readableId'] as String? ?? '',
-        title: json['title'] as String? ?? '',
-        state: json['state'] as String? ?? '',
-        description: json['description'] as String?,
-        type: json['type'] as String? ?? 'TASK',
-        priority: json['priority'] as String? ?? 'NORMAL',
-        assigneeId: json['assigneeId'] as String?,
-        reporterId: json['reporterId'] as String?,
-        tags: _stringList(json['tags']),
-        parentId: json['parentId'] as String?,
-        dependsOnIds: _stringList(json['dependsOnIds']),
-        sprintId: json['sprintId'] as String?,
-        startDate: _date(json['startDate']),
-        dueDate: _date(json['dueDate']),
-        estimateMinutes: json['estimateMinutes'] as int?,
-        spentMinutes: json['spentMinutes'] as int? ?? 0,
-        attachments: ((json['attachments'] as List<dynamic>?) ?? [])
-            .map((a) => IssueAttachment.fromJson(a as Map<String, dynamic>))
-            .toList(),
-        rank: (json['rank'] as num?)?.toDouble() ?? 0,
-        resolvedAt: _instant(json['resolvedAt']),
-        updatedAt: _instant(json['updatedAt']),
-      );
+    id: json['id'] as String,
+    projectId: json['projectId'] as String,
+    readableId: json['readableId'] as String? ?? '',
+    title: json['title'] as String? ?? '',
+    state: json['state'] as String? ?? '',
+    description: json['description'] as String?,
+    type: json['type'] as String? ?? 'TASK',
+    priority: json['priority'] as String? ?? 'NORMAL',
+    assigneeId: json['assigneeId'] as String?,
+    reporterId: json['reporterId'] as String?,
+    tags: _stringList(json['tags']),
+    parentId: json['parentId'] as String?,
+    dependsOnIds: _stringList(json['dependsOnIds']),
+    sprintId: json['sprintId'] as String?,
+    startDate: _date(json['startDate']),
+    dueDate: _date(json['dueDate']),
+    estimateMinutes: json['estimateMinutes'] as int?,
+    spentMinutes: json['spentMinutes'] as int? ?? 0,
+    attachments: ((json['attachments'] as List<dynamic>?) ?? [])
+        .map((a) => IssueAttachment.fromJson(a as Map<String, dynamic>))
+        .toList(),
+    rank: (json['rank'] as num?)?.toDouble() ?? 0,
+    resolvedAt: _instant(json['resolvedAt']),
+    updatedAt: _instant(json['updatedAt']),
+  );
 
   @override
-  List<Object?> get props => [id, readableId, title, state, assigneeId, priority, updatedAt];
+  List<Object?> get props => [
+    id,
+    readableId,
+    title,
+    state,
+    assigneeId,
+    priority,
+    updatedAt,
+  ];
 }
 
 class IssueAttachment extends Equatable {
@@ -137,7 +145,8 @@ class IssueAttachment extends Equatable {
   final int size;
   final String? contentType;
 
-  factory IssueAttachment.fromJson(Map<String, dynamic> json) => IssueAttachment(
+  factory IssueAttachment.fromJson(Map<String, dynamic> json) =>
+      IssueAttachment(
         id: json['id'] as String,
         fileName: json['fileName'] as String? ?? 'file',
         size: json['size'] as int? ?? 0,
@@ -162,11 +171,11 @@ class IssueComment extends Equatable {
   final DateTime? createdAt;
 
   factory IssueComment.fromJson(Map<String, dynamic> json) => IssueComment(
-        id: json['id'] as String,
-        authorId: json['authorId'] as String? ?? '',
-        text: json['text'] as String? ?? '',
-        createdAt: _instant(json['createdAt']),
-      );
+    id: json['id'] as String,
+    authorId: json['authorId'] as String? ?? '',
+    text: json['text'] as String? ?? '',
+    createdAt: _instant(json['createdAt']),
+  );
 
   @override
   List<Object?> get props => [id, authorId, text];
@@ -193,13 +202,13 @@ class IssueActivity extends Equatable {
   final DateTime? createdAt;
 
   factory IssueActivity.fromJson(Map<String, dynamic> json) => IssueActivity(
-        id: json['id'] as String? ?? '',
-        field: json['field'] as String? ?? 'CREATED',
-        actorId: json['actorId'] as String?,
-        fromValue: json['fromValue'] as String?,
-        toValue: json['toValue'] as String?,
-        createdAt: _instant(json['createdAt']),
-      );
+    id: json['id'] as String? ?? '',
+    field: json['field'] as String? ?? 'CREATED',
+    actorId: json['actorId'] as String?,
+    fromValue: json['fromValue'] as String?,
+    toValue: json['toValue'] as String?,
+    createdAt: _instant(json['createdAt']),
+  );
 
   @override
   List<Object?> get props => [id, field, fromValue, toValue, createdAt];
@@ -223,33 +232,42 @@ class Sprint extends Equatable {
   final bool archived;
 
   factory Sprint.fromJson(Map<String, dynamic> json) => Sprint(
-        id: json['id'] as String,
-        name: json['name'] as String? ?? '',
-        goal: json['goal'] as String?,
-        startDate: _date(json['startDate']),
-        endDate: _date(json['endDate']),
-        archived: json['archived'] as bool? ?? false,
-      );
+    id: json['id'] as String,
+    name: json['name'] as String? ?? '',
+    goal: json['goal'] as String?,
+    startDate: _date(json['startDate']),
+    endDate: _date(json['endDate']),
+    archived: json['archived'] as bool? ?? false,
+  );
 
   @override
   List<Object?> get props => [id, name];
 }
 
 class AgileBoard extends Equatable {
-  const AgileBoard({required this.id, required this.name, this.projectIds = const []});
+  const AgileBoard({
+    required this.id,
+    required this.name,
+    this.projectIds = const [],
+    this.activeSprintId,
+  });
 
   final String id;
   final String name;
   final List<String> projectIds;
 
+  /// Sprint shown by default; when set the board is a "sprint board".
+  final String? activeSprintId;
+
   factory AgileBoard.fromJson(Map<String, dynamic> json) => AgileBoard(
-        id: json['id'] as String,
-        name: json['name'] as String? ?? '',
-        projectIds: _stringList(json['projectIds']),
-      );
+    id: json['id'] as String,
+    name: json['name'] as String? ?? '',
+    projectIds: _stringList(json['projectIds']),
+    activeSprintId: json['activeSprintId'] as String?,
+  );
 
   @override
-  List<Object?> get props => [id, name];
+  List<Object?> get props => [id, name, activeSprintId];
 }
 
 class BoardColumnView extends Equatable {
@@ -265,7 +283,8 @@ class BoardColumnView extends Equatable {
   final List<Issue> issues;
   final int? wipLimit;
 
-  factory BoardColumnView.fromJson(Map<String, dynamic> json) => BoardColumnView(
+  factory BoardColumnView.fromJson(Map<String, dynamic> json) =>
+      BoardColumnView(
         name: json['name'] as String? ?? '',
         states: _stringList(json['states']),
         wipLimit: json['wipLimit'] as int?,
@@ -279,21 +298,25 @@ class BoardColumnView extends Equatable {
 }
 
 class BoardView extends Equatable {
-  const BoardView({required this.board, required this.sprints, required this.columns});
+  const BoardView({
+    required this.board,
+    required this.sprints,
+    required this.columns,
+  });
 
   final AgileBoard board;
   final List<Sprint> sprints;
   final List<BoardColumnView> columns;
 
   factory BoardView.fromJson(Map<String, dynamic> json) => BoardView(
-        board: AgileBoard.fromJson(json['board'] as Map<String, dynamic>),
-        sprints: ((json['sprints'] as List<dynamic>?) ?? [])
-            .map((s) => Sprint.fromJson(s as Map<String, dynamic>))
-            .toList(),
-        columns: ((json['columns'] as List<dynamic>?) ?? [])
-            .map((c) => BoardColumnView.fromJson(c as Map<String, dynamic>))
-            .toList(),
-      );
+    board: AgileBoard.fromJson(json['board'] as Map<String, dynamic>),
+    sprints: ((json['sprints'] as List<dynamic>?) ?? [])
+        .map((s) => Sprint.fromJson(s as Map<String, dynamic>))
+        .toList(),
+    columns: ((json['columns'] as List<dynamic>?) ?? [])
+        .map((c) => BoardColumnView.fromJson(c as Map<String, dynamic>))
+        .toList(),
+  );
 
   @override
   List<Object?> get props => [board, sprints, columns];
@@ -317,13 +340,13 @@ class WorkItem extends Equatable {
   final String? description;
 
   factory WorkItem.fromJson(Map<String, dynamic> json) => WorkItem(
-        id: json['id'] as String,
-        userId: json['userId'] as String? ?? '',
-        durationMinutes: json['durationMinutes'] as int? ?? 0,
-        activityType: json['activityType'] as String? ?? 'Development',
-        date: _date(json['date']),
-        description: json['description'] as String?,
-      );
+    id: json['id'] as String,
+    userId: json['userId'] as String? ?? '',
+    durationMinutes: json['durationMinutes'] as int? ?? 0,
+    activityType: json['activityType'] as String? ?? 'Development',
+    date: _date(json['date']),
+    description: json['description'] as String?,
+  );
 
   @override
   List<Object?> get props => [id, userId, durationMinutes, date];
@@ -355,17 +378,17 @@ class GanttTask extends Equatable {
   final List<String> dependsOnIds;
 
   factory GanttTask.fromJson(Map<String, dynamic> json) => GanttTask(
-        id: json['id'] as String,
-        readableId: json['readableId'] as String? ?? '',
-        title: json['title'] as String? ?? '',
-        state: json['state'] as String? ?? '',
-        type: json['type'] as String? ?? 'TASK',
-        resolved: json['resolved'] as bool? ?? false,
-        progressPercent: json['progressPercent'] as int? ?? 0,
-        startDate: _date(json['startDate']),
-        dueDate: _date(json['dueDate']),
-        dependsOnIds: _stringList(json['dependsOnIds']),
-      );
+    id: json['id'] as String,
+    readableId: json['readableId'] as String? ?? '',
+    title: json['title'] as String? ?? '',
+    state: json['state'] as String? ?? '',
+    type: json['type'] as String? ?? 'TASK',
+    resolved: json['resolved'] as bool? ?? false,
+    progressPercent: json['progressPercent'] as int? ?? 0,
+    startDate: _date(json['startDate']),
+    dueDate: _date(json['dueDate']),
+    dependsOnIds: _stringList(json['dependsOnIds']),
+  );
 
   @override
   List<Object?> get props => [id, readableId, state, progressPercent];
@@ -385,12 +408,13 @@ class TimesheetRow extends Equatable {
   final int totalMinutes;
 
   factory TimesheetRow.fromJson(Map<String, dynamic> json) => TimesheetRow(
-        userId: json['userId'] as String? ?? '',
-        projectId: json['projectId'] as String? ?? '',
-        totalMinutes: json['totalMinutes'] as int? ?? 0,
-        minutesPerDay: ((json['minutesPerDay'] as Map<String, dynamic>?) ?? {})
-            .map((k, v) => MapEntry(DateTime.parse(k), v as int)),
-      );
+    userId: json['userId'] as String? ?? '',
+    projectId: json['projectId'] as String? ?? '',
+    totalMinutes: json['totalMinutes'] as int? ?? 0,
+    minutesPerDay: ((json['minutesPerDay'] as Map<String, dynamic>?) ?? {}).map(
+      (k, v) => MapEntry(DateTime.parse(k), v as int),
+    ),
+  );
 
   @override
   List<Object?> get props => [userId, projectId, totalMinutes];
@@ -405,7 +429,10 @@ DateTime? _date(dynamic value) =>
 DateTime? _instant(dynamic value) {
   if (value is String) return DateTime.tryParse(value);
   if (value is num) {
-    return DateTime.fromMillisecondsSinceEpoch((value * 1000).round(), isUtc: true);
+    return DateTime.fromMillisecondsSinceEpoch(
+      (value * 1000).round(),
+      isUtc: true,
+    );
   }
   return null;
 }
