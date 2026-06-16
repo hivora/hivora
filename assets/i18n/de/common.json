@@ -8,7 +8,8 @@
     "create": "Erstellen",
     "edit": "Bearbeiten",
     "empty": "Hier ist noch nichts",
-    "continueAction": "Weiter"
+    "continueAction": "Weiter",
+    "of": "von"
   },
   "errors": {
     "required": "Dieses Feld ist erforderlich",
@@ -199,7 +200,26 @@
     "startDate": "Startdatum",
     "dueDate": "Fälligkeitsdatum",
     "noValue": "Kein Wert",
-    "searchPeople": "Personen suchen…"
+    "searchPeople": "Personen suchen…",
+    "attachments": {
+      "title": "Anhänge",
+      "add": "Dateien hinzufügen",
+      "emptyTitle": "Dateien hier ablegen oder zum Hochladen klicken",
+      "emptyHint": "Bilder werden direkt angezeigt · beliebiger Dateityp · bis zu {{size}} MB",
+      "dropHere": "Zum Anhängen ablegen",
+      "download": "Herunterladen",
+      "remove": "Entfernen",
+      "retry": "Erneut versuchen",
+      "uploadFailed": "Upload fehlgeschlagen",
+      "noPreview": "Keine Vorschau für diesen Dateityp",
+      "tooManyFiles": "Du kannst höchstens {{count}} Dateien auf einmal hochladen.",
+      "tooLarge": "{{name}} überschreitet das Limit von {{size}} MB.",
+      "batchTooLarge": "Die Auswahl überschreitet das Gesamtlimit von {{size}} MB.",
+      "blocked": "{{name}} kann nicht hochgeladen werden – Dateityp nicht erlaubt.",
+      "removeConfirm": "Diese Datei entfernen? Das kann nicht rückgängig gemacht werden."
+    },
+    "storyPoints": "Story Points",
+    "timeline": "Timeline"
   },
   "type": {
     "task": "Aufgabe",
@@ -251,13 +271,25 @@
     "create": "Board erstellen",
     "needsProject": "Bitte zuerst ein Projekt anlegen.",
     "defaultName": "Team-Board",
-    "view": { "board": "Board", "backlog": "Backlog", "timeline": "Timeline" },
+    "view": {
+      "board": "Board",
+      "backlog": "Backlog",
+      "timeline": "Timeline"
+    },
     "active": "Aktiv",
     "sprintDay": "Tag {{day}}/{{total}}",
     "people": "Personen",
     "filterButton": "Filter",
     "filterTitle": "Filter",
-    "filterSection": { "status": "Status", "type": "Typ", "priority": "Priorität", "assignee": "Zugewiesen", "sprint": "Sprint", "author": "Autor", "label": "Stichwort" },
+    "filterSection": {
+      "status": "Status",
+      "type": "Typ",
+      "priority": "Priorität",
+      "assignee": "Zugewiesen",
+      "sprint": "Sprint",
+      "author": "Autor",
+      "label": "Stichwort"
+    },
     "filterSearch": "{{scope}} suchen…",
     "filterNoOptions": "Hier gibt es nichts zu filtern.",
     "clearFilters": "Zurücksetzen",
@@ -266,7 +298,13 @@
     "backlogEmpty": "Keine Backlog-Einträge.",
     "backlogSubtitle": "{{count}} Eintrag/Einträge ohne Sprint",
     "timelineEmpty": "Nichts auf der Zeitachse anzuzeigen.",
-    "timelineNoDates": "Kein Start- oder Fälligkeitsdatum"
+    "timelineNoDates": "Kein Start- oder Fälligkeitsdatum",
+    "createSub": "Jetzt anlegen, später aus dem Backlog füllen.",
+    "chooseType": "Board-Typ",
+    "typeKanban": "Kanban",
+    "typeKanbanDesc": "Kontinuierlicher Fluss — ohne feste Zeitintervalle. Aufgaben werden nacheinander durch die Spalten gezogen.",
+    "typeScrum": "Scrum",
+    "typeScrumDesc": "Projektmanagement in festen Sprints (2–4 Wochen). Aufgaben aus dem Backlog je Sprint einplanen."
   },
   "gantt": {
     "title": "Zeitachse",
@@ -478,5 +516,102 @@
     "deleteFinalTitle": "Dauerhaftes Löschen bestätigen",
     "deleteFinalBody": "Gib zur Bestätigung den Benutzernamen {{username}} unten ein. {{name}} wird dauerhaft gelöscht.",
     "userDeleted": "{{name}} wurde gelöscht"
+  },
+  "sprint": {
+    "tab": {
+      "planning": "Planung",
+      "active": "Aktiver Sprint",
+      "insights": "Auswertung"
+    },
+    "create": {
+      "title": "Sprint erstellen",
+      "sub": "Jetzt anlegen, später aus dem Backlog füllen.",
+      "cta": "Erstellen"
+    },
+    "start": {
+      "title": "{{name}} starten",
+      "sub": "Umfang festlegen und die Timebox beginnen.",
+      "cta": "Sprint starten"
+    },
+    "complete": {
+      "title": "{{name}} abschließen",
+      "sub": "Ergebnis prüfen und offene Arbeit neu zuordnen.",
+      "cta": "Sprint abschließen"
+    },
+    "estimate": {
+      "title": "Schätzen"
+    },
+    "name": "Sprint-Name",
+    "goal": "Sprint-Ziel",
+    "optional": "optional",
+    "goalHint": "Welches Ergebnis soll dieser Sprint liefern?",
+    "duration": "Dauer",
+    "startDate": "Startdatum",
+    "endDate": "Enddatum",
+    "auto": "automatisch",
+    "fibScale": "Fibonacci-Skala · relativer Aufwand",
+    "issuesWord": "Vorgänge",
+    "pointsCommitted": "Story Points committed",
+    "overCapacity": "Über {{capacity}}-Pkt-Kapazität",
+    "runs": "Läuft",
+    "completed": "Abgeschlossen",
+    "notCompleted": "Nicht abgeschlossen",
+    "pointsDone": "{{points}} Story Points erledigt",
+    "pointsOpen": "{{points}} Punkte noch offen",
+    "carryOver": "Übernehmen · {{date}}",
+    "backlog": "Backlog",
+    "returnBacklog": "Zurück ins Produkt-Backlog",
+    "createSprint": "Sprint erstellen",
+    "startSprint": "Sprint starten",
+    "completeSprint": "Sprint abschließen",
+    "planned": "Geplant",
+    "filterBacklog": "Backlog filtern…",
+    "addIssue": "Vorgang hinzufügen",
+    "addBacklogItem": "Backlog-Eintrag hinzufügen",
+    "dragHere": "Vorgänge hierher ziehen, um den Sprint zu planen, oder unten hinzufügen.",
+    "backlogEmpty": "Noch nichts im Backlog.",
+    "noMatches": "Nichts passt zu „{{query}}“.",
+    "moveTo": "Verschieben nach…",
+    "noActive": "Kein aktiver Sprint",
+    "noActiveSub": "Starte einen Sprint im Tab „Planung“, um das Board zu nutzen.",
+    "noInsights": "Starte einen Sprint, um die Auswertung zu sehen.",
+    "pointsDoneLabel": "Punkte erledigt",
+    "issuesDoneLabel": "Vorgänge erledigt",
+    "remaining": "Verbleibend",
+    "ofNDays": "von {{total}} Tagen",
+    "committed": "Committed",
+    "storyPoints": "Story Points",
+    "pointsWord": "Punkte",
+    "percentOfCommitment": "{{percent}}% des Commitments",
+    "avgVelocity": "Ø Velocity",
+    "lastSprints": "letzte Sprints",
+    "burndown": "Sprint-Burndown",
+    "ptsRemaining": "{{points}} Pkt verbleibend",
+    "actual": "Ist",
+    "guideline": "Richtlinie",
+    "noBurndown": "Sprint-Daten setzen, um den Burndown zu sehen.",
+    "velocity": "Velocity",
+    "committedDone": "committed · erledigt",
+    "noVelocity": "Noch keine abgeschlossenen Sprints.",
+    "workBreakdown": "Arbeitsverteilung nach Bearbeiter",
+    "noBreakdown": "Keine geschätzte Arbeit in diesem Sprint.",
+    "unassigned": "Nicht zugewiesen",
+    "scopeChanges": "Umfangsänderungen",
+    "noScope": "Keine Umfangsänderungen in diesem Sprint.",
+    "netScope": "Netto-Umfangsänderung: {{delta}} Pkt seit Sprint-Start.",
+    "toast": {
+      "created": "„{{name}}“ erstellt — Vorgänge aus dem Backlog hinzufügen.",
+      "started": "{{name}} ist jetzt aktiv.",
+      "completed": "{{name}} abgeschlossen — offene Vorgänge verschoben."
+    },
+    "week": "1 Woche",
+    "weeksN": "{{count}} Wochen",
+    "issueOne": "{{count}} Vorgang",
+    "issuesMany": "{{count}} Vorgänge",
+    "moveOpenOne": "{{count}} offenen Vorgang verschieben nach",
+    "moveOpenMany": "{{count}} offene Vorgänge verschieben nach",
+    "selectedCount": "{{count}} ausgewählt",
+    "collapse": "Einklappen",
+    "expand": "Ausklappen"
   }
 }

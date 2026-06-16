@@ -10,6 +10,7 @@ class ServerMeta extends Equatable {
     this.logoUrl,
     this.privacyPolicyUrl = '',
     this.featureFlags = const {},
+    this.uploadLimits = const UploadLimits(),
   });
 
   final String serverVersion;
@@ -19,6 +20,7 @@ class ServerMeta extends Equatable {
   final String? logoUrl;
   final String privacyPolicyUrl;
   final Map<String, bool> featureFlags;
+  final UploadLimits uploadLimits;
 
   factory ServerMeta.fromJson(Map<String, dynamic> json) => ServerMeta(
         serverVersion: json['serverVersion'] as String? ?? '0.0.0',
@@ -31,6 +33,9 @@ class ServerMeta extends Equatable {
         privacyPolicyUrl: json['privacyPolicyUrl'] as String? ?? '',
         featureFlags: (json['featureFlags'] as Map<String, dynamic>? ?? {})
             .map((k, v) => MapEntry(k, v == true)),
+        uploadLimits: json['uploadLimits'] is Map<String, dynamic>
+            ? UploadLimits.fromJson(json['uploadLimits'] as Map<String, dynamic>)
+            : const UploadLimits(),
       );
 
   bool isFlagEnabled(String flag) => featureFlags[flag] ?? false;
@@ -38,6 +43,46 @@ class ServerMeta extends Equatable {
   @override
   List<Object?> get props =>
       [serverVersion, minAppVersion, setupCompleted, organizationName, logoUrl];
+}
+
+/// Attachment upload constraints supplied by the server so the client can
+/// validate a selection before sending. Defaults mirror the server defaults.
+class UploadLimits extends Equatable {
+  const UploadLimits({
+    this.maxFileMb = 25,
+    this.maxFiles = 10,
+    this.maxRequestMb = 100,
+    this.allowedContentTypes = const [],
+  });
+
+  /// Max size of a single file, in megabytes.
+  final int maxFileMb;
+
+  /// Max number of files per upload batch.
+  final int maxFiles;
+
+  /// Max aggregate size of one upload batch, in megabytes.
+  final int maxRequestMb;
+
+  /// Allowed MIME types; empty means "trust the server to reject".
+  final List<String> allowedContentTypes;
+
+  int get maxFileBytes => maxFileMb * 1024 * 1024;
+  int get maxRequestBytes => maxRequestMb * 1024 * 1024;
+
+  factory UploadLimits.fromJson(Map<String, dynamic> json) => UploadLimits(
+        maxFileMb: json['maxFileMb'] as int? ?? 25,
+        maxFiles: json['maxFiles'] as int? ?? 10,
+        maxRequestMb: json['maxRequestMb'] as int? ?? 100,
+        allowedContentTypes:
+            ((json['allowedContentTypes'] as List<dynamic>?) ?? const [])
+                .map((e) => e.toString())
+                .toList(growable: false),
+      );
+
+  @override
+  List<Object?> get props =>
+      [maxFileMb, maxFiles, maxRequestMb, allowedContentTypes];
 }
 
 class AuthUser extends Equatable {

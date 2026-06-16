@@ -128,8 +128,37 @@ class ApiClient {
   Future<dynamic> delete(String path) =>
       _run(() => _dio.delete<dynamic>('$baseUrl$path'));
 
-  Future<dynamic> upload(String path, MultipartFile file) => _run(() =>
-      _dio.post<dynamic>('$baseUrl$path', data: FormData.fromMap({'file': file})));
+  Future<dynamic> upload(
+    String path,
+    MultipartFile file, {
+    void Function(int sent, int total)? onSendProgress,
+    CancelToken? cancelToken,
+  }) =>
+      _run(() => _dio.post<dynamic>(
+            '$baseUrl$path',
+            data: FormData.fromMap({'file': file}),
+            onSendProgress: onSendProgress,
+            cancelToken: cancelToken,
+          ));
+
+  /// Opens a long-lived Server-Sent Events stream and returns the raw byte
+  /// stream (callers parse SSE frames). The bearer token is attached as usual;
+  /// the receive timeout is disabled so the idle connection is not aborted.
+  Future<Stream<List<int>>> openEventStream(
+    String path, {
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _dio.get<ResponseBody>(
+      '$baseUrl$path',
+      options: Options(
+        responseType: ResponseType.stream,
+        receiveTimeout: Duration.zero,
+        headers: {'Accept': 'text/event-stream'},
+      ),
+      cancelToken: cancelToken,
+    );
+    return response.data!.stream;
+  }
 
   Future<dynamic> _run(Future<Response<dynamic>> Function() request) async {
     try {

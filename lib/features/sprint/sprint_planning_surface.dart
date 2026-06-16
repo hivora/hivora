@@ -1,0 +1,903 @@
+import 'package:flutter/material.dart';
+
+import '../../core/i18n/i18n.dart';
+import '../../core/models/work_models.dart';
+import '../../core/responsive/responsive.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/hive_widgets.dart';
+import '../board/board_screen.dart' show DottedAddButton;
+import 'sprint_format.dart';
+import 'widgets/plan_row.dart';
+import 'widgets/sprint_widgets.dart';
+
+/// Planning (backlog) surface: stacked sprint containers above the paginated
+/// product backlog. Drag issues between any container; multi-select + bulk
+/// move; per-row story-point estimate; start / complete a sprint.
+class SprintPlanningSurface extends StatelessWidget {
+  const SprintPlanningSurface({
+    super.key,
+    required this.sprints,
+    required this.activeSprintId,
+    required this.issuesBySprint,
+    required this.backlog,
+    required this.backlogTotal,
+    required this.backlogPage,
+    required this.backlogPages,
+    required this.pageSize,
+    required this.selected,
+    required this.query,
+    required this.onQuery,
+    required this.onPage,
+    required this.onToggleSelect,
+    required this.onClearSelection,
+    required this.onOpenIssue,
+    required this.onEstimate,
+    required this.onMoveToSprint,
+    required this.onBulkMove,
+    required this.onAddIssue,
+    required this.onCreateSprint,
+    required this.onStartSprint,
+    required this.onCompleteSprint,
+  });
+
+  final List<Sprint> sprints;
+  final String? activeSprintId;
+  final Map<String, List<Issue>> issuesBySprint;
+  final List<Issue> backlog;
+  final int backlogTotal;
+  final int backlogPage;
+  final int backlogPages;
+  final int pageSize;
+  final Set<String> selected;
+  final String query;
+  final ValueChanged<String> onQuery;
+  final ValueChanged<int> onPage;
+  final ValueChanged<String> onToggleSelect;
+  final VoidCallback onClearSelection;
+  final void Function(Issue) onOpenIssue;
+  final void Function(Issue) onEstimate;
+  final void Function(Issue, String?) onMoveToSprint;
+  final void Function(String?) onBulkMove;
+  final void Function(String? sprintId) onAddIssue;
+  final VoidCallback onCreateSprint;
+  final void Function(Sprint) onStartSprint;
+  final void Function(Sprint) onCompleteSprint;
+
+  @override
+  Widget build(BuildContext context) {
+    final gutter = context.pageGutter;
+    return Stack(
+      children: [
+        ListView(
+          padding: EdgeInsets.fromLTRB(
+            gutter,
+            0,
+            gutter,
+            gutter + context.bottomGutter + (selected.isNotEmpty ? 72 : 0),
+          ),
+          children: [
+            _toolbar(context),
+            const SizedBox(height: 14),
+            for (final s in sprints) ...[
+              _SprintGroup(
+                sprint: s,
+                isActive: s.id == activeSprintId,
+                issues: issuesBySprint[s.id] ?? const [],
+                selected: selected,
+                onToggleSelect: onToggleSelect,
+                onOpenIssue: onOpenIssue,
+                onEstimate: onEstimate,
+                onAccept: (issue) => onMoveToSprint(issue, s.id),
+                onAddIssue: () => onAddIssue(s.id),
+                action: s.id == activeSprintId
+                    ? GhostButton(
+                        label: context.t('sprint.completeSprint'),
+                        icon: Icons.flag_rounded,
+                        onPressed: () => onCompleteSprint(s),
+                      )
+                    : PrimaryButton(
+                        label: context.t('sprint.startSprint'),
+                        icon: Icons.play_arrow_rounded,
+                        onPressed: (issuesBySprint[s.id] ?? const []).isEmpty
+                            ? null
+                            : () => onStartSprint(s),
+                      ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            _BacklogGroup(
+              issues: backlog,
+              total: backlogTotal,
+              page: backlogPage,
+              pages: backlogPages,
+              pageSize: pageSize,
+              query: query,
+              selected: selected,
+              onToggleSelect: onToggleSelect,
+              onOpenIssue: onOpenIssue,
+              onEstimate: onEstimate,
+              onAccept: (issue) => onMoveToSprint(issue, null),
+              onAddIssue: () => onAddIssue(null),
+              onPage: onPage,
+            ),
+          ],
+        ),
+        if (selected.isNotEmpty)
+          Positioned(
+            left: gutter,
+            right: gutter,
+            bottom: context.bottomGutter + 12,
+            child: _BulkBar(
+              count: selected.length,
+              sprints: sprints,
+              onMove: onBulkMove,
+              onClose: onClearSelection,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _toolbar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          PrimaryButton(
+            label: context.t('sprint.createSprint'),
+            onPressed: onCreateSprint,
+          ),
+          const Spacer(),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: _SearchField(query: query, onQuery: onQuery),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SearchField extends StatefulWidget {
+  const _SearchField({required this.query, required this.onQuery});
+
+  final String query;
+  final ValueChanged<String> onQuery;
+
+  @override
+  State<_SearchField> createState() => _SearchFieldState();
+}
+
+class _SearchFieldState extends State<_SearchField> {
+  late final TextEditingController _c = TextEditingController(text: widget.query);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _c,
+      onChanged: widget.onQuery,
+      style: const TextStyle(fontSize: 13),
+      decoration: InputDecoration(
+        isDense: true,
+        prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.inkFaint),
+        prefixIconConstraints: const BoxConstraints(minWidth: 38),
+        hintText: context.t('sprint.filterBacklog'),
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(vertical: 11),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          borderSide: BorderSide(color: AppColors.hairline),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          borderSide: BorderSide(color: AppColors.hairline),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+        ),
+      ),
+    );
+  }
+}
+
+/// A collapsible sprint container that is a drop target for issues.
+class _SprintGroup extends StatefulWidget {
+  const _SprintGroup({
+    required this.sprint,
+    required this.isActive,
+    required this.issues,
+    required this.selected,
+    required this.onToggleSelect,
+    required this.onOpenIssue,
+    required this.onEstimate,
+    required this.onAccept,
+    required this.onAddIssue,
+    required this.action,
+  });
+
+  final Sprint sprint;
+  final bool isActive;
+  final List<Issue> issues;
+  final Set<String> selected;
+  final ValueChanged<String> onToggleSelect;
+  final void Function(Issue) onOpenIssue;
+  final void Function(Issue) onEstimate;
+  final void Function(Issue) onAccept;
+  final VoidCallback onAddIssue;
+  final Widget action;
+
+  @override
+  State<_SprintGroup> createState() => _SprintGroupState();
+}
+
+class _SprintGroupState extends State<_SprintGroup> {
+  bool _collapsed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.sprint;
+    return DragTarget<Issue>(
+      onWillAcceptWithDetails: (d) => d.data.sprintId != s.id,
+      onAcceptWithDetails: (d) => widget.onAccept(d.data),
+      builder: (context, candidate, rejected) {
+        final dropping = candidate.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          decoration: BoxDecoration(
+            color: dropping ? AppColors.accentSoft : AppColors.canvas2,
+            borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+            border: Border.all(
+              color: dropping
+                  ? AppColors.accentLine
+                  : (widget.isActive ? AppColors.accentLine : AppColors.hairline),
+              width: dropping ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SprintGroupHeader(
+                sprint: s,
+                isActive: widget.isActive,
+                issues: widget.issues,
+                collapsed: _collapsed,
+                onToggleCollapse: () => setState(() => _collapsed = !_collapsed),
+                action: widget.action,
+              ),
+              if (!_collapsed)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                  child: Column(
+                    children: [
+                      if (widget.issues.isEmpty)
+                        _EmptyDropHint(text: context.t('sprint.dragHere'))
+                      else
+                        for (final issue in widget.issues)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 7),
+                            child: _DraggableRow(
+                              issue: issue,
+                              selected: widget.selected.contains(issue.id),
+                              onToggleSelect: () =>
+                                  widget.onToggleSelect(issue.id),
+                              onOpen: () => widget.onOpenIssue(issue),
+                              onEstimate: () => widget.onEstimate(issue),
+                            ),
+                          ),
+                      DottedAddButton(
+                        label: context.t('sprint.addIssue'),
+                        onTap: widget.onAddIssue,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SprintGroupHeader extends StatelessWidget {
+  const _SprintGroupHeader({
+    required this.sprint,
+    required this.isActive,
+    required this.issues,
+    required this.collapsed,
+    required this.onToggleCollapse,
+    required this.action,
+  });
+
+  final Sprint sprint;
+  final bool isActive;
+  final List<Issue> issues;
+  final bool collapsed;
+  final VoidCallback onToggleCollapse;
+  final Widget action;
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = context.isCompact;
+    final title = Row(
+      children: [
+        InkWell(
+          onTap: onToggleCollapse,
+          borderRadius: BorderRadius.circular(6),
+          child: Padding(
+            padding: const EdgeInsets.all(2),
+            child: AnimatedRotation(
+              duration: const Duration(milliseconds: 180),
+              turns: collapsed ? -0.25 : 0,
+              child: Icon(Icons.expand_more_rounded,
+                  size: 18, color: AppColors.inkSoft),
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            sprint.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontFamily: AppTheme.fontBrand,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.1,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        _StateBadge(active: isActive),
+        if ((sprint.startDate != null && sprint.endDate != null)) ...[
+          const SizedBox(width: 8),
+          Text(
+            dateRange(sprint.startDate, sprint.endDate),
+            style: TextStyle(
+              fontFamily: AppTheme.fontMono,
+              fontSize: 11,
+              color: AppColors.inkFaint,
+            ),
+          ),
+        ],
+      ],
+    );
+
+    final issuesLabel = Text(
+      issues.length == 1
+          ? context.t('sprint.issueOne', variables: {'count': '1'})
+          : context.t('sprint.issuesMany',
+              variables: {'count': '${issues.length}'}),
+      style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      child: compact
+          // Phone: stacked — count + buckets, full-width capacity, full-width
+          // action (mirrors sprint.css body[data-bp="phone"] .sg-meta).
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                title,
+                if ((sprint.goal ?? '').isNotEmpty) _goal(context),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    issuesLabel,
+                    const SizedBox(width: 12),
+                    PointBuckets(issues: issues),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                CapacityBar(
+                  issues: issues,
+                  capacity: sprint.capacityPoints,
+                  width: double.infinity,
+                ),
+                const SizedBox(height: 10),
+                SizedBox(width: double.infinity, child: action),
+              ],
+            )
+          // Desktop: a single right-aligned row, action pinned to the far right.
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      title,
+                      if ((sprint.goal ?? '').isNotEmpty) _goal(context),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                issuesLabel,
+                const SizedBox(width: 14),
+                PointBuckets(issues: issues),
+                const SizedBox(width: 14),
+                CapacityBar(
+                  issues: issues,
+                  capacity: sprint.capacityPoints,
+                  width: context.isExpanded ? 188 : 150,
+                ),
+                const SizedBox(width: 14),
+                action,
+              ],
+            ),
+    );
+  }
+
+  Widget _goal(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(30, 2, 0, 0),
+    child: Text(
+      sprint.goal!,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
+    ),
+  );
+}
+
+class _StateBadge extends StatelessWidget {
+  const _StateBadge({required this.active});
+
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: active ? AppColors.accentSoft : AppColors.canvas2,
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            active ? Icons.bolt_rounded : Icons.schedule_rounded,
+            size: 12,
+            color: active ? AppColors.accentStrong : AppColors.inkSoft,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            context.t(active ? 'board.active' : 'sprint.planned'),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: active ? AppColors.accentStrong : AppColors.inkSoft,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BacklogGroup extends StatefulWidget {
+  const _BacklogGroup({
+    required this.issues,
+    required this.total,
+    required this.page,
+    required this.pages,
+    required this.pageSize,
+    required this.query,
+    required this.selected,
+    required this.onToggleSelect,
+    required this.onOpenIssue,
+    required this.onEstimate,
+    required this.onAccept,
+    required this.onAddIssue,
+    required this.onPage,
+  });
+
+  final List<Issue> issues;
+  final int total;
+  final int page;
+  final int pages;
+  final int pageSize;
+  final String query;
+  final Set<String> selected;
+  final ValueChanged<String> onToggleSelect;
+  final void Function(Issue) onOpenIssue;
+  final void Function(Issue) onEstimate;
+  final void Function(Issue) onAccept;
+  final VoidCallback onAddIssue;
+  final ValueChanged<int> onPage;
+
+  @override
+  State<_BacklogGroup> createState() => _BacklogGroupState();
+}
+
+class _BacklogGroupState extends State<_BacklogGroup> {
+  bool _collapsed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return DragTarget<Issue>(
+      onWillAcceptWithDetails: (d) => d.data.sprintId != null,
+      onAcceptWithDetails: (d) => widget.onAccept(d.data),
+      builder: (context, candidate, rejected) {
+        final dropping = candidate.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          decoration: BoxDecoration(
+            color: dropping ? AppColors.accentSoft : AppColors.canvas2,
+            borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+            border: Border.all(
+              color: dropping ? AppColors.accentLine : AppColors.hairline,
+              width: dropping ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 14, 10),
+                child: Row(
+                  children: [
+                    InkWell(
+                      onTap: () => setState(() => _collapsed = !_collapsed),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: AnimatedRotation(
+                          duration: const Duration(milliseconds: 180),
+                          turns: _collapsed ? -0.25 : 0,
+                          child: Icon(Icons.expand_more_rounded,
+                              size: 18, color: AppColors.inkSoft),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      context.t('sprint.backlog'),
+                      style: const TextStyle(
+                        fontFamily: AppTheme.fontBrand,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                        border: Border.all(color: AppColors.hairline),
+                      ),
+                      child: Text(
+                        '${widget.total}',
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontMono,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.inkSoft,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!_collapsed)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 7),
+                        child: DottedAddButton(
+                          label: context.t('sprint.addBacklogItem'),
+                          onTap: widget.onAddIssue,
+                        ),
+                      ),
+                      if (widget.issues.isEmpty)
+                        _EmptyDropHint(
+                          text: widget.query.isEmpty
+                              ? context.t('sprint.backlogEmpty')
+                              : context.t('sprint.noMatches',
+                                  variables: {'query': widget.query}),
+                        )
+                      else
+                        for (final issue in widget.issues)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 7),
+                            child: _DraggableRow(
+                              issue: issue,
+                              selected: widget.selected.contains(issue.id),
+                              onToggleSelect: () =>
+                                  widget.onToggleSelect(issue.id),
+                              onOpen: () => widget.onOpenIssue(issue),
+                              onEstimate: () => widget.onEstimate(issue),
+                            ),
+                          ),
+                      if (widget.pages > 1)
+                        _Pager(
+                          page: widget.page,
+                          pages: widget.pages,
+                          total: widget.total,
+                          pageSize: widget.pageSize,
+                          onPage: widget.onPage,
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Wraps a [PlanRow] in a [Draggable] so it can be dragged between containers.
+class _DraggableRow extends StatelessWidget {
+  const _DraggableRow({
+    required this.issue,
+    required this.selected,
+    required this.onToggleSelect,
+    required this.onOpen,
+    required this.onEstimate,
+  });
+
+  final Issue issue;
+  final bool selected;
+  final VoidCallback onToggleSelect;
+  final VoidCallback onOpen;
+  final VoidCallback onEstimate;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = PlanRow(
+      issue: issue,
+      selected: selected,
+      onToggleSelect: onToggleSelect,
+      onOpen: onOpen,
+      onEstimate: onEstimate,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        return Draggable<Issue>(
+          data: issue,
+          dragAnchorStrategy: childDragAnchorStrategy,
+          maxSimultaneousDrags: 1,
+          feedback: Material(
+            color: Colors.transparent,
+            child: SizedBox(width: width, child: row),
+          ),
+          childWhenDragging: Opacity(opacity: 0.35, child: row),
+          child: row,
+        );
+      },
+    );
+  }
+}
+
+class _EmptyDropHint extends StatelessWidget {
+  const _EmptyDropHint({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 7),
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        border: Border.all(color: AppColors.hairline, style: BorderStyle.solid),
+      ),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 12.5, color: AppColors.inkFaint),
+      ),
+    );
+  }
+}
+
+class _Pager extends StatelessWidget {
+  const _Pager({
+    required this.page,
+    required this.pages,
+    required this.total,
+    required this.pageSize,
+    required this.onPage,
+  });
+
+  final int page;
+  final int pages;
+  final int total;
+  final int pageSize;
+  final ValueChanged<int> onPage;
+
+  @override
+  Widget build(BuildContext context) {
+    // Window of up to 5 page buttons around the current page.
+    final start = (page - 2).clamp(0, (pages - 5).clamp(0, pages));
+    final visible = [
+      for (var i = start; i < (start + 5).clamp(0, pages); i++) i,
+    ];
+    final from = page * pageSize + 1;
+    final to = ((page + 1) * pageSize).clamp(0, total);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _pageBtn(
+            child: const Icon(Icons.chevron_left_rounded, size: 18),
+            enabled: page > 0,
+            onTap: () => onPage(page - 1),
+          ),
+          const SizedBox(width: 6),
+          for (final i in visible) ...[
+            _pageBtn(
+              child: Text('${i + 1}'),
+              selected: i == page,
+              enabled: true,
+              onTap: () => onPage(i),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Text(
+              '$from–$to ${context.t('common.of')} $total',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.inkSoft,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+          _pageBtn(
+            child: const Icon(Icons.chevron_right_rounded, size: 18),
+            enabled: page < pages - 1,
+            onTap: () => onPage(page + 1),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pageBtn({
+    required Widget child,
+    required bool enabled,
+    required VoidCallback onTap,
+    bool selected = false,
+  }) {
+    return SizedBox(
+      width: 32,
+      height: 32,
+      child: Material(
+        color: selected ? AppColors.navy : AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(8),
+          child: Opacity(
+            opacity: enabled ? 1 : 0.4,
+            child: Container(
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: selected ? AppColors.navy : AppColors.hairline,
+                ),
+              ),
+              child: DefaultTextStyle.merge(
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? Colors.white : AppColors.inkSoft,
+                ),
+                child: IconTheme.merge(
+                  data: IconThemeData(
+                    color: selected ? Colors.white : AppColors.inkSoft,
+                  ),
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BulkBar extends StatelessWidget {
+  const _BulkBar({
+    required this.count,
+    required this.sprints,
+    required this.onMove,
+    required this.onClose,
+  });
+
+  final int count;
+  final List<Sprint> sprints;
+  final void Function(String?) onMove;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.navy,
+      borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+      elevation: 8,
+      shadowColor: Colors.black26,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        child: Row(
+          children: [
+            Text(
+              context.t('sprint.selectedCount', variables: {'count': '$count'}),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    hint: Text(
+                      context.t('sprint.moveTo'),
+                      style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                    ),
+                    dropdownColor: AppColors.navy,
+                    isDense: true,
+                    iconEnabledColor: Colors.white70,
+                    style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                    items: [
+                      for (final s in sprints)
+                        DropdownMenuItem(value: s.id, child: Text(s.name)),
+                      DropdownMenuItem(
+                        value: '__backlog',
+                        child: Text(context.t('sprint.backlog')),
+                      ),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) onMove(v == '__backlog' ? null : v);
+                    },
+                  ),
+                ),
+              ),
+            ),
+            const Spacer(),
+            IconButton(
+              onPressed: onClose,
+              icon: const Icon(Icons.close_rounded, size: 18, color: Colors.white70),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

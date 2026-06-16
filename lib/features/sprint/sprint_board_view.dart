@@ -1,0 +1,633 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../core/api/api_client.dart';
+import '../../core/api/hivora_repository.dart';
+import '../../core/i18n/i18n.dart';
+import '../../core/storage/app_storage.dart';
+import '../../core/models/work_models.dart';
+import '../../core/responsive/responsive.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/hive_loader.dart';
+import '../../core/widgets/hive_widgets.dart';
+import '../issues/issue_form.dart';
+import 'modals/complete_sprint_dialog.dart';
+import 'modals/create_sprint_dialog.dart';
+import 'modals/estimate_dialog.dart';
+import 'modals/start_sprint_dialog.dart';
+import 'sprint_active_surface.dart';
+import 'sprint_insights_surface.dart';
+import 'sprint_planning_surface.dart';
+import 'widgets/sprint_widgets.dart';
+
+/// Number of backlog issues per page in the planning surface.
+const int kBacklogPageSize = 12;
+
+/// The Scrum board: Planning · Active sprint · Insights, switched by a
+/// segmented control. Owns the sprint working set (sprints, per-sprint issues,
+/// the paginated backlog and the insights report) and every mutation, each of
+/// which maps to a concrete repository call (optimistic + reconcile on error).
+class ScrumBoardView extends StatefulWidget {
+  const ScrumBoardView({
+    super.key,
+    required this.view,
+    required this.names,
+    required this.projectNames,
+    required this.onOpenIssue,
+  });
+
+  final BoardView view;
+  final Map<String, String> names;
+  final Map<String, String> projectNames;
+  final void Function(Issue) onOpenIssue;
+
+  @override
+  State<ScrumBoardView> createState() => _ScrumBoardViewState();
+}
+
+enum _Tab { planning, active, insights }
+
+class _ScrumBoardViewState extends State<ScrumBoardView> {
+  AgileBoard get _board => widget.view.board;
+  HivoraRepository get _repo => context.read<HivoraRepository>();
+
+  _Tab _tab = _Tab.planning;
+
+  List<Sprint> _sprints = const [];
+  String? _activeSprintId;
+  final Map<String, List<Issue>> _bySprint = {};
+
+  // Backlog (server-paginated for single-project boards; merged + client-paged
+  // for multi-project boards).
+  List<Issue> _backlog = const [];
+  int _backlogTotal = 0;
+  int _backlogPage = 0;
+  String _query = '';
+
+  bool _loading = true;
+  String? _error;
+
+  // Active-sprint glass header collapse state (persisted app-wide).
+  late bool _headerCollapsed =
+      context.read<AppStorage>().sprintHeaderCollapsed;
+
+  // Planning selection / drag.
+  final Set<String> _selected = {};
+
+  // Insights report (lazy, for the active sprint).
+  SprintReport? _report;
+  bool _reportLoading = false;
+  String? _reportError;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeSprintId = _board.activeSprintId;
+    _loadAll();
+  }
+
+  List<Issue> get _activeIssues =>
+      _activeSprintId == null ? const [] : (_bySprint[_activeSprintId] ?? const []);
+
+  Sprint? get _activeSprint {
+    for (final s in _sprints) {
+      if (s.id == _activeSprintId) return s;
+    }
+    return null;
+  }
+
+  List<Sprint> get _plannedSprints =>
+      _sprints.where((s) => s.id != _activeSprintId && !s.archived).toList();
+
+  /// Active sprint first, then the planned ones — the planning containers.
+  List<Sprint> get _planningSprints => [
+    ?_activeSprint,
+    ..._plannedSprints,
+  ];
+
+  int get _backlogPages =>
+      _backlogTotal == 0 ? 1 : ((_backlogTotal + kBacklogPageSize - 1) ~/ kBacklogPageSize);
+
+  // ── loading ─────────────────────────────────────────────────────────────
+
+  Future<void> _loadAll() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final sprints = await _repo.sprints(_board.id);
+      // The active id is tracked locally across start/complete; drop it if the
+      // referenced sprint is gone or archived (the stale board view can't be
+      // trusted after a completion).
+      if (_activeSprintId != null &&
+          !sprints.any((s) => s.id == _activeSprintId && !s.archived)) {
+        _activeSprintId = null;
+      }
+      _bySprint.clear();
+      final issueLists = await Future.wait(
+        sprints.map((s) => _repo.issues(sprintId: s.id, size: 200)),
+      );
+      for (var i = 0; i < sprints.length; i++) {
+        _bySprint[sprints[i].id] = issueLists[i].issues;
+      }
+      await _loadBacklog();
+      if (!mounted) return;
+      setState(() {
+        _sprints = sprints;
+        _loading = false;
+      });
+    } on ApiFailure catch (failure) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = failure.message;
+      });
+    }
+  }
+
+  Future<void> _loadBacklog() async {
+    final projectIds = _board.projectIds;
+    final query = _query.trim().isEmpty ? null : _query.trim();
+    if (projectIds.length <= 1) {
+      final res = await _repo.issues(
+        projectId: projectIds.isEmpty ? null : projectIds.first,
+        noSprint: true,
+        query: query,
+        page: _backlogPage,
+        size: kBacklogPageSize,
+      );
+      _backlog = res.issues;
+      _backlogTotal = res.total;
+    } else {
+      // Multiple projects: the search endpoint is single-project, so merge a
+      // bounded page per project and paginate client-side.
+      final pages = await Future.wait(
+        projectIds.map((p) => _repo.issues(projectId: p, noSprint: true, size: 200)),
+      );
+      var merged = [for (final pg in pages) ...pg.issues];
+      if (query != null) {
+        final q = query.toLowerCase();
+        merged = merged
+            .where((i) =>
+                i.readableId.toLowerCase().contains(q) ||
+                i.title.toLowerCase().contains(q) ||
+                i.tags.any((t) => t.toLowerCase().contains(q)))
+            .toList();
+      }
+      _backlogTotal = merged.length;
+      final start = _backlogPage * kBacklogPageSize;
+      _backlog =
+          merged.skip(start).take(kBacklogPageSize).toList(growable: false);
+    }
+  }
+
+  Future<void> _reloadBacklogOnly() async {
+    try {
+      await _loadBacklog();
+      if (mounted) setState(() {});
+    } on ApiFailure catch (failure) {
+      _toastKey(failure.message);
+    }
+  }
+
+  Future<void> _loadReport() async {
+    final id = _activeSprintId;
+    if (id == null) return;
+    setState(() {
+      _reportLoading = true;
+      _reportError = null;
+    });
+    try {
+      final report = await _repo.sprintReport(id);
+      if (!mounted) return;
+      setState(() {
+        _report = report;
+        _reportLoading = false;
+      });
+    } on ApiFailure catch (failure) {
+      if (!mounted) return;
+      setState(() {
+        _reportLoading = false;
+        _reportError = failure.message;
+      });
+    }
+  }
+
+  // ── mutations ───────────────────────────────────────────────────────────
+
+  /// Resolves [key] against i18n only after confirming the widget is still
+  /// mounted, so [context] is never read across an async gap.
+  void _toggleHeader() {
+    setState(() => _headerCollapsed = !_headerCollapsed);
+    context.read<AppStorage>().setSprintHeaderCollapsed(_headerCollapsed);
+  }
+
+  void _toastKey(String key, {Map<String, dynamic>? vars}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.t(key, variables: vars))),
+    );
+  }
+
+  /// Locates an issue across the sprint containers and the backlog.
+  Issue? _findIssue(String id) {
+    for (final list in _bySprint.values) {
+      for (final i in list) {
+        if (i.id == id) return i;
+      }
+    }
+    for (final i in _backlog) {
+      if (i.id == id) return i;
+    }
+    return null;
+  }
+
+  Future<void> _moveIssueToSprint(Issue issue, String? sprintId) async {
+    if (issue.sprintId == sprintId) return;
+    final moved = issue.copyWith(sprintId: sprintId);
+    setState(() => _applyLocalMove(issue, moved));
+    try {
+      await _repo.updateIssue(issue.id, {'sprintId': sprintId ?? ''});
+      // A full (non-flashing) reload reconciles the server's truth — including
+      // the backlog→working-state promotion when an issue enters a sprint.
+      await _loadAll();
+    } on ApiFailure catch (failure) {
+      _toastKey(failure.message);
+      await _loadAll();
+    }
+  }
+
+  /// Removes [from] from its current container and inserts [to] into its target.
+  void _applyLocalMove(Issue from, Issue to) {
+    for (final entry in _bySprint.entries) {
+      entry.value.removeWhere((i) => i.id == from.id);
+    }
+    _backlog = _backlog.where((i) => i.id != from.id).toList();
+    _selected.remove(from.id);
+    if (to.sprintId != null) {
+      (_bySprint[to.sprintId!] ??= []).insert(0, to);
+    } else {
+      _backlog = [to, ..._backlog];
+      _backlogTotal += 1;
+    }
+  }
+
+  Future<void> _bulkMove(String? sprintId) async {
+    final ids = _selected.toList();
+    if (ids.isEmpty) return;
+    setState(() {
+      for (final id in ids) {
+        final issue = _findIssue(id);
+        if (issue != null) _applyLocalMove(issue, issue.copyWith(sprintId: sprintId));
+      }
+      _selected.clear();
+    });
+    try {
+      await Future.wait(
+        ids.map((id) => _repo.updateIssue(id, {'sprintId': sprintId ?? ''})),
+      );
+      await _loadAll();
+    } on ApiFailure catch (failure) {
+      _toastKey(failure.message);
+      await _loadAll();
+    }
+  }
+
+  Future<void> _estimate(Issue issue) async {
+    final result = await showEstimateDialog(context, issue: issue);
+    if (result == null) return;
+    final patch = result.points == null
+        ? {'clearStoryPoints': true}
+        : {'storyPoints': result.points};
+    setState(() {
+      final updated = issue.copyWith(storyPoints: result.points);
+      _replaceIssue(updated);
+    });
+    try {
+      await _repo.updateIssue(issue.id, patch);
+    } on ApiFailure catch (failure) {
+      _toastKey(failure.message);
+      await _loadAll();
+    }
+  }
+
+  void _replaceIssue(Issue updated) {
+    for (final list in _bySprint.values) {
+      final idx = list.indexWhere((i) => i.id == updated.id);
+      if (idx != -1) list[idx] = updated;
+    }
+    final bi = _backlog.indexWhere((i) => i.id == updated.id);
+    if (bi != -1) {
+      _backlog = [..._backlog]..[bi] = updated;
+    }
+  }
+
+  Future<void> _moveIssueState(Issue issue, String newState) async {
+    if (issue.state == newState) return;
+    setState(() => _replaceIssue(issue.copyWith(state: newState)));
+    try {
+      await _repo.updateIssue(issue.id, {'state': newState});
+      await _loadAll();
+    } on ApiFailure catch (failure) {
+      _toastKey(failure.message);
+      await _loadAll();
+    }
+  }
+
+  Future<void> _addIssue(String? sprintId) async {
+    final projectId = _board.projectIds.isNotEmpty ? _board.projectIds.first : null;
+    final created = await showIssueForm(context, projectId: projectId);
+    if (created == null) return;
+    if (sprintId != null) {
+      try {
+        await _repo.updateIssue(created.id, {'sprintId': sprintId});
+      } on ApiFailure catch (failure) {
+        _toastKey(failure.message);
+      }
+    }
+    await _loadAll();
+  }
+
+  int _nextSprintNumber() {
+    var max = 0;
+    final re = RegExp(r'(\d+)');
+    for (final s in _sprints) {
+      final m = re.allMatches(s.name).lastOrNull;
+      final n = m == null ? null : int.tryParse(m.group(1)!);
+      if (n != null && n > max) max = n;
+    }
+    return (max == 0 ? _sprints.length : max) + 1;
+  }
+
+  Future<void> _createSprint() async {
+    final lastEnd = _sprints
+        .map((s) => s.endDate)
+        .whereType<DateTime>()
+        .fold<DateTime?>(null, (a, b) => a == null || b.isAfter(a) ? b : a);
+    final data = await showCreateSprintDialog(
+      context,
+      nextNumber: _nextSprintNumber(),
+      defaultStart: lastEnd?.add(const Duration(days: 3)),
+    );
+    if (data == null) return;
+    try {
+      await _repo.createSprint(
+        boardId: _board.id,
+        name: data.name,
+        goal: data.goal,
+        startDate: data.start,
+        endDate: data.end,
+      );
+      _toastKey('sprint.toast.created', vars: {'name': data.name});
+      await _loadAll();
+    } on ApiFailure catch (failure) {
+      _toastKey(failure.message);
+    }
+  }
+
+  Future<void> _startSprint(Sprint sprint) async {
+    final issues = _bySprint[sprint.id] ?? const [];
+    final data = await showStartSprintDialog(
+      context,
+      sprintName: sprint.name,
+      initialGoal: sprint.goal,
+      start: sprint.startDate ?? DateTime.now(),
+      issueCount: issues.length,
+      committedPoints: sumPoints(issues),
+      capacityPoints: sprint.capacityPoints,
+    );
+    if (data == null) return;
+    try {
+      await _repo.startSprint(sprint.id, goal: data.goal, endDate: data.endDate);
+      _activeSprintId = sprint.id;
+      _report = null;
+      _toastKey('sprint.toast.started', vars: {'name': sprint.name});
+      if (mounted) setState(() => _tab = _Tab.active);
+      await _loadAll();
+    } on ApiFailure catch (failure) {
+      _toastKey(failure.message);
+    }
+  }
+
+  Future<void> _completeSprint(Sprint sprint) async {
+    final issues = _bySprint[sprint.id] ?? const [];
+    final done = issues.where((i) => i.resolved).toList();
+    final open = issues.where((i) => !i.resolved).toList();
+    final dest = await showCompleteSprintDialog(
+      context,
+      sprintName: sprint.name,
+      doneCount: done.length,
+      donePoints: sumPoints(done),
+      openCount: open.length,
+      openPoints: sumPoints(open),
+      plannedDestinations: _plannedSprints,
+    );
+    if (dest == null) return;
+    try {
+      await _repo.completeSprint(sprint.id, moveOpenTo: dest);
+      if (_activeSprintId == sprint.id) _activeSprintId = null;
+      _report = null;
+      _toastKey('sprint.toast.completed', vars: {'name': sprint.name});
+      if (mounted) setState(() => _tab = _Tab.planning);
+      await _loadAll();
+    } on ApiFailure catch (failure) {
+      _toastKey(failure.message);
+    }
+  }
+
+  // ── build ──────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading && _sprints.isEmpty && _error == null) {
+      return const Center(child: HiveLoader());
+    }
+    if (_error != null && _sprints.isEmpty) {
+      return _ErrorRetry(message: context.t(_error!), onRetry: _loadAll);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            context.pageGutter,
+            18 + context.topGutter,
+            context.pageGutter,
+            10,
+          ),
+          child: _tabBar(),
+        ),
+        Expanded(child: _surface()),
+      ],
+    );
+  }
+
+  Widget _tabBar() {
+    final items = [
+      SegmentItem(label: context.t('sprint.tab.planning'), icon: Icons.list_alt_rounded),
+      SegmentItem(label: context.t('sprint.tab.active'), icon: Icons.view_column_rounded),
+      SegmentItem(label: context.t('sprint.tab.insights'), icon: Icons.show_chart_rounded),
+    ];
+    final control = SegmentedControl(
+      items: items,
+      selected: _tab.index,
+      onChanged: (i) {
+        setState(() => _tab = _Tab.values[i]);
+        if (_tab == _Tab.insights && _report == null) _loadReport();
+      },
+    );
+    // Scroll horizontally on narrow widths so the three labels never overflow.
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: control,
+      ),
+    );
+  }
+
+  Widget _surface() {
+    switch (_tab) {
+      case _Tab.planning:
+        return SprintPlanningSurface(
+          sprints: _planningSprints,
+          activeSprintId: _activeSprintId,
+          issuesBySprint: _bySprint,
+          backlog: _backlog,
+          backlogTotal: _backlogTotal,
+          backlogPage: _backlogPage,
+          backlogPages: _backlogPages,
+          pageSize: kBacklogPageSize,
+          selected: _selected,
+          query: _query,
+          onQuery: (q) {
+            setState(() {
+              _query = q;
+              _backlogPage = 0;
+            });
+            _reloadBacklogOnly();
+          },
+          onPage: (p) {
+            setState(() => _backlogPage = p);
+            _reloadBacklogOnly();
+          },
+          onToggleSelect: (id) => setState(() {
+            _selected.contains(id) ? _selected.remove(id) : _selected.add(id);
+          }),
+          onClearSelection: () => setState(_selected.clear),
+          onOpenIssue: widget.onOpenIssue,
+          onEstimate: _estimate,
+          onMoveToSprint: _moveIssueToSprint,
+          onBulkMove: _bulkMove,
+          onAddIssue: _addIssue,
+          onCreateSprint: _createSprint,
+          onStartSprint: _startSprint,
+          onCompleteSprint: _completeSprint,
+        );
+      case _Tab.active:
+        final sprint = _activeSprint;
+        if (sprint == null) {
+          return _EmptyState(
+            icon: Icons.bolt_outlined,
+            title: context.t('sprint.noActive'),
+            subtitle: context.t('sprint.noActiveSub'),
+          );
+        }
+        return SprintActiveSurface(
+          sprint: sprint,
+          columns: widget.view.columns,
+          issues: _activeIssues,
+          names: widget.names,
+          onOpenIssue: widget.onOpenIssue,
+          onMoveState: _moveIssueState,
+          onComplete: () => _completeSprint(sprint),
+          headerCollapsed: _headerCollapsed,
+          onToggleHeader: _toggleHeader,
+        );
+      case _Tab.insights:
+        final sprint = _activeSprint;
+        if (sprint == null) {
+          return _EmptyState(
+            icon: Icons.show_chart_rounded,
+            title: context.t('sprint.noActive'),
+            subtitle: context.t('sprint.noInsights'),
+          );
+        }
+        return SprintInsightsSurface(
+          report: _report,
+          loading: _reportLoading,
+          error: _reportError == null ? null : context.t(_reportError!),
+          names: widget.names,
+          onRetry: _loadReport,
+        );
+    }
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(context.pageGutter),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 48, color: AppColors.inkFaint),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              style: const TextStyle(
+                fontFamily: AppTheme.fontBrand,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppColors.inkSoft),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorRetry extends StatelessWidget {
+  const _ErrorRetry({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(message, style: TextStyle(color: AppColors.textSecondary)),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: onRetry,
+            child: Text(context.t('common.retry')),
+          ),
+        ],
+      ),
+    );
+  }
+}

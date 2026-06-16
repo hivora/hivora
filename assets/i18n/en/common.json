@@ -8,7 +8,8 @@
     "create": "Create",
     "edit": "Edit",
     "empty": "Nothing here yet",
-    "continueAction": "Continue"
+    "continueAction": "Continue",
+    "of": "of"
   },
   "errors": {
     "required": "This field is required",
@@ -199,7 +200,26 @@
     "startDate": "Start date",
     "dueDate": "Due date",
     "noValue": "No value",
-    "searchPeople": "Search people…"
+    "searchPeople": "Search people…",
+    "attachments": {
+      "title": "Attachments",
+      "add": "Add files",
+      "emptyTitle": "Drop files here, or click to upload",
+      "emptyHint": "Images preview inline · any file type · up to {{size}} MB",
+      "dropHere": "Drop to attach",
+      "download": "Download",
+      "remove": "Remove",
+      "retry": "Retry",
+      "uploadFailed": "Upload failed",
+      "noPreview": "No inline preview for this type",
+      "tooManyFiles": "You can upload at most {{count}} files at once.",
+      "tooLarge": "{{name}} exceeds the {{size}} MB limit.",
+      "batchTooLarge": "The selection exceeds the {{size}} MB total limit.",
+      "blocked": "{{name}} can't be uploaded — file type not allowed.",
+      "removeConfirm": "Remove this file? This can't be undone."
+    },
+    "storyPoints": "Story points",
+    "timeline": "Timeline"
   },
   "type": {
     "task": "Task",
@@ -251,13 +271,25 @@
     "create": "Create board",
     "needsProject": "Create a project first.",
     "defaultName": "Team Board",
-    "view": { "board": "Board", "backlog": "Backlog", "timeline": "Timeline" },
+    "view": {
+      "board": "Board",
+      "backlog": "Backlog",
+      "timeline": "Timeline"
+    },
     "active": "Active",
     "sprintDay": "Day {{day}}/{{total}}",
     "people": "People",
     "filterButton": "Filter",
     "filterTitle": "Filter",
-    "filterSection": { "status": "Status", "type": "Type", "priority": "Priority", "assignee": "Assignee", "sprint": "Sprint", "author": "Author", "label": "Label" },
+    "filterSection": {
+      "status": "Status",
+      "type": "Type",
+      "priority": "Priority",
+      "assignee": "Assignee",
+      "sprint": "Sprint",
+      "author": "Author",
+      "label": "Label"
+    },
     "filterSearch": "Search {{scope}}…",
     "filterNoOptions": "Nothing to filter here.",
     "clearFilters": "Clear all",
@@ -266,7 +298,13 @@
     "backlogEmpty": "No backlog items.",
     "backlogSubtitle": "{{count}} item(s) without a sprint",
     "timelineEmpty": "Nothing to show on the timeline.",
-    "timelineNoDates": "No start or due date"
+    "timelineNoDates": "No start or due date",
+    "createSub": "Set it up now, fill it from the backlog after.",
+    "chooseType": "Board type",
+    "typeKanban": "Kanban",
+    "typeKanbanDesc": "Continuous flow — no fixed timeboxes. Pull tasks across columns one after another.",
+    "typeScrum": "Scrum",
+    "typeScrumDesc": "Project management in fixed sprints (2–4 weeks). Plan work from the backlog into each sprint."
   },
   "gantt": {
     "title": "Timeline",
@@ -478,5 +516,102 @@
     "deleteFinalTitle": "Confirm permanent deletion",
     "deleteFinalBody": "To confirm, type the username {{username}} below. {{name}} will be permanently deleted.",
     "userDeleted": "{{name}} was deleted"
+  },
+  "sprint": {
+    "tab": {
+      "planning": "Planning",
+      "active": "Active sprint",
+      "insights": "Insights"
+    },
+    "create": {
+      "title": "Create sprint",
+      "sub": "Set it up now, fill it from the backlog after.",
+      "cta": "Create"
+    },
+    "start": {
+      "title": "Start {{name}}",
+      "sub": "Lock the scope and begin the timebox.",
+      "cta": "Start sprint"
+    },
+    "complete": {
+      "title": "Complete {{name}}",
+      "sub": "Review the outcome and re-home unfinished work.",
+      "cta": "Complete sprint"
+    },
+    "estimate": {
+      "title": "Estimate"
+    },
+    "name": "Sprint name",
+    "goal": "Sprint goal",
+    "optional": "optional",
+    "goalHint": "What outcome should this sprint deliver?",
+    "duration": "Duration",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "auto": "auto",
+    "fibScale": "Fibonacci scale · relative effort",
+    "issuesWord": "issues",
+    "pointsCommitted": "story points committed",
+    "overCapacity": "Over {{capacity}}-pt capacity",
+    "runs": "Runs",
+    "completed": "Completed",
+    "notCompleted": "Not completed",
+    "pointsDone": "{{points}} story points done",
+    "pointsOpen": "{{points}} points still open",
+    "carryOver": "Carry over · {{date}}",
+    "backlog": "Backlog",
+    "returnBacklog": "Return to the product backlog",
+    "createSprint": "Create sprint",
+    "startSprint": "Start sprint",
+    "completeSprint": "Complete sprint",
+    "planned": "Planned",
+    "filterBacklog": "Filter backlog…",
+    "addIssue": "Add issue",
+    "addBacklogItem": "Add backlog item",
+    "dragHere": "Drag issues here to plan this sprint, or add one below.",
+    "backlogEmpty": "Nothing in the backlog yet.",
+    "noMatches": "Nothing matches “{{query}}”.",
+    "moveTo": "Move to…",
+    "noActive": "No active sprint",
+    "noActiveSub": "Start a sprint from the Planning tab to run the board.",
+    "noInsights": "Start a sprint to see its insights.",
+    "pointsDoneLabel": "Points done",
+    "issuesDoneLabel": "Issues done",
+    "remaining": "Remaining",
+    "ofNDays": "of {{total}} days",
+    "committed": "Committed",
+    "storyPoints": "story points",
+    "pointsWord": "points",
+    "percentOfCommitment": "{{percent}}% of commitment",
+    "avgVelocity": "Avg velocity",
+    "lastSprints": "last sprints",
+    "burndown": "Sprint burndown",
+    "ptsRemaining": "{{points}} pts remaining",
+    "actual": "Actual",
+    "guideline": "Guideline",
+    "noBurndown": "Set sprint dates to see the burndown.",
+    "velocity": "Velocity",
+    "committedDone": "committed · done",
+    "noVelocity": "No completed sprints yet.",
+    "workBreakdown": "Work breakdown by assignee",
+    "noBreakdown": "No estimated work in this sprint.",
+    "unassigned": "Unassigned",
+    "scopeChanges": "Scope changes",
+    "noScope": "No scope changes this sprint.",
+    "netScope": "Net scope change: {{delta}} pts since sprint start.",
+    "toast": {
+      "created": "“{{name}}” created — add issues from the backlog.",
+      "started": "{{name}} is now active.",
+      "completed": "{{name}} completed — unfinished issues moved."
+    },
+    "week": "1 week",
+    "weeksN": "{{count}} weeks",
+    "issueOne": "{{count}} issue",
+    "issuesMany": "{{count}} issues",
+    "moveOpenOne": "Move {{count}} unfinished issue to",
+    "moveOpenMany": "Move {{count}} unfinished issues to",
+    "selectedCount": "{{count}} selected",
+    "collapse": "Collapse",
+    "expand": "Expand"
   }
 }

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/hivora_repository.dart';
@@ -20,7 +19,9 @@ import '../issues/issue_detail_sheet.dart';
 import '../issues/issue_form.dart';
 import '../issues/issues_screen.dart' show IssueRow;
 import '../shell/page_chrome.dart';
+import '../sprint/sprint_board_view.dart';
 import 'board_filter.dart';
+import 'create_board_dialog.dart';
 import 'board_filter_popup.dart';
 import 'board_people_strip.dart';
 import 'board_timeline.dart';
@@ -78,25 +79,13 @@ class _BoardScreenState extends State<BoardScreen> {
       ).showSnackBar(SnackBar(content: Text(context.t('board.needsProject'))));
       return;
     }
-    final repo = context.read<HivoraRepository>();
-    final created = await WoltModalSheet.show<AgileBoard?>(
-      context: context,
-      pageListBuilder: (modalContext) => [
-        WoltModalSheetPage(
-          backgroundColor: AppColors.surface,
-          hasTopBarLayer: false,
-          child: RepositoryProvider.value(
-            value: repo,
-            child: _CreateBoardBody(
-              projects: _projects,
-              initialProjectId: _projectFilter,
-            ),
-          ),
-        ),
-      ],
+    final created = await showCreateBoardDialog(
+      context,
+      projects: _projects,
+      initialProjectId: _projectFilter,
     );
-    if (created != null) {
-      if (mounted) context.push('/boards/${created.id}');
+    if (created != null && mounted) {
+      context.push('/boards/${created.id}');
     }
   }
 
@@ -446,6 +435,20 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
       );
     }
     final view = _view!;
+    // Scrum boards swap the Kanban/Backlog/Timeline surfaces for the sprint
+    // planning · active · insights surfaces. The sprint view owns its own data
+    // (sprints, story points, report) and reuses the loaded name maps.
+    if (view.board.isScrum) {
+      return PageChrome(
+        title: view.board.name,
+        child: ScrumBoardView(
+          view: view,
+          names: _names,
+          projectNames: _projectNames,
+          onOpenIssue: _openIssue,
+        ),
+      );
+    }
     // Back navigation is handled by the shell app bar (via PageChrome), which
     // also shows the board name as the title.
     return PageChrome(
@@ -497,8 +500,8 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
           // Right-aligned, collapsible, responsive-label switcher (mobile).
           _CompactViewSwitcher(
             items: _switcherItems(),
-            selected: _mode.index,
-            onChanged: (i) => setState(() => _mode = BoardViewMode.values[i]),
+            selected: _viewModes.indexOf(_mode).clamp(0, _viewModes.length - 1),
+            onChanged: (i) => setState(() => _mode = _viewModes[i]),
           ),
         ],
       );
@@ -509,27 +512,38 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
       actions: [
         SegmentedControl(
           items: _switcherItems(),
-          selected: _mode.index,
-          onChanged: (i) => setState(() => _mode = BoardViewMode.values[i]),
+          selected: _viewModes.indexOf(_mode).clamp(0, _viewModes.length - 1),
+          onChanged: (i) => setState(() => _mode = _viewModes[i]),
         ),
       ],
     );
   }
 
-  List<SegmentItem> _switcherItems() => [
-    SegmentItem(
+  /// Views offered for a (Kanban) board. The Backlog view is a Scrum-only
+  /// concept, so it isn't offered here — Scrum boards render the dedicated
+  /// sprint planning surface instead.
+  static const List<BoardViewMode> _viewModes = [
+    BoardViewMode.board,
+    BoardViewMode.timeline,
+  ];
+
+  SegmentItem _itemFor(BoardViewMode mode) => switch (mode) {
+    BoardViewMode.board => SegmentItem(
       label: context.t('board.view.board'),
       icon: Icons.view_kanban_outlined,
     ),
-    SegmentItem(
+    BoardViewMode.backlog => SegmentItem(
       label: context.t('board.view.backlog'),
       icon: Icons.list_rounded,
     ),
-    SegmentItem(
+    BoardViewMode.timeline => SegmentItem(
       label: context.t('board.view.timeline'),
       icon: Icons.timeline_rounded,
     ),
-  ];
+  };
+
+  List<SegmentItem> _switcherItems() =>
+      [for (final mode in _viewModes) _itemFor(mode)];
 
   // ---- meta area: sprint header + people strip + filter ----
 
@@ -1237,14 +1251,18 @@ class _BoardListCard extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.view_kanban_rounded,
+                Icon(
+                  board.isScrum
+                      ? Icons.bolt_rounded
+                      : Icons.view_column_rounded,
                   size: 13,
                   color: AppColors.navy,
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  context.t('board.boardLabel'),
+                  context.t(
+                    board.isScrum ? 'board.typeScrum' : 'board.typeKanban',
+                  ),
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 11,
@@ -1338,136 +1356,6 @@ class _ProjectFilterChip extends StatelessWidget {
   }
 }
 
-// ─────────────────────────── Create Board dialog body ─────────────────────
-
-class _CreateBoardBody extends StatefulWidget {
-  const _CreateBoardBody({required this.projects, this.initialProjectId});
-
-  final List<Project> projects;
-  final String? initialProjectId;
-
-  @override
-  State<_CreateBoardBody> createState() => _CreateBoardBodyState();
-}
-
-class _CreateBoardBodyState extends State<_CreateBoardBody> {
-  final _formKey = GlobalKey<FormState>();
-  final _name = TextEditingController();
-  late String _selectedProjectId;
-  bool _saving = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedProjectId = widget.initialProjectId ?? widget.projects.first.id;
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        24,
-        24,
-        24,
-        32 + MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              context.t('board.newBoard'),
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: _name,
-              autofocus: true,
-              decoration: InputDecoration(labelText: context.t('board.name')),
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? context.t('errors.required')
-                  : null,
-            ),
-            const SizedBox(height: 14),
-            DropdownButtonFormField<String>(
-              initialValue: _selectedProjectId,
-              decoration: InputDecoration(
-                labelText: context.t('board.project'),
-              ),
-              items: widget.projects
-                  .map(
-                    (p) => DropdownMenuItem(value: p.id, child: Text(p.name)),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => _selectedProjectId = value);
-                }
-              },
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                style: const TextStyle(color: AppColors.danger),
-                textAlign: TextAlign.center,
-              ),
-            ],
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: const Color(0xFF2A2410),
-              ),
-              child: _saving
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: HiveLoader(
-                        strokeWidth: 2,
-                        color: Color(0xFF2A2410),
-                      ),
-                    )
-                  : Text(context.t('common.create')),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _save() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-    try {
-      final board = await context.read<HivoraRepository>().createBoard(
-        _name.text.trim(),
-        [_selectedProjectId],
-      );
-      if (mounted) Navigator.of(context).pop(board);
-    } on ApiFailure catch (failure) {
-      setState(() {
-        _saving = false;
-        _error = failure.message;
-      });
-    }
-  }
-}
 
 // ─────────────────────────── Kanban column ────────────────────────────────
 

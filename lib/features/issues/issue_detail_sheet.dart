@@ -17,6 +17,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
+import '../sprint/modals/estimate_dialog.dart' show showStoryPointsDialog;
+import 'attachments/attachments_section.dart';
 import 'issue_labels.dart';
 import 'issue_markdown.dart';
 import 'work_log_sheet.dart';
@@ -289,13 +291,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           .firstOrNull;
       _users = results[3] as List<DirectoryUser>;
       _activity = results[4] as List<IssueActivity>;
-      // Sprints come from the project's board(s); best-effort.
+      // Sprints come from the project's board(s); aggregate across every board
+      // (a project may have both a Kanban and a Scrum board). Best-effort.
       try {
-        final boards = await _repo.boards(projectId: issue.projectId);
-        if (boards.isNotEmpty) {
-          final view = await _repo.boardView(boards.first.id);
-          _sprints = view.sprints;
-        }
+        _sprints = await _repo.sprintsForProject(issue.projectId);
       } catch (_) {
         _sprints = const [];
       }
@@ -453,6 +452,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
               final left = <Widget>[
                 _contentCard(issue),
                 const SizedBox(height: 14),
+                _attachmentsSection(issue),
+                const SizedBox(height: 14),
                 _activityCard(),
               ];
               final right = <Widget>[
@@ -487,6 +488,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _contentCard(issue),
+                  const SizedBox(height: 14),
+                  _attachmentsSection(issue),
                   const SizedBox(height: 14),
                   _detailsCard(issue),
                   const SizedBox(height: 14),
@@ -608,6 +611,13 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     ),
   );
 
+  Widget _attachmentsSection(Issue issue) => AttachmentsSection(
+        issueId: widget.issueId,
+        initial: issue.attachments,
+        userNames: _names,
+        onChanged: widget.onChanged,
+      );
+
   Widget _detailsCard(Issue issue) {
     final assigneeName = issue.assigneeId != null
         ? _names[issue.assigneeId!]
@@ -673,6 +683,12 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
             onTap: _pickType,
             child: TypeBadge(type: issue.type),
           ),
+          // Story points (Scrum estimate)
+          _DetailRow(
+            label: context.t('issues.storyPoints'),
+            onTap: _pickStoryPoints,
+            child: _pointsValue(issue.storyPoints),
+          ),
           // Labels ("Stichwort")
           _DetailRow(
             label: context.t('issues.label'),
@@ -706,25 +722,31 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           // Author / reporter (read-only)
           _DetailRow(
             label: context.t('issues.author'),
+            last: true,
             child: _person(
               reporterName,
               fallback: context.t('issues.unassigned'),
             ),
           ),
-          // Start date
-          _DetailRow(
-            label: context.t('issues.startDate'),
-            onTap: () => _pickDate(isStart: true),
-            child: _dateValue(issue.startDate, isStart: true),
-          ),
-          // Due date
-          _DetailRow(
-            label: context.t('issues.dueDate'),
-            onTap: () => _pickDate(isStart: false),
-            last: true,
-            child: _dateValue(issue.dueDate, isStart: false),
-          ),
         ],
+      ),
+    );
+  }
+
+  /// Read-only display of an issue's story-point estimate.
+  Widget _pointsValue(int? points) {
+    if (points == null) {
+      return Text(
+        context.t('issues.noValue'),
+        style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
+      );
+    }
+    return Text(
+      '$points',
+      style: const TextStyle(
+        fontFamily: AppTheme.fontMono,
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
       ),
     );
   }
@@ -790,7 +812,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
             children: [
               Expanded(
                 child: Text(
-                  context.t('issues.timeTracking'),
+                  context.t('issues.timeline'),
                   style: const TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w700,
@@ -816,7 +838,20 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
+          // Schedule (moved here from the Details panel).
+          _DetailRow(
+            label: context.t('issues.startDate'),
+            onTap: () => _pickDate(isStart: true),
+            child: _dateValue(issue.startDate, isStart: true),
+          ),
+          _DetailRow(
+            label: context.t('issues.dueDate'),
+            onTap: () => _pickDate(isStart: false),
+            last: true,
+            child: _dateValue(issue.dueDate, isStart: false),
+          ),
+          const SizedBox(height: 12),
           Text(
             context.t(
               'issues.spent',
@@ -1071,6 +1106,21 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     if (picked != null) {
       final iso = picked.toIso8601String().substring(0, 10);
       await _patch({isStart ? 'startDate' : 'dueDate': iso});
+    }
+  }
+
+  Future<void> _pickStoryPoints() async {
+    final issue = _issue;
+    if (issue == null) return;
+    final result = await showStoryPointsDialog(
+      context,
+      current: issue.storyPoints,
+      subtitle: '${issue.readableId} · ${issue.title}',
+    );
+    if (result != null) {
+      await _patch(result.points == null
+          ? {'clearStoryPoints': true}
+          : {'storyPoints': result.points});
     }
   }
 
@@ -1348,6 +1398,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
   String _priority = 'NORMAL';
   String _type = 'TASK';
   String? _sprintId;
+  int? _storyPoints;
   DateTime? _startDate;
   DateTime? _dueDate;
   List<String> _labels = const [];
@@ -1414,11 +1465,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     final pid = _projectId;
     if (pid == null) return;
     try {
-      final boards = await _repo.boards(projectId: pid);
-      if (boards.isNotEmpty) {
-        final view = await _repo.boardView(boards.first.id);
-        _sprints = view.sprints;
-      }
+      _sprints = await _repo.sprintsForProject(pid);
     } catch (_) {
       _sprints = const [];
     }
@@ -1457,6 +1504,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
         if (_state != null) 'state': _state,
         if (_assigneeId != null) 'assigneeId': _assigneeId,
         if (_sprintId != null) 'sprintId': _sprintId,
+        if (_storyPoints != null) 'storyPoints': _storyPoints,
         if (_startDate != null)
           'startDate': _startDate!.toIso8601String().substring(0, 10),
         if (_dueDate != null)
@@ -1504,7 +1552,14 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
             LayoutBuilder(
               builder: (context, c) {
                 final left = _contentCard();
-                final right = _detailsCard();
+                final right = Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _detailsCard(),
+                    const SizedBox(height: 14),
+                    _timelineCard(),
+                  ],
+                );
                 if (c.maxWidth >= 680) {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1640,6 +1695,11 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
             child: TypeBadge(type: _type),
           ),
           _DetailRow(
+            label: context.t('issues.storyPoints'),
+            onTap: _pickStoryPoints,
+            child: _pointsValue(_storyPoints),
+          ),
+          _DetailRow(
             label: context.t('issues.label'),
             onTap: _pickLabels,
             child: _labels.isEmpty
@@ -1656,6 +1716,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
           _DetailRow(
             label: context.t('issues.sprint'),
             onTap: _sprints.isEmpty ? null : _pickSprint,
+            last: true,
             child: Text(
               sprintName ?? context.t('issues.noSprint'),
               style: TextStyle(
@@ -1667,6 +1728,23 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// The "Timeline" card for the create form: schedule (start / due dates).
+  Widget _timelineCard() {
+    return SoftCard(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.t('issues.timeline'),
+            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
           _DetailRow(
             label: context.t('issues.startDate'),
             onTap: () => _pickDate(isStart: true),
@@ -1679,6 +1757,24 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
             child: _dateValue(_dueDate, isStart: false),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Read-only display of the chosen story-point estimate.
+  Widget _pointsValue(int? points) {
+    if (points == null) {
+      return Text(
+        context.t('issues.noValue'),
+        style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
+      );
+    }
+    return Text(
+      '$points',
+      style: const TextStyle(
+        fontFamily: AppTheme.fontMono,
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
       ),
     );
   }
@@ -1873,6 +1969,18 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
           _dueDate = picked;
         }
       });
+    }
+  }
+
+  Future<void> _pickStoryPoints() async {
+    final title = _titleCtrl.text.trim();
+    final result = await showStoryPointsDialog(
+      context,
+      current: _storyPoints,
+      subtitle: title.isEmpty ? context.t('issues.new') : title,
+    );
+    if (result != null) {
+      setState(() => _storyPoints = result.points);
     }
   }
 }

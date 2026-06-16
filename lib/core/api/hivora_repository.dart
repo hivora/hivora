@@ -114,7 +114,9 @@ class HivoraRepository {
     String? projectId,
     String? state,
     String? assigneeId,
+    String? sprintId,
     String? query,
+    bool noSprint = false,
     int page = 0,
     int size = 50,
   }) async {
@@ -125,6 +127,8 @@ class HivoraRepository {
                 'projectId': ?projectId,
                 'state': ?state,
                 'assigneeId': ?assigneeId,
+                'sprintId': ?sprintId,
+                if (noSprint) 'noSprint': true,
                 if (query != null && query.isNotEmpty) 'query': query,
                 'page': page,
                 'size': size,
@@ -174,10 +178,44 @@ class HivoraRepository {
             as Map<String, dynamic>,
       );
 
-  Future<Issue> uploadAttachment(String issueId, MultipartFile file) async =>
+  /// Uploads one file to an issue, reporting fractional progress (0–1) as the
+  /// bytes are sent so the tile's ring can fill. Returns the updated issue.
+  Future<Issue> uploadAttachment(
+    String issueId,
+    MultipartFile file, {
+    void Function(double pct)? onProgress,
+    CancelToken? cancelToken,
+  }) async =>
       Issue.fromJson(
-        await _api.upload('/api/v1/issues/$issueId/attachments', file)
-            as Map<String, dynamic>,
+        await _api.upload(
+          '/api/v1/issues/$issueId/attachments',
+          file,
+          cancelToken: cancelToken,
+          onSendProgress: onProgress == null
+              ? null
+              : (sent, total) => onProgress(total > 0 ? sent / total : 0),
+        ) as Map<String, dynamic>,
+      );
+
+  /// Short-lived presigned download URL for an attachment.
+  Future<String> attachmentDownloadUrl(
+          String issueId, String attachmentId) async =>
+      ((await _api.get(
+        '/api/v1/issues/$issueId/attachments/$attachmentId/download-url',
+      )) as Map<String, dynamic>)['url'] as String;
+
+  Future<void> deleteAttachment(String issueId, String attachmentId) =>
+      _api.delete('/api/v1/issues/$issueId/attachments/$attachmentId');
+
+  /// Raw SSE byte stream of attachment changes for an issue (parse with
+  /// [parseSse]). Cancel via [cancelToken] when the view is disposed.
+  Future<Stream<List<int>>> attachmentEventStream(
+    String issueId, {
+    CancelToken? cancelToken,
+  }) =>
+      _api.openEventStream(
+        '/api/v1/issues/$issueId/attachments/stream',
+        cancelToken: cancelToken,
       );
 
   // --- Boards ---------------------------------------------------------------
@@ -188,14 +226,21 @@ class HivoraRepository {
           .map((b) => AgileBoard.fromJson(b as Map<String, dynamic>))
           .toList();
 
-  Future<AgileBoard> createBoard(String name, List<String> projectIds) async =>
-      AgileBoard.fromJson(
-        await _api.post(
-              '/api/v1/boards',
-              body: {'name': name, 'projectIds': projectIds},
-            )
-            as Map<String, dynamic>,
-      );
+  Future<AgileBoard> createBoard(
+    String name,
+    List<String> projectIds, {
+    BoardType type = BoardType.kanban,
+  }) async => AgileBoard.fromJson(
+    await _api.post(
+          '/api/v1/boards',
+          body: {
+            'name': name,
+            'projectIds': projectIds,
+            'type': type == BoardType.scrum ? 'SCRUM' : 'KANBAN',
+          },
+        )
+        as Map<String, dynamic>,
+  );
 
   Future<BoardView> boardView(String boardId, {String? sprintId}) async =>
       BoardView.fromJson(
@@ -205,6 +250,94 @@ class HivoraRepository {
             )
             as Map<String, dynamic>,
       );
+
+  // --- Sprints --------------------------------------------------------------
+
+  Future<List<Sprint>> sprints(
+    String boardId, {
+    bool includeArchived = false,
+  }) async =>
+      ((await _api.get(
+                '/api/v1/sprints',
+                query: {'boardId': boardId, 'archived': includeArchived},
+              ))
+              as List<dynamic>)
+          .map((s) => Sprint.fromJson(s as Map<String, dynamic>))
+          .toList();
+
+  Future<Sprint> createSprint({
+    required String boardId,
+    required String name,
+    String? goal,
+    DateTime? startDate,
+    DateTime? endDate,
+    int? capacityPoints,
+  }) async => Sprint.fromJson(
+    await _api.post(
+          '/api/v1/sprints',
+          body: {
+            'boardId': boardId,
+            'name': name,
+            'goal': ?goal,
+            if (startDate != null)
+              'startDate': startDate.toIso8601String().substring(0, 10),
+            if (endDate != null)
+              'endDate': endDate.toIso8601String().substring(0, 10),
+            'capacityPoints': ?capacityPoints,
+          },
+        )
+        as Map<String, dynamic>,
+  );
+
+  /// All assignable (non-archived) sprints across every board of [projectId].
+  /// A project can have several boards (e.g. a Kanban and a Scrum board); only
+  /// the Scrum boards contribute sprints. Used by the issue form/detail pickers.
+  Future<List<Sprint>> sprintsForProject(String projectId) async {
+    final boardList = await boards(projectId: projectId);
+    if (boardList.isEmpty) return const [];
+    final lists = await Future.wait(boardList.map((b) => sprints(b.id)));
+    final seen = <String>{};
+    final out = <Sprint>[];
+    for (final list in lists) {
+      for (final s in list) {
+        if (seen.add(s.id)) out.add(s);
+      }
+    }
+    return out;
+  }
+
+  Future<Sprint> updateSprint(String id, Map<String, dynamic> patch) async =>
+      Sprint.fromJson(
+        await _api.patch('/api/v1/sprints/$id', body: patch)
+            as Map<String, dynamic>,
+      );
+
+  /// Locks scope and sets the board's activeSprintId server-side.
+  Future<Sprint> startSprint(
+    String id, {
+    String? goal,
+    DateTime? endDate,
+  }) async => Sprint.fromJson(
+    await _api.post(
+          '/api/v1/sprints/$id/start',
+          body: {
+            'goal': ?goal,
+            if (endDate != null)
+              'endDate': endDate.toIso8601String().substring(0, 10),
+          },
+        )
+        as Map<String, dynamic>,
+  );
+
+  /// Archives the sprint; re-homes every unfinished issue to [moveOpenTo]
+  /// (`backlog` → no sprint, or a sibling sprint id).
+  Future<void> completeSprint(String id, {required String moveOpenTo}) =>
+      _api.post('/api/v1/sprints/$id/complete', body: {'moveOpenTo': moveOpenTo});
+
+  /// Server-computed insights (summary, burndown, velocity, scope, breakdown).
+  Future<SprintReport> sprintReport(String id) async => SprintReport.fromJson(
+    await _api.get('/api/v1/sprints/$id/report') as Map<String, dynamic>,
+  );
 
   // --- Time tracking --------------------------------------------------------
 
