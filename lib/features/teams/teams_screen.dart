@@ -209,7 +209,7 @@ class _TeamCard extends StatelessWidget {
           Row(
             children: [
               if (memberNames.isNotEmpty)
-                Flexible(child: HiveAvatarStack(names: memberNames, size: 26)),
+                HiveAvatarStack(names: memberNames, size: 26),
               const SizedBox(width: 14),
               Icon(LucideIcons.folder, size: 14, color: AppColors.inkFaint),
               const SizedBox(width: 5),

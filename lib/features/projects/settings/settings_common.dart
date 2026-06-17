@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/i18n/i18n.dart';
 import '../../../core/models/core_models.dart';
+import '../../../core/models/work_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/hue_colors.dart';
@@ -569,4 +570,183 @@ InputDecoration settingsInput(
       ),
     ),
   );
+}
+
+/// Liquid Glass dialog shown when the user tries to delete a workflow state
+/// that still has issues. Forces them to pick a target state to migrate the
+/// issues into; returns the chosen target state id, or null on cancel.
+Future<String?> showStateMigrationDialog(
+  BuildContext context, {
+  required String stateName,
+  required int issueCount,
+  required List<WorkflowState> targets,
+}) {
+  return showGlassModal<String>(
+    context,
+    width: 520,
+    builder: (modalContext) => _StateMigrationDialog(
+      stateName: stateName,
+      issueCount: issueCount,
+      targets: targets,
+    ),
+  );
+}
+
+class _StateMigrationDialog extends StatefulWidget {
+  const _StateMigrationDialog({
+    required this.stateName,
+    required this.issueCount,
+    required this.targets,
+  });
+
+  final String stateName;
+  final int issueCount;
+  final List<WorkflowState> targets;
+
+  @override
+  State<_StateMigrationDialog> createState() => _StateMigrationDialogState();
+}
+
+class _StateMigrationDialogState extends State<_StateMigrationDialog> {
+  String? _targetId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GlassModalHeader(
+          icon: LucideIcons.arrowRightLeft,
+          title: context.t('projectSettings.migrateTitle'),
+          subtitle: context.t(
+            'projectSettings.migrateSubtitle',
+            variables: {'count': '${widget.issueCount}'},
+          ),
+        ),
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.t(
+                    'projectSettings.migrateBody',
+                    variables: {'name': widget.stateName},
+                  ),
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.45,
+                    color: AppColors.inkSoft,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                FieldLabel(text: context.t('projectSettings.migrateTarget')),
+                for (final s in widget.targets)
+                  _TargetRow(
+                    state: s,
+                    selected: _targetId == s.id,
+                    onTap: () => setState(() => _targetId = s.id),
+                  ),
+                const SizedBox(height: 10),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(LucideIcons.info, size: 14, color: AppColors.inkFaint),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(
+                        context.t('projectSettings.migrateManualHint'),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          height: 1.4,
+                          color: AppColors.inkFaint,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        GlassModalFooter(
+          confirmLabel: context.t('projectSettings.migrateConfirm'),
+          confirmIcon: LucideIcons.trash2,
+          onConfirm: _targetId == null
+              ? null
+              : () => Navigator.of(context).pop(_targetId),
+        ),
+      ],
+    );
+  }
+}
+
+class _TargetRow extends StatelessWidget {
+  const _TargetRow({
+    required this.state,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final WorkflowState state;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: selected
+            ? AppColors.accentSoft
+            : AppColors.surface.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+              border: Border.all(
+                color: selected ? AppColors.accentLine : AppColors.hairline,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 11,
+                  height: 11,
+                  decoration: BoxDecoration(
+                    color: hueColor(state.hue),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Text(
+                    state.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Icon(
+                  selected
+                      ? LucideIcons.circleCheckBig
+                      : LucideIcons.circle,
+                  size: 18,
+                  color: selected ? AppColors.accentStrong : AppColors.inkFaint,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

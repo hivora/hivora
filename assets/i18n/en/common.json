@@ -792,6 +792,12 @@
     "toastMinStates": "A workflow needs at least 2 states",
     "toastDuplicateLabel": "That label already exists",
     "toastSaved": "Project settings saved",
-    "allProjects": "All projects"
+    "allProjects": "All projects",
+    "migrateTitle": "Status still has issues",
+    "migrateSubtitle": "{{count}} issue(s) assigned",
+    "migrateBody": "Choose a status to move the issues from \"{{name}}\" into — only then can it be removed.",
+    "migrateTarget": "Move issues to",
+    "migrateManualHint": "You can also move the issues manually before deleting the status.",
+    "migrateConfirm": "Migrate & remove"
   }
 }

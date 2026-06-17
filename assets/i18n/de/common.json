@@ -792,6 +792,12 @@
     "toastMinStates": "Ein Workflow braucht mindestens 2 Status",
     "toastDuplicateLabel": "Dieses Stichwort existiert bereits",
     "toastSaved": "Projekteinstellungen gespeichert",
-    "allProjects": "Alle Projekte"
+    "allProjects": "Alle Projekte",
+    "migrateTitle": "Status hat noch Aufgaben",
+    "migrateSubtitle": "{{count}} Aufgabe(n) zugeordnet",
+    "migrateBody": "Wähle einen Status, in den die Aufgaben von „{{name}}“ verschoben werden – erst dann kann er entfernt werden.",
+    "migrateTarget": "Aufgaben verschieben nach",
+    "migrateManualHint": "Du kannst die Aufgaben auch manuell verschieben, bevor du den Status löschst.",
+    "migrateConfirm": "Migrieren & entfernen"
   }
 }

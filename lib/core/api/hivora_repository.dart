@@ -89,6 +89,15 @@ class HivoraRepository {
     await _api.get('/api/v1/projects/$id') as Map<String, dynamic>,
   );
 
+  /// Issue count per workflow-state name — used by the settings UI to warn
+  /// before deleting a state that still has issues assigned.
+  Future<Map<String, int>> projectStateUsage(String id) async {
+    final json =
+        await _api.get('/api/v1/projects/$id/state-usage')
+            as Map<String, dynamic>;
+    return json.map((k, v) => MapEntry(k, (v as num).toInt()));
+  }
+
   Future<Project> createProject({
     required String key,
     required String name,

@@ -45,6 +45,13 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
   Map<String, DirectoryUser> _users = const {};
   List<DirectoryUser> _allUsers = const [];
 
+  /// Issue count per *saved* workflow-state name (for the delete guard).
+  Map<String, int> _stateUsage = const {};
+
+  /// Deleted-state id -> target-state id, collected as the user resolves
+  /// deletions of states that still have issues; sent on save.
+  final Map<String, String> _stateMigrations = {};
+
   bool _loading = true;
   bool _saving = false;
   String? _loadError;
@@ -93,14 +100,18 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
       final results = await Future.wait([
         repo.project(widget.projectId),
         repo.users(),
+        repo.projectStateUsage(widget.projectId),
       ]);
       final project = results[0] as Project;
       final users = results[1] as List<DirectoryUser>;
+      final usage = results[2] as Map<String, int>;
       setState(() {
         _saved = project;
         _draft = project;
         _allUsers = users;
         _users = {for (final u in users) u.id: u};
+        _stateUsage = usage;
+        _stateMigrations.clear();
         _syncTextControllers(project);
         _loading = false;
       });
@@ -274,7 +285,7 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
     }
   }
 
-  void _deleteState(String id) {
+  Future<void> _deleteState(String id) async {
     final d = _draft!;
     if (d.workflowStates.length <= 2) {
       settingsToast(context, context.t('projectSettings.toastMinStates'));
@@ -282,12 +293,29 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
     }
     final state = d.workflowStates.firstWhere((s) => s.id == id);
     if (d.resolvedStates.contains(state.name) && d.resolvedStates.length == 1) {
-      settingsToast(
-        context,
-        context.t('projectSettings.toastResolvedRequired'),
-      );
+      settingsToast(context, context.t('projectSettings.toastResolvedRequired'));
       return;
     }
+
+    // A state with issues assigned (by its *saved* name) can't be removed until
+    // the user picks a state to migrate those issues into.
+    final savedName = _saved?.workflowStates
+        .where((s) => s.id == id)
+        .map((s) => s.name)
+        .firstOrNull;
+    final count = savedName == null ? 0 : (_stateUsage[savedName] ?? 0);
+    if (count > 0) {
+      final targets = d.workflowStates.where((s) => s.id != id).toList();
+      final targetId = await showStateMigrationDialog(
+        context,
+        stateName: state.name,
+        issueCount: count,
+        targets: targets,
+      );
+      if (targetId == null) return; // cancelled — keep the state
+      _stateMigrations[id] = targetId;
+    }
+
     _mutate(
       (d) => d.copyWith(
         workflowStates: d.workflowStates.where((s) => s.id != id).toList(),
@@ -315,6 +343,7 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
     if (saved == null) return;
     setState(() {
       _draft = saved;
+      _stateMigrations.clear();
       _syncTextControllers(saved);
       _rev++;
     });
@@ -336,15 +365,18 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
         'resolvedStates': d.resolvedStates,
         'labels': d.labels.map((l) => l.toJson()).toList(),
         'archived': d.archived,
+        if (_stateMigrations.isNotEmpty) 'stateMigrations': _stateMigrations,
       };
-      final updated = await context.read<HivoraRepository>().updateProject(
-        d.id,
-        patch,
-      );
+      final repo = context.read<HivoraRepository>();
+      final updated = await repo.updateProject(d.id, patch);
+      // Counts changed once issues were reassigned/deleted.
+      final usage = await repo.projectStateUsage(d.id);
       if (!mounted) return;
       setState(() {
         _saved = updated;
         _draft = updated;
+        _stateUsage = usage;
+        _stateMigrations.clear();
         _syncTextControllers(updated);
         _saving = false;
         _rev++;
