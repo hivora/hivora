@@ -34,8 +34,8 @@ class _Destination {
 
 const _primary = [
   _Destination('/dashboard', 'nav.dashboard', LucideIcons.layoutDashboard),
-  _Destination('/projects', 'nav.projects', LucideIcons.folder),
   _Destination('/teams', 'nav.teams', LucideIcons.usersRound),
+  _Destination('/projects', 'nav.projects', LucideIcons.folder),
   _Destination('/issues', 'nav.issues', LucideIcons.circleCheckBig),
   _Destination('/board', 'nav.board', LucideIcons.squareKanban),
 ];
