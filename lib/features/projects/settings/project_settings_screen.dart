@@ -381,6 +381,7 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
     final nameErr = draft.name.trim().isEmpty;
     final keyErr = draft.key.trim().isEmpty;
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -641,26 +642,24 @@ class _SaveBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // No SizeTransition here: it clips the child to its rectangular layout box,
+    // which would cut the glass pill's soft shadow into a hard-edged rectangle.
+    // A fade + slide keeps the shadow intact.
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 220),
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeInCubic,
       transitionBuilder: (child, animation) => FadeTransition(
         opacity: animation,
-        child: SizeTransition(
-          sizeFactor: animation,
-          child: SlideTransition(
-            position: Tween(
-              begin: const Offset(0, 0.4),
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
-          ),
+        child: SlideTransition(
+          position: Tween(
+            begin: const Offset(0, 0.35),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
         ),
       ),
-      child: !visible
-          ? const SizedBox(width: double.infinity)
-          : _bar(context),
+      child: !visible ? const SizedBox.shrink() : _bar(context),
     );
   }
 
