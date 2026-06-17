@@ -225,6 +225,9 @@ class _ProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Mobile shows the compact gear in the corner; larger views show the
+    // full-width "Settings" button in the footer instead.
+    final compact = context.isCompact;
     final color = _projectColor(project);
     final glyphColor = project.archived
         ? HSLColor.fromColor(color).withSaturation(0.25).toColor()
@@ -268,9 +271,9 @@ class _ProjectCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Leave room for the gear affordance in the corner.
+                    // Leave room for the corner gear only when it's shown.
                     Padding(
-                      padding: const EdgeInsets.only(right: 26),
+                      padding: EdgeInsets.only(right: compact ? 26 : 0),
                       child: Text(
                         project.name,
                         maxLines: 1,
@@ -334,7 +337,7 @@ class _ProjectCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
               ],
-              _SettingsButton(onTap: onSettings),
+              if (!compact) _SettingsButton(onTap: onSettings),
             ],
           ),
         ],
@@ -344,7 +347,8 @@ class _ProjectCard extends StatelessWidget {
     final stacked = Stack(
       children: [
         card,
-        Positioned(top: 10, right: 10, child: _GearButton(onTap: onSettings)),
+        if (compact)
+          Positioned(top: 10, right: 10, child: _GearButton(onTap: onSettings)),
       ],
     );
 
