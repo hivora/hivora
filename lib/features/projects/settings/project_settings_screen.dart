@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
+    show GlassContainer, LiquidGlassSettings, LiquidRoundedSuperellipse;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -12,6 +14,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/hue_colors.dart';
 import '../../../core/widgets/hive_loader.dart';
+import '../../search/search_tokens.dart';
 import '../../shell/page_chrome.dart';
 import 'archive_section.dart';
 import 'general_section.dart';
@@ -377,24 +380,24 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
   Widget _buildBody(BuildContext context, Project draft) {
     final nameErr = draft.name.trim().isEmpty;
     final keyErr = draft.key.trim().isEmpty;
-    return Column(
+    return Stack(
       children: [
-        Expanded(
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(
-              context.pageGutter,
-              16 + context.topGutter,
-              context.pageGutter,
-              24 + context.bottomGutter,
-            ),
-            children: [
-              Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 880),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+        ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            context.pageGutter,
+            16 + context.topGutter,
+            context.pageGutter,
+            // Reserve room so the last card clears the floating save bar.
+            (_dirty ? 96 : 24) + context.bottomGutter,
+          ),
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 880),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                       _BackLink(onTap: () => Navigator.of(context).maybePop()),
                       const SizedBox(height: 14),
                       _Header(draft: draft),
@@ -450,13 +453,33 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
               ),
             ],
           ),
-        ),
-        _SaveBar(
-          visible: _dirty,
-          valid: _valid,
-          saving: _saving,
-          onDiscard: _discard,
-          onSave: _save,
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                context.pageGutter,
+                0,
+                context.pageGutter,
+                12 + context.bottomGutter,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 880),
+                  child: _SaveBar(
+                    visible: _dirty,
+                    valid: _valid,
+                    saving: _saving,
+                    onDiscard: _discard,
+                    onSave: _save,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -620,97 +643,105 @@ class _SaveBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 220),
-      transitionBuilder: (child, animation) => SizeTransition(
-        sizeFactor: animation,
-        child: FadeTransition(opacity: animation, child: child),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SizeTransition(
+          sizeFactor: animation,
+          child: SlideTransition(
+            position: Tween(
+              begin: const Offset(0, 0.4),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        ),
       ),
       child: !visible
-          ? const SizedBox.shrink()
-          : SafeArea(
-              top: false,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  context.pageGutter,
-                  4,
-                  context.pageGutter,
-                  12 + context.bottomGutter,
-                ),
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(18, 10, 12, 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                    border: Border.all(color: AppColors.hairline),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x33191637),
-                        blurRadius: 30,
-                        offset: Offset(0, 14),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        valid ? LucideIcons.info : LucideIcons.triangleAlert,
-                        size: 17,
-                        color: valid
-                            ? AppColors.accentStrong
-                            : AppColors.danger,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          valid
-                              ? context.t('projectSettings.unsavedChanges')
-                              : context.t('projectSettings.fixRequired'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.inkSoft,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      TextButton(
-                        onPressed: saving ? null : onDiscard,
-                        child: Text(context.t('projectSettings.discard')),
-                      ),
-                      const SizedBox(width: 4),
-                      FilledButton.icon(
-                        onPressed: (!valid || saving) ? null : onSave,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.navy,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.radiusControl,
-                            ),
-                          ),
-                        ),
-                        icon: saving
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: HiveLoader(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(LucideIcons.check, size: 16),
-                        label: Text(context.t('projectSettings.saveChanges')),
-                      ),
-                    ],
+          ? const SizedBox(width: double.infinity)
+          : _bar(context),
+    );
+  }
+
+  Widget _bar(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = SearchTokens.of(Theme.of(context).brightness);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        boxShadow: tokens.panelShadow,
+      ),
+      child: GlassContainer(
+        useOwnLayer: true,
+        clipBehavior: Clip.antiAlias,
+        shape: const LiquidRoundedSuperellipse(borderRadius: 30),
+        settings: LiquidGlassSettings(
+          glassColor: tokens.tint,
+          blur: 18,
+          thickness: 16,
+          saturation: 1.9,
+          whitenStrength: dark ? 0.04 : 0.0,
+          whitenGated: false,
+          shadowElevation: 0,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 10, 12, 10),
+          child: Row(
+            children: [
+              Icon(
+                valid ? LucideIcons.info : LucideIcons.triangleAlert,
+                size: 17,
+                color: valid ? AppColors.accentStrong : AppColors.danger,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  valid
+                      ? context.t('projectSettings.unsavedChanges')
+                      : context.t('projectSettings.fixRequired'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: tokens.inkSoft,
                   ),
                 ),
               ),
-            ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: saving ? null : onDiscard,
+                style: TextButton.styleFrom(foregroundColor: tokens.ink),
+                child: Text(context.t('projectSettings.discard')),
+              ),
+              const SizedBox(width: 4),
+              FilledButton.icon(
+                onPressed: (!valid || saving) ? null : onSave,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.navy,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+                  ),
+                ),
+                icon: saving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: HiveLoader(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(LucideIcons.check, size: 16),
+                label: Text(context.t('projectSettings.saveChanges')),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

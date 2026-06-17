@@ -127,7 +127,7 @@ class ModalShell extends StatelessWidget {
           ),
           Divider(height: 1, color: AppColors.hairline2),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
             child: SafeArea(top: false, child: footer),
           ),
         ],
@@ -159,8 +159,15 @@ class ModalFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        if (leading != null) Flexible(child: leading!),
-        const Spacer(),
+        // A single expander between the (optional) leading action and the
+        // trailing buttons guarantees Cancel + primary sit flush against the
+        // right gutter (two competing flex widgets left a gap).
+        if (leading != null)
+          Expanded(
+            child: Align(alignment: Alignment.centerLeft, child: leading!),
+          )
+        else
+          const Spacer(),
         TextButton(
           onPressed: busy ? null : () => Navigator.of(context).maybePop(),
           child: Text(
