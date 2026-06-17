@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/api/api_client.dart';
@@ -86,7 +87,7 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
       mainAxisSize: MainAxisSize.min,
       children: [
         GlassModalHeader(
-          icon: Icons.view_kanban_rounded,
+          icon: LucideIcons.squareKanban,
           title: context.t('board.newBoard'),
           subtitle: context.t('board.createSub'),
         ),
@@ -101,7 +102,7 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
                   child: Column(
                     children: [
                       _TypeCard(
-                        icon: Icons.view_column_rounded,
+                        icon: LucideIcons.columns3,
                         title: context.t('board.typeKanban'),
                         description: context.t('board.typeKanbanDesc'),
                         selected: _type == BoardType.kanban,
@@ -109,7 +110,7 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
                       ),
                       const SizedBox(height: 8),
                       _TypeCard(
-                        icon: Icons.bolt_rounded,
+                        icon: LucideIcons.zap,
                         title: context.t('board.typeScrum'),
                         description: context.t('board.typeScrumDesc'),
                         selected: _type == BoardType.scrum,
@@ -254,7 +255,7 @@ class _TypeCard extends StatelessWidget {
             ),
             if (selected)
               const Icon(
-                Icons.check_circle_rounded,
+                LucideIcons.circleCheckBig,
                 size: 20,
                 color: AppColors.accentStrong,
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/models/work_models.dart';
 import '../../../core/responsive/responsive.dart';
@@ -105,7 +106,7 @@ class _Checkbox extends StatelessWidget {
           ),
         ),
         child: selected
-            ? const Icon(Icons.check_rounded, size: 13, color: Color(0xFF2A2410))
+            ? const Icon(LucideIcons.check, size: 13, color: Color(0xFF2A2410))
             : null,
       ),
     );

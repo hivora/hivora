@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Visual + semantic metadata for an attachment "kind", mirroring `KIND_META`
 /// in the web design (`view_attachments.jsx`). Colours are sRGB approximations
@@ -10,14 +11,14 @@ class AttachmentKindMeta {
 }
 
 const Map<String, AttachmentKindMeta> _kindMeta = {
-  'image': AttachmentKindMeta(Icons.image_outlined, Color(0xFF4F74B8)),
-  'pdf': AttachmentKindMeta(Icons.picture_as_pdf_outlined, Color(0xFFC1503C)),
-  'doc': AttachmentKindMeta(Icons.description_outlined, Color(0xFF5566A8)),
-  'sheet': AttachmentKindMeta(Icons.table_chart_outlined, Color(0xFF3E9168)),
-  'zip': AttachmentKindMeta(Icons.folder_zip_outlined, Color(0xFFB07F38)),
-  'figma': AttachmentKindMeta(Icons.brush_outlined, Color(0xFF9A57BE)),
-  'video': AttachmentKindMeta(Icons.movie_outlined, Color(0xFFBE5479)),
-  'file': AttachmentKindMeta(Icons.insert_drive_file_outlined, Color(0xFF7B7E88)),
+  'image': AttachmentKindMeta(LucideIcons.image, Color(0xFF4F74B8)),
+  'pdf': AttachmentKindMeta(LucideIcons.fileText, Color(0xFFC1503C)),
+  'doc': AttachmentKindMeta(LucideIcons.fileText, Color(0xFF5566A8)),
+  'sheet': AttachmentKindMeta(LucideIcons.table, Color(0xFF3E9168)),
+  'zip': AttachmentKindMeta(LucideIcons.folderArchive, Color(0xFFB07F38)),
+  'figma': AttachmentKindMeta(LucideIcons.paintbrush, Color(0xFF9A57BE)),
+  'video': AttachmentKindMeta(LucideIcons.film, Color(0xFFBE5479)),
+  'file': AttachmentKindMeta(LucideIcons.file, Color(0xFF7B7E88)),
 };
 
 AttachmentKindMeta kindMeta(String kind) => _kindMeta[kind] ?? _kindMeta['file']!;

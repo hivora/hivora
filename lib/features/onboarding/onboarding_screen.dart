@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/i18n/i18n.dart';
 import '../../core/storage/app_storage.dart';
@@ -26,21 +27,21 @@ class _OnboardingPage {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   static const _pages = [
-    _OnboardingPage(Icons.folder_special_rounded, 'onboarding.projects.title',
+    _OnboardingPage(LucideIcons.folderHeart, 'onboarding.projects.title',
         'onboarding.projects.body', AppColors.pastelBlue),
-    _OnboardingPage(Icons.timer_rounded, 'onboarding.time.title',
+    _OnboardingPage(LucideIcons.timer, 'onboarding.time.title',
         'onboarding.time.body', AppColors.pastelLavender),
-    _OnboardingPage(Icons.stacked_bar_chart_rounded, 'onboarding.gantt.title',
+    _OnboardingPage(LucideIcons.chartColumnStacked, 'onboarding.gantt.title',
         'onboarding.gantt.body', AppColors.pastelPeach),
-    _OnboardingPage(Icons.table_chart_rounded, 'onboarding.timesheets.title',
+    _OnboardingPage(LucideIcons.table, 'onboarding.timesheets.title',
         'onboarding.timesheets.body', AppColors.pastelMint),
-    _OnboardingPage(Icons.view_kanban_rounded, 'onboarding.boards.title',
+    _OnboardingPage(LucideIcons.squareKanban, 'onboarding.boards.title',
         'onboarding.boards.body', AppColors.pastelBlue),
-    _OnboardingPage(Icons.insights_rounded, 'onboarding.reports.title',
+    _OnboardingPage(LucideIcons.chartLine, 'onboarding.reports.title',
         'onboarding.reports.body', AppColors.pastelLavender),
-    _OnboardingPage(Icons.dashboard_rounded, 'onboarding.dashboards.title',
+    _OnboardingPage(LucideIcons.layoutDashboard, 'onboarding.dashboards.title',
         'onboarding.dashboards.body', AppColors.pastelPeach),
-    _OnboardingPage(Icons.menu_book_rounded, 'onboarding.knowledge.title',
+    _OnboardingPage(LucideIcons.bookOpen, 'onboarding.knowledge.title',
         'onboarding.knowledge.body', AppColors.pastelMint),
   ];
 

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,7 @@ import '../../core/models/work_models.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/project_palette.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
 import '../issues/issue_detail_sheet.dart';
@@ -157,7 +159,7 @@ class _BoardScreenState extends State<BoardScreen> {
                       fontSize: 13,
                     ),
                   ),
-                  icon: const Icon(Icons.add_rounded, size: 18),
+                  icon: const Icon(LucideIcons.plus, size: 18),
                   label: Text(context.t('board.newBoard')),
                 ),
               ],
@@ -171,7 +173,7 @@ class _BoardScreenState extends State<BoardScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Icons.view_kanban_rounded,
+                    LucideIcons.squareKanban,
                     size: 56,
                     color: AppColors.textSecondary,
                   ),
@@ -190,7 +192,7 @@ class _BoardScreenState extends State<BoardScreen> {
                       backgroundColor: AppColors.accent,
                       foregroundColor: const Color(0xFF2A2410),
                     ),
-                    icon: const Icon(Icons.add_rounded, size: 18),
+                    icon: const Icon(LucideIcons.plus, size: 18),
                     label: Text(context.t('board.newBoard')),
                   ),
                 ],
@@ -252,6 +254,7 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
   Map<String, String> _names = const {};
   Map<String, String> _projectNames = const {};
   List<String> _projectLabels = const [];
+  ProjectPalette _palette = ProjectPalette.empty;
   List<Issue> _backlog = const [];
   BoardFilter _filter = BoardFilter.empty;
 
@@ -287,8 +290,11 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
         _projectNames = {for (final p in projects) p.id: p.name};
         _projectLabels = [
           for (final p in projects)
-            if (boardProjectIds.contains(p.id)) ...p.labels,
+            if (boardProjectIds.contains(p.id)) ...p.labelNames,
         ];
+        _palette = ProjectPalette.fromProjects(
+          projects.where((p) => boardProjectIds.contains(p.id)),
+        );
         _backlog = backlog;
         _loading = false;
       });
@@ -530,15 +536,15 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
   SegmentItem _itemFor(BoardViewMode mode) => switch (mode) {
     BoardViewMode.board => SegmentItem(
       label: context.t('board.view.board'),
-      icon: Icons.view_kanban_outlined,
+      icon: LucideIcons.squareKanban,
     ),
     BoardViewMode.backlog => SegmentItem(
       label: context.t('board.view.backlog'),
-      icon: Icons.list_rounded,
+      icon: LucideIcons.list,
     ),
     BoardViewMode.timeline => SegmentItem(
       label: context.t('board.view.timeline'),
-      icon: Icons.timeline_rounded,
+      icon: LucideIcons.waypoints,
     ),
   };
 
@@ -654,6 +660,7 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
         return _BoardColumn(
           column: column,
           issues: issues,
+          palette: _palette,
           onAccept: (issue) => _moveIssue(issue, column),
           onAddIssue: () => _addIssue(column),
           onOpenIssue: _openIssue,
@@ -756,7 +763,7 @@ class _BoardFilterButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.tune_rounded, size: 16, color: AppColors.inkSoft),
+              Icon(LucideIcons.slidersHorizontal, size: 16, color: AppColors.inkSoft),
               const SizedBox(width: 7),
               Text(
                 context.t('board.filterButton'),
@@ -883,7 +890,7 @@ class _CompactViewSwitcherState extends State<_CompactViewSwitcher> {
           curve: hiveEase,
           turns: _expanded ? 0 : 0.5,
           child: Icon(
-            Icons.chevron_right_rounded,
+            LucideIcons.chevronRight,
             size: 18,
             color: AppColors.inkFaint,
           ),
@@ -1052,7 +1059,7 @@ class _ActivePill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(
-            Icons.bolt_rounded,
+            LucideIcons.zap,
             size: 13,
             color: AppColors.accentStrong,
           ),
@@ -1192,7 +1199,7 @@ class _SprintSelector extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.bolt_outlined, size: 15, color: AppColors.inkSoft),
+            Icon(LucideIcons.zap, size: 15, color: AppColors.inkSoft),
             const SizedBox(width: 7),
             Text(
               label,
@@ -1202,7 +1209,7 @@ class _SprintSelector extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.expand_more_rounded, size: 16, color: AppColors.inkSoft),
+            Icon(LucideIcons.chevronDown, size: 16, color: AppColors.inkSoft),
           ],
         ),
       ),
@@ -1253,8 +1260,8 @@ class _BoardListCard extends StatelessWidget {
               children: [
                 Icon(
                   board.isScrum
-                      ? Icons.bolt_rounded
-                      : Icons.view_column_rounded,
+                      ? LucideIcons.zap
+                      : LucideIcons.columns3,
                   size: 13,
                   color: AppColors.navy,
                 ),
@@ -1292,7 +1299,7 @@ class _BoardListCard extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: Icon(
-              Icons.arrow_forward_rounded,
+              LucideIcons.arrowRight,
               size: 14,
               color: AppColors.inkSoft,
             ),
@@ -1348,7 +1355,7 @@ class _ProjectFilterChip extends StatelessWidget {
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.expand_more_rounded, size: 16, color: AppColors.inkSoft),
+            Icon(LucideIcons.chevronDown, size: 16, color: AppColors.inkSoft),
           ],
         ),
       ),
@@ -1363,6 +1370,7 @@ class _BoardColumn extends StatefulWidget {
   const _BoardColumn({
     required this.column,
     required this.issues,
+    required this.palette,
     required this.onAccept,
     required this.onAddIssue,
     required this.onOpenIssue,
@@ -1370,6 +1378,7 @@ class _BoardColumn extends StatefulWidget {
 
   final BoardColumnView column;
   final List<Issue> issues;
+  final ProjectPalette palette;
   final void Function(Issue) onAccept;
   final VoidCallback onAddIssue;
   final void Function(Issue) onOpenIssue;
@@ -1389,7 +1398,7 @@ class _BoardColumnState extends State<_BoardColumn> {
     // Tint from the column's first workflow state, falling back to its display
     // name so the header dot still matches the theme when `states` is empty.
     // stateColor normalises case/separators, so either form resolves correctly.
-    final dotColor = AppColors.stateColor(
+    final dotColor = widget.palette.stateColor(
       column.states.isNotEmpty ? column.states.first : column.name,
     );
     final countLabel = column.wipLimit != null
@@ -1502,16 +1511,19 @@ class _BoardColumnState extends State<_BoardColumn> {
                                     width: 276,
                                     child: _BoardCard(
                                       issue: issue,
+                                      palette: widget.palette,
                                       dragging: true,
                                     ),
                                   ),
                                 ),
                                 childWhenDragging: Opacity(
                                   opacity: 0.35,
-                                  child: _BoardCard(issue: issue),
+                                  child: _BoardCard(
+                                      issue: issue, palette: widget.palette),
                                 ),
                                 child: _BoardCard(
                                   issue: issue,
+                                  palette: widget.palette,
                                   onOpen: () => widget.onOpenIssue(issue),
                                 ),
                               );
@@ -1547,15 +1559,21 @@ class _BoardColumnState extends State<_BoardColumn> {
 }
 
 class _BoardCard extends StatelessWidget {
-  const _BoardCard({required this.issue, this.dragging = false, this.onOpen});
+  const _BoardCard({
+    required this.issue,
+    required this.palette,
+    this.dragging = false,
+    this.onOpen,
+  });
 
   final Issue issue;
+  final ProjectPalette palette;
   final bool dragging;
   final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
-    final accent = AppColors.stateColor(issue.state.toUpperCase());
+    final accent = palette.stateColor(issue.state);
     final due = dueLabel(issue.dueDate);
     return Container(
       decoration: BoxDecoration(
@@ -1612,7 +1630,8 @@ class _BoardCard extends StatelessWidget {
                         spacing: 5,
                         runSpacing: 5,
                         children: [
-                          for (final t in issue.tags.take(3)) LabelTag(t),
+                          for (final t in issue.tags.take(3))
+                            LabelTag(t, hue: palette.labelHue(t)),
                         ],
                       ),
                     ],
@@ -1622,14 +1641,14 @@ class _BoardCard extends StatelessWidget {
                         if (issue.estimateMinutes != null &&
                             issue.estimateMinutes! > 0)
                           _MiniMeta(
-                            icon: Icons.timelapse_rounded,
+                            icon: LucideIcons.timer,
                             text: fmtDuration(issue.spentMinutes),
                           ),
                         if (due != null) ...[
                           if (issue.estimateMinutes != null)
                             const SizedBox(width: 10),
                           _MiniMeta(
-                            icon: Icons.calendar_today_rounded,
+                            icon: LucideIcons.calendar,
                             text: due.text,
                             color: due.late ? AppColors.danger : null,
                           ),
@@ -1718,7 +1737,7 @@ class _DottedAddButtonState extends State<DottedAddButton> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_rounded, size: 15, color: accent),
+                  Icon(LucideIcons.plus, size: 15, color: accent),
                   const SizedBox(width: 7),
                   Text(
                     widget.label,

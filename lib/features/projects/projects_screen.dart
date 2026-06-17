@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -16,7 +17,11 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
 
-typedef _ProjectsData = ({List<Project> projects, Map<String, String> names});
+typedef _ProjectsData = ({
+  List<Project> active,
+  List<Project> archived,
+  Map<String, String> names,
+});
 
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({super.key});
@@ -27,19 +32,24 @@ class ProjectsScreen extends StatefulWidget {
 
 class _ProjectsScreenState extends State<ProjectsScreen> {
   late final FetchCubit<_ProjectsData> _cubit;
+  bool _showArchived = false;
 
   @override
   void initState() {
     super.initState();
     _cubit = FetchCubit<_ProjectsData>(() async {
       final repo = context.read<HivoraRepository>();
-      final results = await Future.wait([repo.projects(), repo.users()]);
-      final projects = results[0] as List<Project>;
-      final users = results[1] as List<DirectoryUser>;
+      final results = await Future.wait([
+        repo.projects(),
+        repo.projects(archived: true),
+        repo.users(),
+      ]);
+      final active = results[0] as List<Project>;
+      final archived = results[1] as List<Project>;
+      final users = results[2] as List<DirectoryUser>;
       final names = {for (final u in users) u.id: u.displayName};
-      return (projects: projects, names: names);
-    })
-      ..load();
+      return (active: active, archived: archived, names: names);
+    })..load();
   }
 
   @override
@@ -54,8 +64,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       value: _cubit,
       child: BlocBuilder<FetchCubit<_ProjectsData>, FetchState<_ProjectsData>>(
         builder: (context, state) {
-          final projects = state.data?.projects ?? const <Project>[];
+          final active = state.data?.active ?? const <Project>[];
+          final archived = state.data?.archived ?? const <Project>[];
           final names = state.data?.names ?? const <String, String>{};
+          final projects = _showArchived ? archived : active;
           return RefreshIndicator(
             onRefresh: _cubit.load,
             color: AppColors.accent,
@@ -64,13 +76,22 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverPadding(
-                  padding: EdgeInsets.fromLTRB(context.pageGutter,
-                      24 + context.topGutter, context.pageGutter, 16),
+                  padding: EdgeInsets.fromLTRB(
+                    context.pageGutter,
+                    24 + context.topGutter,
+                    context.pageGutter,
+                    16,
+                  ),
                   sliver: SliverToBoxAdapter(
                     child: PageHead(
                       title: context.t('projects.title'),
-                      subtitle: context.t('projects.activeSummary',
-                          variables: {'count': '${projects.length}'}),
+                      subtitle: context.t(
+                        'projects.summary',
+                        variables: {
+                          'active': '${active.length}',
+                          'archived': '${archived.length}',
+                        },
+                      ),
                       actions: [
                         PrimaryButton(
                           label: context.t('projects.new'),
@@ -80,24 +101,57 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     ),
                   ),
                 ),
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    context.pageGutter,
+                    0,
+                    context.pageGutter,
+                    16,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: SegmentedControl(
+                        selected: _showArchived ? 1 : 0,
+                        onChanged: (i) =>
+                            setState(() => _showArchived = i == 1),
+                        items: [
+                          SegmentItem(
+                            label: context.t('projects.active'),
+                            icon: LucideIcons.folderOpen,
+                          ),
+                          SegmentItem(
+                            label: archived.isEmpty
+                                ? context.t('projects.archived')
+                                : '${context.t('projects.archived')} · ${archived.length}',
+                            icon: LucideIcons.archive,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 if (state.isLoading && projects.isEmpty)
-                  const SliverFillRemaining(
-                    child: Center(
-                        child: HiveLoader()),
-                  )
+                  const SliverFillRemaining(child: Center(child: HiveLoader()))
                 else if (projects.isEmpty)
                   SliverFillRemaining(
                     child: Center(
-                      child: Text(context.t('projects.empty'),
-                          style:
-                              TextStyle(color: AppColors.textSecondary)),
+                      child: Text(
+                        _showArchived
+                            ? context.t('projects.emptyArchived')
+                            : context.t('projects.empty'),
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
                     ),
                   )
                 else
                   SliverPadding(
-                    padding: EdgeInsets.fromLTRB(context.pageGutter, 0,
-                        context.pageGutter,
-                        context.pageGutter + context.bottomGutter),
+                    padding: EdgeInsets.fromLTRB(
+                      context.pageGutter,
+                      0,
+                      context.pageGutter,
+                      context.pageGutter + context.bottomGutter,
+                    ),
                     sliver: SliverGrid(
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: context.gridColumns(minTileWidth: 300),
@@ -107,7 +161,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                       ),
                       delegate: SliverChildBuilderDelegate(
                         (context, index) => _ProjectCard(
-                            project: projects[index], names: names),
+                          project: projects[index],
+                          names: names,
+                          onSettings: () => _openSettings(projects[index]),
+                        ),
                         childCount: projects.length,
                       ),
                     ),
@@ -137,6 +194,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     );
     if (created != null) _cubit.load();
   }
+
+  Future<void> _openSettings(Project project) async {
+    await context.push('/projects/${project.id}/settings');
+    if (mounted) _cubit.load();
+  }
 }
 
 /// Parses a project's stored hex color (e.g. "#AEC6F4") to a Color, with a
@@ -151,16 +213,23 @@ Color _projectColor(Project project) {
 }
 
 class _ProjectCard extends StatelessWidget {
-  const _ProjectCard({required this.project, required this.names});
+  const _ProjectCard({
+    required this.project,
+    required this.names,
+    required this.onSettings,
+  });
 
   final Project project;
   final Map<String, String> names;
+  final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
     final color = _projectColor(project);
-    final leadName =
-        project.leadId != null ? names[project.leadId!] : null;
+    final glyphColor = project.archived
+        ? HSLColor.fromColor(color).withSaturation(0.25).toColor()
+        : color;
+    final leadName = project.leadId != null ? names[project.leadId!] : null;
     final memberNames = project.memberIds
         .map((id) => names[id] ?? id)
         .toList(growable: false);
@@ -168,7 +237,7 @@ class _ProjectCard extends StatelessWidget {
         ? '${project.key} · ${context.t('projects.lead')} ${leadName.split(' ').first}'
         : project.key;
 
-    return SoftCard(
+    final card = SoftCard(
       onTap: () => context.go('/issues?projectId=${project.id}'),
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -180,17 +249,18 @@ class _ProjectCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.soft(color),
+                  color: AppColors.soft(glyphColor),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   project.key,
                   style: TextStyle(
-                      fontFamily: AppTheme.fontMono,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: color),
+                    fontFamily: AppTheme.fontMono,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: glyphColor,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -198,19 +268,30 @@ class _ProjectCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(project.name,
+                    // Leave room for the gear affordance in the corner.
+                    Padding(
+                      padding: const EdgeInsets.only(right: 26),
+                      child: Text(
+                        project.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w700)),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontFamily: AppTheme.fontMono,
-                            fontSize: 11.5,
-                            color: AppColors.inkFaint)),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontMono,
+                        fontSize: 11.5,
+                        color: AppColors.inkFaint,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -231,21 +312,43 @@ class _ProjectCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          HiveProgress(value: _completion(project), color: color),
+          HiveProgress(value: _completion(project), color: glyphColor),
           const Spacer(),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Row(
             children: [
               if (memberNames.isNotEmpty)
-                HiveAvatarStack(names: memberNames, size: 26),
-              const Spacer(),
-              Icon(Icons.arrow_forward_rounded,
-                  size: 16, color: AppColors.inkSoft),
+                Expanded(child: HiveAvatarStack(names: memberNames, size: 26))
+              else
+                const Spacer(),
+              if (project.labels.isNotEmpty) ...[
+                Icon(LucideIcons.tag, size: 14, color: AppColors.inkFaint),
+                const SizedBox(width: 4),
+                Text(
+                  '${project.labels.length}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.inkSoft,
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              _SettingsButton(onTap: onSettings),
             ],
           ),
         ],
       ),
     );
+
+    final stacked = Stack(
+      children: [
+        card,
+        Positioned(top: 10, right: 10, child: _GearButton(onTap: onSettings)),
+      ],
+    );
+
+    return project.archived ? Opacity(opacity: 0.82, child: stacked) : stacked;
   }
 
   // Resolved-state ratio gives a rough completion proxy when no counts exist.
@@ -253,6 +356,76 @@ class _ProjectCard extends StatelessWidget {
     if (project.workflowStates.isEmpty) return 0.0;
     return (project.resolvedStates.length / project.workflowStates.length)
         .clamp(0.0, 1.0);
+  }
+}
+
+/// Small gear affordance in the card corner that opens project settings.
+class _GearButton extends StatelessWidget {
+  const _GearButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surfaceMuted,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(9),
+        side: BorderSide(color: AppColors.hairline),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(9),
+        child: SizedBox(
+          width: 30,
+          height: 30,
+          child: Icon(LucideIcons.settings, size: 15, color: AppColors.inkSoft),
+        ),
+      ),
+    );
+  }
+}
+
+/// Footer "Settings" ghost button on each project card.
+class _SettingsButton extends StatelessWidget {
+  const _SettingsButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+            border: Border.all(color: AppColors.hairline),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                LucideIcons.slidersHorizontal,
+                size: 14,
+                color: AppColors.inkSoft,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                context.t('projects.settings'),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.inkSoft,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -266,14 +439,16 @@ class _Stat extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value,
-            style: TextStyle(
-                fontFamily: AppTheme.fontBrand,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.ink)),
-        Text(label,
-            style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
+        Text(
+          value,
+          style: TextStyle(
+            fontFamily: AppTheme.fontBrand,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: AppColors.ink,
+          ),
+        ),
+        Text(label, style: TextStyle(fontSize: 11, color: AppColors.inkSoft)),
       ],
     );
   }
@@ -314,15 +489,16 @@ class _CreateProjectBodyState extends State<_CreateProjectBody> {
           children: [
             Text(
               context.t('projects.new'),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 20),
             TextFormField(
               controller: _name,
-              decoration: InputDecoration(labelText: context.t('projects.name')),
+              decoration: InputDecoration(
+                labelText: context.t('projects.name'),
+              ),
               validator: (value) => (value == null || value.trim().isEmpty)
                   ? context.t('errors.required')
                   : null,
@@ -337,22 +513,25 @@ class _CreateProjectBodyState extends State<_CreateProjectBody> {
               ),
               validator: (value) =>
                   RegExp(r'^[A-Za-z][A-Za-z0-9]{1,9}$').hasMatch(value ?? '')
-                      ? null
-                      : context.t('errors.invalidProjectKey'),
+                  ? null
+                  : context.t('errors.invalidProjectKey'),
             ),
             const SizedBox(height: 14),
             TextFormField(
               controller: _description,
               minLines: 2,
               maxLines: 4,
-              decoration:
-                  InputDecoration(labelText: context.t('issues.description')),
+              decoration: InputDecoration(
+                labelText: context.t('issues.description'),
+              ),
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!,
-                  style: const TextStyle(color: AppColors.danger),
-                  textAlign: TextAlign.center),
+              Text(
+                _error!,
+                style: const TextStyle(color: AppColors.danger),
+                textAlign: TextAlign.center,
+              ),
             ],
             const SizedBox(height: 24),
             FilledButton(
@@ -361,8 +540,7 @@ class _CreateProjectBodyState extends State<_CreateProjectBody> {
                   ? const SizedBox(
                       width: 22,
                       height: 22,
-                      child: HiveLoader(
-                          strokeWidth: 2, color: Colors.white),
+                      child: HiveLoader(strokeWidth: 2, color: Colors.white),
                     )
                   : Text(context.t('common.create')),
             ),
@@ -380,12 +558,12 @@ class _CreateProjectBodyState extends State<_CreateProjectBody> {
     });
     try {
       final project = await context.read<HivoraRepository>().createProject(
-            key: _key.text.trim().toUpperCase(),
-            name: _name.text.trim(),
-            description: _description.text.trim().isEmpty
-                ? null
-                : _description.text.trim(),
-          );
+        key: _key.text.trim().toUpperCase(),
+        name: _name.text.trim(),
+        description: _description.text.trim().isEmpty
+            ? null
+            : _description.text.trim(),
+      );
       if (mounted) Navigator.of(context).pop(project);
     } on ApiFailure catch (failure) {
       setState(() {

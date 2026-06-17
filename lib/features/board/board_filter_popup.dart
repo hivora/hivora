@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
     show GlassContainer, LiquidGlassSettings, LiquidRoundedSuperellipse;
 
@@ -122,13 +123,13 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
   };
 
   IconData _scopeIcon(BoardFilterFacet f) => switch (f) {
-    BoardFilterFacet.state => Icons.radio_button_checked_rounded,
-    BoardFilterFacet.assignee => Icons.person_rounded,
-    BoardFilterFacet.priority => Icons.flag_rounded,
-    BoardFilterFacet.type => Icons.category_rounded,
-    BoardFilterFacet.sprint => Icons.bolt_rounded,
-    BoardFilterFacet.author => Icons.edit_note_rounded,
-    BoardFilterFacet.label => Icons.sell_rounded,
+    BoardFilterFacet.state => LucideIcons.circleDot,
+    BoardFilterFacet.assignee => LucideIcons.user,
+    BoardFilterFacet.priority => LucideIcons.flag,
+    BoardFilterFacet.type => LucideIcons.shapes,
+    BoardFilterFacet.sprint => LucideIcons.zap,
+    BoardFilterFacet.author => LucideIcons.penLine,
+    BoardFilterFacet.label => LucideIcons.tag,
   };
 
   /// Builds the option list for the active scope.
@@ -189,7 +190,7 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
             value: BoardFilter.noSprint,
             label: context.t('issues.noSprint'),
             leading: Icon(
-              Icons.block_rounded,
+              LucideIcons.ban,
               size: 18,
               color: AppColors.inkFaint,
             ),
@@ -199,7 +200,7 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
               value: id,
               label: widget.sprintNames[id] ?? id,
               leading: Icon(
-                Icons.bolt_rounded,
+                LucideIcons.zap,
                 size: 18,
                 color: AppColors.accentStrong,
               ),
@@ -212,7 +213,7 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
               value: l,
               label: l,
               leading: Icon(
-                Icons.sell_outlined,
+                LucideIcons.tag,
                 size: 16,
                 color: AppColors.inkFaint,
               ),
@@ -419,7 +420,7 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
       ),
       child: Row(
         children: [
-          Icon(Icons.search_rounded, size: 18, color: tokens.inkSoft),
+          Icon(LucideIcons.search, size: 18, color: tokens.inkSoft),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
@@ -583,8 +584,8 @@ class _OptionRowState extends State<_OptionRow> {
               const SizedBox(width: 8),
               Icon(
                 widget.selected
-                    ? Icons.check_circle_rounded
-                    : Icons.circle_outlined,
+                    ? LucideIcons.circleCheckBig
+                    : LucideIcons.circle,
                 size: 18,
                 color: widget.selected ? AppColors.accentStrong : t.inkFaint,
               ),

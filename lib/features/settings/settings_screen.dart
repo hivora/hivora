@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -62,7 +63,7 @@ class SettingsScreen extends StatelessWidget {
           child: Column(
             children: [
               ListTile(
-                leading: Icon(Icons.language_rounded, color: AppColors.brandInk),
+                leading: Icon(LucideIcons.globe, color: AppColors.brandInk),
                 title: Text(context.t('settings.language')),
                 trailing: DropdownButton<String>(
                   value: locale.languageCode,
@@ -81,17 +82,17 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
               ListTile(
-                leading: Icon(Icons.brightness_6_rounded,
+                leading: Icon(LucideIcons.sunMoon,
                     color: AppColors.brandInk),
                 title: Text(context.t('settings.theme')),
                 trailing: _ThemeModeSelector(mode: themeMode),
               ),
               if ((config.meta?.privacyPolicyUrl ?? '').isNotEmpty)
                 ListTile(
-                  leading: Icon(Icons.privacy_tip_rounded,
+                  leading: Icon(LucideIcons.shieldAlert,
                       color: AppColors.brandInk),
                   title: Text(context.t('settings.privacyPolicy')),
-                  trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+                  trailing: const Icon(LucideIcons.externalLink, size: 18),
                   onTap: () => launchUrl(
                     Uri.parse(config.meta!.privacyPolicyUrl),
                     mode: LaunchMode.externalApplication,
@@ -99,10 +100,10 @@ class SettingsScreen extends StatelessWidget {
                 ),
               if (user?.isAdmin ?? false)
                 ListTile(
-                  leading: Icon(Icons.admin_panel_settings_rounded,
+                  leading: Icon(LucideIcons.shieldUser,
                       color: AppColors.brandInk),
                   title: Text(context.t('settings.adminArea')),
-                  trailing: const Icon(Icons.chevron_right_rounded),
+                  trailing: const Icon(LucideIcons.chevronRight),
                   onTap: () => context.go('/admin'),
                 ),
             ],
@@ -142,9 +143,9 @@ class _ThemeModeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final options = <(ThemeMode, IconData, String)>[
-      (ThemeMode.system, Icons.brightness_auto_rounded, 'settings.themeSystem'),
-      (ThemeMode.light, Icons.light_mode_rounded, 'settings.themeLight'),
-      (ThemeMode.dark, Icons.dark_mode_rounded, 'settings.themeDark'),
+      (ThemeMode.system, LucideIcons.monitorCog, 'settings.themeSystem'),
+      (ThemeMode.light, LucideIcons.sun, 'settings.themeLight'),
+      (ThemeMode.dark, LucideIcons.moon, 'settings.themeDark'),
     ];
     return Container(
       decoration: BoxDecoration(

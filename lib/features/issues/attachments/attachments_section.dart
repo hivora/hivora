@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -483,7 +484,7 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
                   color: AppColors.canvas2,
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(Icons.attach_file_rounded,
+                child: Icon(LucideIcons.paperclip,
                     size: 18, color: AppColors.inkSoft),
               ),
               const SizedBox(width: 13),
@@ -688,13 +689,13 @@ class _AttachmentTileState extends State<_AttachmentTile> {
                 child: Row(
                   children: [
                     _TileAction(
-                      icon: Icons.download_rounded,
+                      icon: LucideIcons.download,
                       tooltip: context.t('issues.attachments.download'),
                       onTap: widget.onDownload!,
                     ),
                     const SizedBox(width: 6),
                     _TileAction(
-                      icon: Icons.delete_outline_rounded,
+                      icon: LucideIcons.trash2,
                       tooltip: context.t('issues.attachments.remove'),
                       danger: true,
                       onTap: widget.onDelete!,
@@ -758,13 +759,13 @@ class _AttachmentTileState extends State<_AttachmentTile> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _TileAction(
-                          icon: Icons.refresh_rounded,
+                          icon: LucideIcons.refreshCw,
                           tooltip: context.t('issues.attachments.retry'),
                           onTap: widget.onRetry!,
                         ),
                         const SizedBox(width: 6),
                         _TileAction(
-                          icon: Icons.close_rounded,
+                          icon: LucideIcons.x,
                           tooltip: context.t('common.cancel'),
                           danger: true,
                           onTap: widget.onCancel!,
@@ -898,7 +899,7 @@ class _AddButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.attach_file_rounded,
+              const Icon(LucideIcons.paperclip,
                   size: 14, color: AppColors.accentStrong),
               const SizedBox(width: 7),
               Text(
@@ -956,7 +957,7 @@ class _DropOverlay extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Icon(Icons.cloud_upload_outlined,
+                  child: Icon(LucideIcons.cloudUpload,
                       size: 22, color: AppColors.accentStrong),
                 ),
                 const SizedBox(height: 8),

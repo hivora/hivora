@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -187,7 +188,7 @@ class GlobalSearchController extends ChangeNotifier {
           title: hit.title,
           keys: hit.title.toLowerCase(),
           subtitle: hit.subtitle,
-          leadingIcon: Icons.view_column_rounded,
+          leadingIcon: LucideIcons.columns3,
           onSelect: open,
         );
       case SearchCat.docs:
@@ -197,7 +198,7 @@ class GlobalSearchController extends ChangeNotifier {
           title: hit.title,
           keys: hit.title.toLowerCase(),
           subtitle: '${hit.space ?? 'Knowledge'} · ${_relative(hit.updatedAt)}',
-          leadingIcon: Icons.description_rounded,
+          leadingIcon: LucideIcons.fileText,
           onSelect: open,
         );
       case SearchCat.commands:
@@ -346,13 +347,13 @@ class GlobalSearchController extends ChangeNotifier {
 
   List<SearchEntry> _buildCommands(String Function(String) t) {
     const nav = <(String, String, IconData)>[
-      ('/dashboard', 'search.cmd.dashboard', Icons.dashboard_rounded),
-      ('/projects', 'search.cmd.projects', Icons.view_kanban_rounded),
-      ('/issues', 'search.cmd.issues', Icons.check_circle_outline_rounded),
-      ('/board', 'search.cmd.board', Icons.view_column_rounded),
-      ('/gantt', 'search.cmd.timeline', Icons.stacked_bar_chart_rounded),
-      ('/reports', 'search.cmd.reports', Icons.insights_rounded),
-      ('/knowledge', 'search.cmd.knowledge', Icons.menu_book_rounded),
+      ('/dashboard', 'search.cmd.dashboard', LucideIcons.layoutDashboard),
+      ('/projects', 'search.cmd.projects', LucideIcons.squareKanban),
+      ('/issues', 'search.cmd.issues', LucideIcons.circleCheck),
+      ('/board', 'search.cmd.board', LucideIcons.columns3),
+      ('/gantt', 'search.cmd.timeline', LucideIcons.chartColumnStacked),
+      ('/reports', 'search.cmd.reports', LucideIcons.chartLine),
+      ('/knowledge', 'search.cmd.knowledge', LucideIcons.bookOpen),
     ];
     return [
       for (final (route, labelKey, icon) in nav)
@@ -370,7 +371,7 @@ class GlobalSearchController extends ChangeNotifier {
         title: t('search.cmd.newIssue'),
         keys: '${t('search.cmd.newIssue')} new issue create add task bug'
             .toLowerCase(),
-        leadingIcon: Icons.add_rounded,
+        leadingIcon: LucideIcons.plus,
         hint: 'C',
         onSelect: (context) => context.go('/board'),
       ),
@@ -380,7 +381,7 @@ class GlobalSearchController extends ChangeNotifier {
         title: t('search.cmd.toggleTheme'),
         keys: '${t('search.cmd.toggleTheme')} theme dark light appearance mode'
             .toLowerCase(),
-        leadingIcon: Icons.brightness_6_rounded,
+        leadingIcon: LucideIcons.sunMoon,
         closesOnSelect: false,
         onSelect: (context) {
           final cubit = context.read<ThemeCubit>();

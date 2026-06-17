@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/api/hivora_repository.dart';
@@ -12,6 +13,7 @@ import '../../core/models/work_models.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/project_palette.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
 import '../../core/widgets/status_widgets.dart';
@@ -22,6 +24,7 @@ typedef _IssuesData = ({
   List<Issue> issues,
   int total,
   Map<String, String> names,
+  ProjectPalette palette,
 });
 
 class IssuesScreen extends StatefulWidget {
@@ -50,11 +53,18 @@ class _IssuesScreenState extends State<IssuesScreen> {
       final results = await Future.wait([
         repo.issues(projectId: widget.projectId, query: _query),
         repo.users(),
+        repo.projects(),
       ]);
       final page = results[0] as ({List<Issue> issues, int total});
       final users = results[1] as List<DirectoryUser>;
+      final projects = results[2] as List<Project>;
       final names = {for (final u in users) u.id: u.displayName};
-      return (issues: page.issues, total: page.total, names: names);
+      return (
+        issues: page.issues,
+        total: page.total,
+        names: names,
+        palette: ProjectPalette.fromProjects(projects),
+      );
     })..load();
   }
 
@@ -107,6 +117,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
         builder: (context, state) {
           final all = state.data?.issues ?? const <Issue>[];
           final names = state.data?.names ?? const <String, String>{};
+          final palette = state.data?.palette ?? ProjectPalette.empty;
           final list = _apply(all);
           return RefreshIndicator(
             onRefresh: _cubit.load,
@@ -211,6 +222,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
                               child: IssueRow(
                                 issue: issue,
                                 assignee: names[issue.assigneeId],
+                                palette: palette,
                               ),
                             ),
                         ],
@@ -226,10 +238,10 @@ class _IssuesScreenState extends State<IssuesScreen> {
   }
 
   IconData _filterIcon(_IssueFilter f) => switch (f) {
-    _IssueFilter.all => Icons.layers_rounded,
-    _IssueFilter.mine => Icons.person_rounded,
-    _IssueFilter.open => Icons.radio_button_unchecked_rounded,
-    _IssueFilter.bugs => Icons.bug_report_outlined,
+    _IssueFilter.all => LucideIcons.layers,
+    _IssueFilter.mine => LucideIcons.user,
+    _IssueFilter.open => LucideIcons.circle,
+    _IssueFilter.bugs => LucideIcons.bug,
   };
 
   String _filterKey(_IssueFilter f) => switch (f) {
@@ -315,7 +327,7 @@ class _SearchField extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         children: [
-          Icon(Icons.search_rounded, size: 16, color: AppColors.inkFaint),
+          Icon(LucideIcons.search, size: 16, color: AppColors.inkFaint),
           const SizedBox(width: 9),
           Expanded(
             child: TextField(
@@ -387,11 +399,18 @@ class _IssueTableHeader extends StatelessWidget {
 }
 
 class IssueRow extends StatelessWidget {
-  const IssueRow({super.key, required this.issue, this.assignee, this.onTap});
+  const IssueRow({
+    super.key,
+    required this.issue,
+    this.assignee,
+    this.onTap,
+    this.palette,
+  });
 
   final Issue issue;
   final String? assignee;
   final VoidCallback? onTap;
+  final ProjectPalette? palette;
 
   @override
   Widget build(BuildContext context) {
@@ -449,7 +468,12 @@ class IssueRow extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                Flexible(child: StateDotBadge(state: issue.state)),
+                Flexible(
+                  child: StateDotBadge(
+                    state: issue.state,
+                    color: palette?.stateColor(issue.state),
+                  ),
+                ),
                 const Spacer(),
                 if (name.isNotEmpty) HiveAvatar(name: name, size: 22),
                 if (due != null) ...[
@@ -497,7 +521,12 @@ class IssueRow extends StatelessWidget {
                 ),
                 if (issue.tags.isNotEmpty) ...[
                   const SizedBox(width: 8),
-                  Flexible(child: LabelTag(issue.tags.first)),
+                  Flexible(
+                    child: LabelTag(
+                      issue.tags.first,
+                      hue: palette?.labelHue(issue.tags.first),
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -507,7 +536,10 @@ class IssueRow extends StatelessWidget {
             flex: 3,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: StateDotBadge(state: issue.state),
+              child: StateDotBadge(
+                state: issue.state,
+                color: palette?.stateColor(issue.state),
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -559,7 +591,7 @@ class IssueRow extends StatelessWidget {
           ),
           const SizedBox(width: 18),
           Icon(
-            Icons.chevron_right_rounded,
+            LucideIcons.chevronRight,
             size: 18,
             color: AppColors.inkFaint,
           ),

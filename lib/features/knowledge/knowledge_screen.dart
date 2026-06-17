@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -141,7 +142,7 @@ class _ArticleNode extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(Icons.description_outlined,
+                  child: const Icon(LucideIcons.fileText,
                       color: AppColors.accentStrong, size: 18),
                 ),
                 const SizedBox(width: 14),
@@ -172,7 +173,7 @@ class _ArticleNode extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.subject_rounded,
+                      Icon(LucideIcons.alignLeft,
                           size: 13, color: AppColors.inkFaint),
                       const SizedBox(width: 4),
                       Text('${children.length}',

@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -454,32 +455,32 @@ class MarkdownEditorField extends StatelessWidget {
             child: Row(
               children: [
                 _ToolBtn(
-                  icon: Icons.title_rounded,
+                  icon: LucideIcons.heading,
                   tooltip: 'Heading',
                   onTap: () => _prefixLine('## '),
                 ),
                 _ToolBtn(
-                  icon: Icons.format_bold_rounded,
+                  icon: LucideIcons.bold,
                   tooltip: 'Bold',
                   onTap: () => _wrap('**', '**'),
                 ),
                 _ToolBtn(
-                  icon: Icons.format_italic_rounded,
+                  icon: LucideIcons.italic,
                   tooltip: 'Italic',
                   onTap: () => _wrap('_', '_'),
                 ),
                 _ToolBtn(
-                  icon: Icons.format_list_bulleted_rounded,
+                  icon: LucideIcons.list,
                   tooltip: 'List',
                   onTap: () => _prefixLine('- '),
                 ),
                 _ToolBtn(
-                  icon: Icons.code_rounded,
+                  icon: LucideIcons.code,
                   tooltip: 'Code',
                   onTap: () => _wrap('`', '`'),
                 ),
                 _ToolBtn(
-                  icon: Icons.link_rounded,
+                  icon: LucideIcons.link,
                   tooltip: 'Link',
                   onTap: () => _wrap('[', '](https://)'),
                 ),

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
@@ -73,7 +74,7 @@ Future<Issue?> showIssueForm(
           margin: const EdgeInsets.only(right: 12),
           child: IconButton(
             onPressed: () => Navigator.of(modalContext).maybePop(),
-            icon: Icon(Icons.close_rounded, color: AppColors.inkSoft),
+            icon: Icon(LucideIcons.x, color: AppColors.inkSoft),
           ),
         ),
         stickyActionBar: _CreateSaveBar(controller: controller),
@@ -153,7 +154,7 @@ class _CreateSaveBar extends StatelessWidget {
                           ),
                         ),
                         IssueCreatePhase.success => const Icon(
-                          Icons.check_rounded,
+                          LucideIcons.check,
                           key: ValueKey('success'),
                           size: 26,
                           color: Colors.white,

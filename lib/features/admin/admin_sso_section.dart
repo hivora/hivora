@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/i18n/i18n.dart';
 import 'admin_form_helpers.dart';
@@ -23,7 +24,7 @@ class _AdminSsoSectionState extends State<AdminSsoSection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AdminSectionCard(
-          icon: Icons.lock_rounded,
+          icon: LucideIcons.lock,
           title: context.t('admin.sso'),
           subtitle: context.t('admin.ssoHint'),
           children: [

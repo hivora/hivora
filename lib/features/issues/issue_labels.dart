@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
@@ -191,7 +192,7 @@ class _LabelPickerSheetState extends State<_LabelPickerSheet> {
                 decoration: InputDecoration(
                   isDense: true,
                   prefixIcon: Icon(
-                    Icons.search_rounded,
+                    LucideIcons.search,
                     size: 18,
                     color: AppColors.inkFaint,
                   ),
@@ -283,7 +284,7 @@ class _CreateRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             children: [
-              Icon(Icons.add_rounded, size: 18, color: AppColors.accentStrong),
+              Icon(LucideIcons.plus, size: 18, color: AppColors.accentStrong),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -339,7 +340,7 @@ class _LabelChip extends StatelessWidget {
               duration: const Duration(milliseconds: 130),
               child: selected
                   ? Icon(
-                      Icons.check_rounded,
+                      LucideIcons.check,
                       size: 14,
                       color: selected
                           ? AppColors.accentStrong
@@ -369,7 +370,7 @@ class _LabelChip extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      Icons.close_rounded,
+                      LucideIcons.x,
                       size: 13,
                       color: AppColors.danger,
                     ),

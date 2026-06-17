@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// The fixed grouping order of the palette (mirrors `GS_ORDER` in search.jsx).
 enum SearchCat { commands, issues, projects, people, boards, docs }
@@ -12,14 +13,14 @@ class SearchCatMeta {
 
 const Map<SearchCat, SearchCatMeta> kSearchCatMeta = {
   SearchCat.commands:
-      SearchCatMeta(Icons.keyboard_command_key_rounded, 'search.cat.commands'),
-  SearchCat.issues: SearchCatMeta(Icons.adjust_rounded, 'search.cat.issues'),
+      SearchCatMeta(LucideIcons.command, 'search.cat.commands'),
+  SearchCat.issues: SearchCatMeta(LucideIcons.circleDot, 'search.cat.issues'),
   SearchCat.projects:
-      SearchCatMeta(Icons.view_kanban_rounded, 'search.cat.projects'),
-  SearchCat.people: SearchCatMeta(Icons.group_rounded, 'search.cat.people'),
+      SearchCatMeta(LucideIcons.squareKanban, 'search.cat.projects'),
+  SearchCat.people: SearchCatMeta(LucideIcons.users, 'search.cat.people'),
   SearchCat.boards:
-      SearchCatMeta(Icons.view_column_rounded, 'search.cat.boards'),
-  SearchCat.docs: SearchCatMeta(Icons.menu_book_rounded, 'search.cat.docs'),
+      SearchCatMeta(LucideIcons.columns3, 'search.cat.boards'),
+  SearchCat.docs: SearchCatMeta(LucideIcons.bookOpen, 'search.cat.docs'),
 };
 
 /// One row in the search index. Display data is precomputed off the real

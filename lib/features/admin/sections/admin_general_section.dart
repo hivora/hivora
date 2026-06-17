@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/i18n/i18n.dart';
 import '../admin_form_helpers.dart';
@@ -46,7 +47,7 @@ class _AdminGeneralSectionState extends State<AdminGeneralSection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AdminSectionCard(
-          icon: Icons.business_rounded,
+          icon: LucideIcons.building2,
           title: context.t('admin.general'),
           subtitle: context.t('admin.generalHint'),
           children: [
@@ -66,7 +67,7 @@ class _AdminGeneralSectionState extends State<AdminGeneralSection> {
         ),
         const SizedBox(height: 16),
         AdminSectionCard(
-          icon: Icons.language_rounded,
+          icon: LucideIcons.globe,
           title: context.t('admin.localization'),
           subtitle: context.t('admin.localizationHint'),
           children: [

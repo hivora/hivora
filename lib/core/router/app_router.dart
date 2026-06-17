@@ -21,10 +21,13 @@ import '../../features/knowledge/knowledge_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/projects/projects_screen.dart';
+import '../../features/projects/settings/project_settings_screen.dart';
 import '../../features/reports/reports_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/setup/setup_screen.dart';
 import '../../features/shell/app_shell.dart';
+import '../../features/teams/team_detail_screen.dart';
+import '../../features/teams/teams_screen.dart';
 import '../../features/timesheet/timesheet_screen.dart';
 import '../blocs/app_config_bloc.dart';
 import '../blocs/auth_bloc.dart';
@@ -161,6 +164,24 @@ GoRouter buildRouter({
           GoRoute(
             path: '/projects',
             pageBuilder: (_, state) => _transition(state, const ProjectsScreen()),
+          ),
+          GoRoute(
+            path: '/projects/:id/settings',
+            pageBuilder: (_, state) => _transition(
+              state,
+              ProjectSettingsScreen(projectId: state.pathParameters['id']!),
+            ),
+          ),
+          GoRoute(
+            path: '/teams',
+            pageBuilder: (_, state) => _transition(state, const TeamsScreen()),
+          ),
+          GoRoute(
+            path: '/teams/:id',
+            pageBuilder: (_, state) => _transition(
+              state,
+              TeamDetailScreen(teamId: state.pathParameters['id']!),
+            ),
           ),
           GoRoute(
             path: '/issues',

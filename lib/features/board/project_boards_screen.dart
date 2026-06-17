@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -136,7 +137,7 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
                                     fontSize: 13,
                                   ),
                                 ),
-                                icon: const Icon(Icons.add_rounded, size: 18),
+                                icon: const Icon(LucideIcons.plus, size: 18),
                                 label: Text(context.t('board.newBoard')),
                               ),
                             ],
@@ -175,7 +176,7 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  Icons.view_kanban_rounded,
+                                  LucideIcons.squareKanban,
                                   size: 56,
                                   color: AppColors.textSecondary,
                                 ),
@@ -194,7 +195,7 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
                                     backgroundColor: AppColors.accent,
                                     foregroundColor: const Color(0xFF2A2410),
                                   ),
-                                  icon: const Icon(Icons.add_rounded, size: 18),
+                                  icon: const Icon(LucideIcons.plus, size: 18),
                                   label: Text(context.t('board.newBoard')),
                                 ),
                               ],
@@ -268,7 +269,7 @@ class _BoardCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(
-                      Icons.view_kanban_rounded,
+                      LucideIcons.squareKanban,
                       size: 13,
                       color: AppColors.navy,
                     ),
@@ -306,7 +307,7 @@ class _BoardCard extends StatelessWidget {
               ),
               const Spacer(),
               Icon(
-                Icons.arrow_forward_rounded,
+                LucideIcons.arrowRight,
                 size: 14,
                 color: AppColors.inkSoft,
               ),

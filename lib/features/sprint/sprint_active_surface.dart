@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/i18n/i18n.dart';
 import '../../core/models/work_models.dart';
@@ -289,7 +290,7 @@ class _SprintCard extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                Icons.calendar_today_rounded,
+                                LucideIcons.calendar,
                                 size: 13,
                                 color: due.late
                                     ? AppColors.danger

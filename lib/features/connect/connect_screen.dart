@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -70,7 +71,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                             autofillHints: const [AutofillHints.url],
                             decoration: InputDecoration(
                               hintText: 'https://hivora.example.org',
-                              prefixIcon: const Icon(Icons.dns_rounded),
+                              prefixIcon: const Icon(LucideIcons.server),
                               labelText: context.t('connect.serverUrl'),
                             ),
                             validator: (value) {

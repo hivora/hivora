@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
     show GlassContainer, LiquidGlassSettings, LiquidRoundedSuperellipse;
 
@@ -346,7 +347,7 @@ class GlassModalHeader extends StatelessWidget {
           const SizedBox(width: 8),
           IconButton(
             tooltip: context.t('common.cancel'),
-            icon: Icon(Icons.close_rounded, size: 20, color: AppColors.inkSoft),
+            icon: Icon(LucideIcons.x, size: 20, color: AppColors.inkSoft),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
         ],
@@ -361,7 +362,7 @@ class GlassModalFooter extends StatelessWidget {
     super.key,
     required this.confirmLabel,
     required this.onConfirm,
-    this.confirmIcon = Icons.check_rounded,
+    this.confirmIcon = LucideIcons.check,
     this.hint,
     this.busy = false,
   });

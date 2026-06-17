@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
@@ -371,7 +372,7 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
       ),
       child: Row(
         children: [
-          Icon(Icons.search_rounded, size: 22, color: tokens.inkSoft),
+          Icon(LucideIcons.search, size: 22, color: tokens.inkSoft),
           const SizedBox(width: 14),
           Expanded(
             child: TextField(
@@ -426,7 +427,7 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
               _ScopeChip(
                 tokens: tokens,
                 icon: cat == null
-                    ? Icons.auto_awesome_rounded
+                    ? LucideIcons.sparkles
                     : kSearchCatMeta[cat]!.icon,
                 label: cat == null
                     ? context.t('search.scope.all')
@@ -547,7 +548,7 @@ class _Results extends StatelessWidget {
       if (controller.query.trim().isNotEmpty) {
         children.add(_EmptyDeep(
           tokens: tokens,
-          icon: Icons.search_off_rounded,
+          icon: LucideIcons.searchX,
           title: context.t('search.noMatch',
               variables: {'q': controller.query.trim()}),
           subtitle: context.t('search.noMatchSub'),
@@ -705,7 +706,7 @@ class _ResultRow extends StatelessWidget {
       case SearchCat.commands:
       case SearchCat.boards:
       case SearchCat.docs:
-        return _IconTile(tokens: tokens, icon: entry.leadingIcon ?? Icons.bolt_rounded);
+        return _IconTile(tokens: tokens, icon: entry.leadingIcon ?? LucideIcons.zap);
     }
   }
 
@@ -850,7 +851,7 @@ class _RecentRow extends StatelessWidget {
       onTap: onTap,
       onHover: onHover,
       children: [
-        _IconTile(tokens: tokens, icon: Icons.schedule_rounded),
+        _IconTile(tokens: tokens, icon: LucideIcons.clock),
         const SizedBox(width: 13),
         Expanded(
           child: Text(
@@ -862,7 +863,7 @@ class _RecentRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Icon(Icons.north_west_rounded, size: 15, color: tokens.inkFaint),
+        Icon(LucideIcons.arrowUpLeft, size: 15, color: tokens.inkFaint),
       ],
     );
   }
@@ -1009,7 +1010,7 @@ class _EscPill extends StatelessWidget {
     return Tooltip(
       message: 'esc',
       child: IconButton(
-        icon: Icon(Icons.close_rounded),
+        icon: Icon(LucideIcons.x),
         color: tokens.inkSoft,
         onPressed: onTap,
         style: ButtonStyle(

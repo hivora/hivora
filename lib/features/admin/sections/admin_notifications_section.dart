@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/i18n/i18n.dart';
 import '../admin_form_helpers.dart';
@@ -26,7 +27,7 @@ class _AdminNotificationsSectionState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AdminSectionCard(
-          icon: Icons.notifications_active_rounded,
+          icon: LucideIcons.bellRing,
           title: context.t('admin.pushNotifications'),
           subtitle: context.t('admin.pushHint'),
           children: [
@@ -63,7 +64,7 @@ class _AdminNotificationsSectionState
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline_rounded,
+                    const Icon(LucideIcons.info,
                         size: 16, color: Color(0xFFF57F17)),
                     const SizedBox(width: 8),
                     Expanded(

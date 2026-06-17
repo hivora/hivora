@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
@@ -58,7 +59,7 @@ class _AdminUsersSectionState extends State<AdminUsersSection> {
             ),
             TextButton.icon(
               onPressed: _showCreate,
-              icon: const Icon(Icons.person_add_rounded, size: 18),
+              icon: const Icon(LucideIcons.userPlus, size: 18),
               label: Text(context.t('admin.newUser')),
             ),
           ],
@@ -100,8 +101,8 @@ class _AdminUsersSectionState extends State<AdminUsersSection> {
                         : 'admin.activate'),
                     icon: Icon(
                       user['active'] == true
-                          ? Icons.toggle_on_rounded
-                          : Icons.toggle_off_rounded,
+                          ? LucideIcons.toggleRight
+                          : LucideIcons.toggleLeft,
                       color: user['active'] == true
                           ? AppColors.success
                           : AppColors.textSecondary,
@@ -113,7 +114,7 @@ class _AdminUsersSectionState extends State<AdminUsersSection> {
                   IconButton(
                     tooltip: context.t('admin.toggleAdmin'),
                     icon: Icon(
-                      Icons.shield_rounded,
+                      LucideIcons.shield,
                       color: ((user['roles'] as List<dynamic>?) ?? [])
                               .contains('ADMIN')
                           ? AppColors.navy

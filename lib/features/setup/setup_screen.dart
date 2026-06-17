@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -65,19 +66,19 @@ class _SetupScreenState extends State<SetupScreen> {
                         style: TextStyle(color: AppColors.textSecondary),
                       ),
                       const SizedBox(height: 24),
-                      _field(_organization, 'setup.organization', Icons.apartment_rounded),
-                      _field(_displayName, 'setup.displayName', Icons.badge_rounded),
-                      _field(_email, 'setup.email', Icons.alternate_email_rounded,
+                      _field(_organization, 'setup.organization', LucideIcons.building2),
+                      _field(_displayName, 'setup.displayName', LucideIcons.idCard),
+                      _field(_email, 'setup.email', LucideIcons.atSign,
                           keyboardType: TextInputType.emailAddress,
                           validator: (v) => v != null && v.contains('@')
                               ? null
                               : context.t('errors.invalidEmail')),
-                      _field(_username, 'setup.username', Icons.person_rounded,
+                      _field(_username, 'setup.username', LucideIcons.user,
                           validator: (v) => RegExp(r'^[a-zA-Z0-9._-]{3,40}$')
                                   .hasMatch(v ?? '')
                               ? null
                               : context.t('errors.invalidUsername')),
-                      _field(_password, 'setup.password', Icons.lock_rounded,
+                      _field(_password, 'setup.password', LucideIcons.lock,
                           obscure: true,
                           validator: (v) => (v ?? '').length >= 10
                               ? null

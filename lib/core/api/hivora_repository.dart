@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../models/content_models.dart';
 import '../models/core_models.dart';
 import '../models/search_api.dart';
+import '../models/team_models.dart';
 import '../models/work_models.dart';
 import 'api_client.dart';
 
@@ -77,10 +78,16 @@ class HivoraRepository {
 
   // --- Projects -------------------------------------------------------------
 
-  Future<List<Project>> projects() async =>
-      ((await _api.get('/api/v1/projects')) as List<dynamic>)
+  Future<List<Project>> projects({bool archived = false}) async =>
+      ((await _api.get('/api/v1/projects',
+                  query: archived ? {'archived': 'true'} : null))
+              as List<dynamic>)
           .map((p) => Project.fromJson(p as Map<String, dynamic>))
           .toList();
+
+  Future<Project> project(String id) async => Project.fromJson(
+    await _api.get('/api/v1/projects/$id') as Map<String, dynamic>,
+  );
 
   Future<Project> createProject({
     required String key,
@@ -98,6 +105,16 @@ class HivoraRepository {
           },
         )
         as Map<String, dynamic>,
+  );
+
+  /// Atomically commits the full edited project from the settings surface. Pass
+  /// only the fields that changed; the server re-validates every invariant
+  /// (>=1 lead, >=2 states, >=1 resolved) and cascades workflow/label renames.
+  Future<Project> updateProject(
+    String id,
+    Map<String, dynamic> patch,
+  ) async => Project.fromJson(
+    await _api.patch('/api/v1/projects/$id', body: patch) as Map<String, dynamic>,
   );
 
   /// Permanently removes a label from the project and every issue using it.
@@ -533,4 +550,112 @@ class HivoraRepository {
 
   Future<void> adminDeleteUser(String id) =>
       _api.delete('/api/v1/admin/users/$id');
+
+  // --- Teams ----------------------------------------------------------------
+
+  Future<List<Team>> teams() async =>
+      ((await _api.get('/api/v1/teams')) as List<dynamic>)
+          .map((t) => Team.fromJson(t as Map<String, dynamic>))
+          .toList();
+
+  Future<Team> team(String id) async => Team.fromJson(
+        await _api.get('/api/v1/teams/$id') as Map<String, dynamic>,
+      );
+
+  Future<Team> createTeam({
+    required String name,
+    required String key,
+    String? description,
+    required int colorHue,
+    required String icon,
+  }) async =>
+      Team.fromJson(
+        await _api.post('/api/v1/teams', body: {
+          'name': name,
+          'key': key,
+          'description': ?description,
+          'colorHue': colorHue,
+          'icon': icon,
+        }) as Map<String, dynamic>,
+      );
+
+  Future<Team> updateTeam(String id, Map<String, dynamic> patch) async =>
+      Team.fromJson(
+        await _api.patch('/api/v1/teams/$id', body: patch)
+            as Map<String, dynamic>,
+      );
+
+  Future<void> deleteTeam(String id) => _api.delete('/api/v1/teams/$id');
+
+  /// Adds [userIds] to the team with a single [role] + [access] for the batch.
+  Future<Team> addTeamMembers(
+    String teamId,
+    List<String> userIds, {
+    required TeamRole role,
+    required ProjectAccess access,
+  }) async =>
+      Team.fromJson(
+        await _api.post('/api/v1/teams/$teamId/members', body: {
+          'userIds': userIds,
+          'role': role.wire,
+          'access': access.toJson(),
+        }) as Map<String, dynamic>,
+      );
+
+  Future<Team> updateTeamMembership(
+    String teamId,
+    String userId, {
+    TeamRole? role,
+    ProjectAccess? access,
+  }) async =>
+      Team.fromJson(
+        await _api.patch('/api/v1/teams/$teamId/members/$userId', body: {
+          if (role != null) 'role': role.wire,
+          if (access != null) 'access': access.toJson(),
+        }) as Map<String, dynamic>,
+      );
+
+  Future<Team> removeTeamMember(String teamId, String userId) async =>
+      Team.fromJson(
+        await _api.delete('/api/v1/teams/$teamId/members/$userId')
+            as Map<String, dynamic>,
+      );
+
+  Future<Team> attachTeamProjects(String teamId, List<String> projectIds) async =>
+      Team.fromJson(
+        await _api.post('/api/v1/teams/$teamId/projects',
+            body: {'projectIds': projectIds}) as Map<String, dynamic>,
+      );
+
+  Future<Project> createTeamProject(
+    String teamId, {
+    required String key,
+    required String name,
+    String? description,
+    String? color,
+    String? leadId,
+  }) async =>
+      Project.fromJson(
+        await _api.post('/api/v1/teams/$teamId/projects/new', body: {
+          'key': key,
+          'name': name,
+          'description': ?description,
+          'color': ?color,
+          'leadId': ?leadId,
+        }) as Map<String, dynamic>,
+      );
+
+  Future<Team> detachTeamProject(String teamId, String projectId) async =>
+      Team.fromJson(
+        await _api.delete('/api/v1/teams/$teamId/projects/$projectId')
+            as Map<String, dynamic>,
+      );
+
+  Future<List<TeamActivity>> teamActivity(String teamId, {int page = 0}) async {
+    final data = await _api.get('/api/v1/teams/$teamId/activity',
+        query: {'page': page}) as Map<String, dynamic>;
+    return ((data['content'] as List<dynamic>?) ?? const [])
+        .map((a) => TeamActivity.fromJson(a as Map<String, dynamic>))
+        .toList();
+  }
 }

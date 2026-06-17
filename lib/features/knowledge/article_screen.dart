@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/api/hivora_repository.dart';
@@ -69,7 +70,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
                                 await showArticleEditor(context, existing: article);
                             if (saved != null) _cubit.load();
                           },
-                          icon: const Icon(Icons.edit_rounded),
+                          icon: const Icon(LucideIcons.pencil),
                         ),
                       ],
                     ),

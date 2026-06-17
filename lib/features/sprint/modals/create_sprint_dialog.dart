@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/i18n/i18n.dart';
 import '../../../core/theme/app_colors.dart';
@@ -84,7 +85,7 @@ class _CreateSprintBodyState extends State<_CreateSprintBody> {
       mainAxisSize: MainAxisSize.min,
       children: [
         GlassModalHeader(
-          icon: Icons.rocket_launch_rounded,
+          icon: LucideIcons.rocket,
           title: context.t('sprint.create.title'),
           subtitle: context.t('sprint.create.sub'),
         ),
@@ -229,7 +230,7 @@ class _DateButton extends StatelessWidget {
               ),
               if (!muted)
                 Icon(
-                  Icons.calendar_today_rounded,
+                  LucideIcons.calendar,
                   size: 15,
                   color: AppColors.inkSoft,
                 ),

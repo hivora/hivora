@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -740,7 +741,7 @@ class _ExportButton extends StatelessWidget {
         PopupMenuItem(
           value: 'pdf',
           child: Row(children: [
-            const Icon(Icons.picture_as_pdf_outlined, size: 18),
+            const Icon(LucideIcons.fileText, size: 18),
             const SizedBox(width: 10),
             Text(context.t('reports.exportPdf')),
           ]),
@@ -748,7 +749,7 @@ class _ExportButton extends StatelessWidget {
         PopupMenuItem(
           value: 'csv',
           child: Row(children: [
-            const Icon(Icons.table_chart_outlined, size: 18),
+            const Icon(LucideIcons.table, size: 18),
             const SizedBox(width: 10),
             Text(context.t('reports.exportCsv')),
           ]),
@@ -756,7 +757,7 @@ class _ExportButton extends StatelessWidget {
         PopupMenuItem(
           value: 'json',
           child: Row(children: [
-            const Icon(Icons.data_object_rounded, size: 18),
+            const Icon(LucideIcons.braces, size: 18),
             const SizedBox(width: 10),
             Text(context.t('reports.exportJson')),
           ]),
@@ -772,7 +773,7 @@ class _ExportButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.download_rounded, size: 16, color: AppColors.ink),
+            Icon(LucideIcons.download, size: 16, color: AppColors.ink),
             const SizedBox(width: 8),
             Text(context.t('reports.export'),
                 style: TextStyle(
@@ -831,7 +832,7 @@ class _ProjectPicker extends StatelessWidget {
                       fontSize: 13, fontWeight: FontWeight.w600)),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.expand_more_rounded,
+            Icon(LucideIcons.chevronDown,
                 size: 16, color: AppColors.inkSoft),
           ],
         ),

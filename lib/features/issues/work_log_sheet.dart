@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
@@ -119,7 +120,7 @@ class _WorkLogBodyState extends State<_WorkLogBody> {
             ),
             const SizedBox(height: 14),
             OutlinedButton.icon(
-              icon: const Icon(Icons.event_rounded, size: 18),
+              icon: const Icon(LucideIcons.calendarDays, size: 18),
               label: Text(
                 MaterialLocalizations.of(context).formatShortDate(_date),
               ),

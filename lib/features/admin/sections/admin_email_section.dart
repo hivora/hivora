@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/i18n/i18n.dart';
 import '../admin_form_helpers.dart';
@@ -29,7 +30,7 @@ class _AdminEmailSectionState extends State<AdminEmailSection> {
       children: [
         // ─── Outbound SMTP ───────────────────────────────────────
         AdminSectionCard(
-          icon: Icons.send_rounded,
+          icon: LucideIcons.send,
           title: context.t('admin.smtpTitle'),
           subtitle: context.t('admin.smtpHint'),
           children: [
@@ -105,7 +106,7 @@ class _AdminEmailSectionState extends State<AdminEmailSection> {
 
         // ─── Email-to-Ticket (IMAP ingest) ───────────────────────
         AdminSectionCard(
-          icon: Icons.move_to_inbox_rounded,
+          icon: LucideIcons.inbox,
           title: context.t('admin.emailIngest'),
           subtitle: context.t('admin.emailIngestHint'),
           children: [

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -37,13 +38,13 @@ typedef _SectionMeta = ({
 });
 
 const _navItems = <_SectionMeta>[
-  (section: _AdminSection.general,        icon: Icons.business_rounded,       labelKey: 'admin.general',           group: 'navGeneral'),
-  (section: _AdminSection.security,       icon: Icons.shield_rounded,         labelKey: 'admin.security',          group: 'navGeneral'),
-  (section: _AdminSection.authentication, icon: Icons.lock_rounded,           labelKey: 'admin.authentication',    group: 'navIntegrations'),
-  (section: _AdminSection.email,          icon: Icons.mail_rounded,           labelKey: 'admin.email',             group: 'navIntegrations'),
-  (section: _AdminSection.notifications,  icon: Icons.notifications_rounded,  labelKey: 'admin.pushNotifications', group: 'navIntegrations'),
-  (section: _AdminSection.auditLog,       icon: Icons.history_rounded,        labelKey: 'admin.auditLog',          group: 'navSystem'),
-  (section: _AdminSection.users,          icon: Icons.people_rounded,         labelKey: 'admin.users',             group: 'navSystem'),
+  (section: _AdminSection.general,        icon: LucideIcons.building2,       labelKey: 'admin.general',           group: 'navGeneral'),
+  (section: _AdminSection.security,       icon: LucideIcons.shield,         labelKey: 'admin.security',          group: 'navGeneral'),
+  (section: _AdminSection.authentication, icon: LucideIcons.lock,           labelKey: 'admin.authentication',    group: 'navIntegrations'),
+  (section: _AdminSection.email,          icon: LucideIcons.mail,           labelKey: 'admin.email',             group: 'navIntegrations'),
+  (section: _AdminSection.notifications,  icon: LucideIcons.bell,  labelKey: 'admin.pushNotifications', group: 'navIntegrations'),
+  (section: _AdminSection.auditLog,       icon: LucideIcons.history,        labelKey: 'admin.auditLog',          group: 'navSystem'),
+  (section: _AdminSection.users,          icon: LucideIcons.users,         labelKey: 'admin.users',             group: 'navSystem'),
 ];
 
 // ─────────────────────────── Root screen ─────────────────────────────────
@@ -132,7 +133,7 @@ class _AdminScreenState extends State<AdminScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off_rounded,
+            Icon(LucideIcons.cloudOff,
                 size: 48, color: AppColors.inkFaint),
             const SizedBox(height: 12),
             Text(context.t(_error!),
@@ -334,8 +335,8 @@ class _MobileNavTile extends StatelessWidget {
               ),
               Icon(
                 isUsers
-                    ? Icons.open_in_new_rounded
-                    : Icons.chevron_right_rounded,
+                    ? LucideIcons.externalLink
+                    : LucideIcons.chevronRight,
                 size: 18,
                 color: AppColors.inkFaint,
               ),
@@ -392,7 +393,7 @@ class _MobileDetailView extends StatelessWidget {
                   )
                 : TextButton.icon(
                     onPressed: onSave,
-                    icon: const Icon(Icons.save_rounded, size: 16),
+                    icon: const Icon(LucideIcons.save, size: 16),
                     label: Text(context.t('common.save')),
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.navy,
@@ -599,7 +600,7 @@ class _DesktopSectionContent extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 10),
                         ),
-                        icon: const Icon(Icons.save_rounded, size: 16),
+                        icon: const Icon(LucideIcons.save, size: 16),
                         label: Text(context.t('common.save')),
                       ),
             ],
@@ -714,7 +715,7 @@ class _NavItem extends StatelessWidget {
                   ),
                 ),
                 if (isUsers)
-                  Icon(Icons.open_in_new_rounded,
+                  Icon(LucideIcons.externalLink,
                       size: 12, color: AppColors.inkFaint),
               ],
             ),
@@ -745,7 +746,7 @@ class _AuditLogPlaceholder extends StatelessWidget {
                 color: AppColors.canvas2,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Icon(Icons.history_rounded,
+              child: Icon(LucideIcons.history,
                   size: 36, color: AppColors.inkSoft),
             ),
             const SizedBox(height: 20),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../i18n/i18n.dart';
 import '../theme/app_colors.dart';
@@ -35,14 +36,16 @@ class PillChip extends StatelessWidget {
   }
 }
 
-/// State badge shown inline in issue rows.
+/// State badge shown inline in issue rows. [color] overrides the global
+/// state-palette color (used to honour a project's configured state hue).
 class StateBadge extends StatelessWidget {
-  const StateBadge({super.key, required this.state});
+  const StateBadge({super.key, required this.state, this.color});
   final String state;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    final color = AppColors.stateColor(state);
+    final color = this.color ?? AppColors.stateColor(state);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -101,7 +104,7 @@ class AsyncView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.cloud_off_rounded,
+              Icon(LucideIcons.cloudOff,
                   size: 40, color: AppColors.inkFaint),
               const SizedBox(height: 12),
               Text(

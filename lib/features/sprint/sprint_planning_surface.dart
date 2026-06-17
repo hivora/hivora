@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/i18n/i18n.dart';
 import '../../core/models/work_models.dart';
@@ -98,12 +99,12 @@ class SprintPlanningSurface extends StatelessWidget {
                 action: s.id == activeSprintId
                     ? GhostButton(
                         label: context.t('sprint.completeSprint'),
-                        icon: Icons.flag_rounded,
+                        icon: LucideIcons.flag,
                         onPressed: () => onCompleteSprint(s),
                       )
                     : PrimaryButton(
                         label: context.t('sprint.startSprint'),
-                        icon: Icons.play_arrow_rounded,
+                        icon: LucideIcons.play,
                         onPressed: (issuesBySprint[s.id] ?? const []).isEmpty
                             ? null
                             : () => onStartSprint(s),
@@ -191,7 +192,7 @@ class _SearchFieldState extends State<_SearchField> {
       style: const TextStyle(fontSize: 13),
       decoration: InputDecoration(
         isDense: true,
-        prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.inkFaint),
+        prefixIcon: Icon(LucideIcons.search, size: 18, color: AppColors.inkFaint),
         prefixIconConstraints: const BoxConstraints(minWidth: 38),
         hintText: context.t('sprint.filterBacklog'),
         filled: true,
@@ -343,7 +344,7 @@ class _SprintGroupHeader extends StatelessWidget {
             child: AnimatedRotation(
               duration: const Duration(milliseconds: 180),
               turns: collapsed ? -0.25 : 0,
-              child: Icon(Icons.expand_more_rounded,
+              child: Icon(LucideIcons.chevronDown,
                   size: 18, color: AppColors.inkSoft),
             ),
           ),
@@ -473,7 +474,7 @@ class _StateBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            active ? Icons.bolt_rounded : Icons.schedule_rounded,
+            active ? LucideIcons.zap : LucideIcons.clock,
             size: 12,
             color: active ? AppColors.accentStrong : AppColors.inkSoft,
           ),
@@ -562,7 +563,7 @@ class _BacklogGroupState extends State<_BacklogGroup> {
                         child: AnimatedRotation(
                           duration: const Duration(milliseconds: 180),
                           turns: _collapsed ? -0.25 : 0,
-                          child: Icon(Icons.expand_more_rounded,
+                          child: Icon(LucideIcons.chevronDown,
                               size: 18, color: AppColors.inkSoft),
                         ),
                       ),
@@ -748,7 +749,7 @@ class _Pager extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _pageBtn(
-            child: const Icon(Icons.chevron_left_rounded, size: 18),
+            child: const Icon(LucideIcons.chevronLeft, size: 18),
             enabled: page > 0,
             onTap: () => onPage(page - 1),
           ),
@@ -774,7 +775,7 @@ class _Pager extends StatelessWidget {
             ),
           ),
           _pageBtn(
-            child: const Icon(Icons.chevron_right_rounded, size: 18),
+            child: const Icon(LucideIcons.chevronRight, size: 18),
             enabled: page < pages - 1,
             onTap: () => onPage(page + 1),
           ),
@@ -898,7 +899,7 @@ class _BulkBar extends StatelessWidget {
             const Spacer(),
             IconButton(
               onPressed: onClose,
-              icon: const Icon(Icons.close_rounded, size: 18, color: Colors.white70),
+              icon: const Icon(LucideIcons.x, size: 18, color: Colors.white70),
             ),
           ],
         ),

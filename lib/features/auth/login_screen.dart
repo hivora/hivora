@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -122,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             autofillHints: const [AutofillHints.username],
                             decoration: InputDecoration(
                               labelText: context.t('auth.identifier'),
-                              prefixIcon: const Icon(Icons.person_rounded),
+                              prefixIcon: const Icon(LucideIcons.user),
                             ),
                             validator: (v) => (v == null || v.trim().isEmpty)
                                 ? context.t('errors.required')
@@ -136,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             autofillHints: const [AutofillHints.password],
                             decoration: InputDecoration(
                               labelText: context.t('auth.password'),
-                              prefixIcon: const Icon(Icons.lock_rounded),
+                              prefixIcon: const Icon(LucideIcons.lock),
                             ),
                             validator: (v) => (v == null || v.isEmpty)
                                 ? context.t('errors.required')
@@ -196,7 +197,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             child: HiveLoader(
                                                 size: 18, strokeWidth: 2),
                                           )
-                                        : const Icon(Icons.shield_rounded,
+                                        : const Icon(LucideIcons.shield,
                                             size: 18, key: ValueKey('icon')),
                                   ),
                                   label: AnimatedSwitcher(

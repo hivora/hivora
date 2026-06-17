@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/i18n/i18n.dart';
 import '../../../core/theme/app_colors.dart';
@@ -77,7 +78,7 @@ class _StartSprintBodyState extends State<_StartSprintBody> {
       mainAxisSize: MainAxisSize.min,
       children: [
         GlassModalHeader(
-          icon: Icons.play_arrow_rounded,
+          icon: LucideIcons.play,
           title: context.t(
             'sprint.start.title',
             variables: {'name': widget.sprintName},
@@ -91,7 +92,7 @@ class _StartSprintBodyState extends State<_StartSprintBody> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 GlassInfoLine(
-                  icon: Icons.layers_rounded,
+                  icon: LucideIcons.layers,
                   child: Row(
                     children: [
                       Expanded(
@@ -153,7 +154,7 @@ class _StartSprintBodyState extends State<_StartSprintBody> {
                 ),
                 const SizedBox(height: 16),
                 GlassInfoLine(
-                  icon: Icons.event_rounded,
+                  icon: LucideIcons.calendarDays,
                   child: Text.rich(
                     TextSpan(
                       style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
@@ -172,7 +173,7 @@ class _StartSprintBodyState extends State<_StartSprintBody> {
         ),
         GlassModalFooter(
           confirmLabel: context.t('sprint.start.cta'),
-          confirmIcon: Icons.play_arrow_rounded,
+          confirmIcon: LucideIcons.play,
           onConfirm: () => Navigator.of(context).pop(
             StartSprintData(
               goal: _goal.text.trim().isEmpty ? null : _goal.text.trim(),

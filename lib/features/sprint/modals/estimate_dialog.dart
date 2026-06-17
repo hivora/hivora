@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/i18n/i18n.dart';
 import '../../../core/models/work_models.dart';
@@ -56,7 +57,7 @@ class _EstimateBodyState extends State<_EstimateBody> {
       mainAxisSize: MainAxisSize.min,
       children: [
         GlassModalHeader(
-          icon: Icons.style_rounded,
+          icon: LucideIcons.swatchBook,
           title: context.t('sprint.estimate.title'),
           subtitle: widget.subtitle,
         ),

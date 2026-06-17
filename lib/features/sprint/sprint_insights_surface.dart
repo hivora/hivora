@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/i18n/i18n.dart';
 import '../../core/models/work_models.dart';
@@ -112,13 +113,13 @@ class SprintInsightsSurface extends StatelessWidget {
   Widget _summary(BuildContext context, SprintSummary s) {
     final cards = [
       _StatCard(
-        icon: Icons.adjust_rounded,
+        icon: LucideIcons.circleDot,
         label: context.t('sprint.committed'),
         value: '${s.committed}',
         sub: context.t('sprint.storyPoints'),
       ),
       _StatCard(
-        icon: Icons.check_circle_outline_rounded,
+        icon: LucideIcons.circleCheck,
         label: context.t('sprint.completed'),
         value: '${s.completed}',
         valueColor: SprintTokens.done,
@@ -127,13 +128,13 @@ class SprintInsightsSurface extends StatelessWidget {
         }),
       ),
       _StatCard(
-        icon: Icons.local_fire_department_outlined,
+        icon: LucideIcons.flame,
         label: context.t('sprint.remaining'),
         value: '${s.remaining}',
         sub: context.t('sprint.pointsWord'),
       ),
       _StatCard(
-        icon: Icons.speed_rounded,
+        icon: LucideIcons.gauge,
         label: context.t('sprint.avgVelocity'),
         value: '${s.avgVelocity}',
         sub: context.t('sprint.lastSprints'),
@@ -514,7 +515,7 @@ class _BreakdownCard extends StatelessWidget {
                       CircleAvatar(
                         radius: 13,
                         backgroundColor: AppColors.canvas2,
-                        child: Icon(Icons.person_outline_rounded,
+                        child: Icon(LucideIcons.user,
                             size: 15, color: AppColors.inkFaint),
                       )
                     else

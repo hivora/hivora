@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -32,24 +33,25 @@ class _Destination {
 }
 
 const _primary = [
-  _Destination('/dashboard', 'nav.dashboard', Icons.dashboard_rounded),
-  _Destination('/projects', 'nav.projects', Icons.folder_rounded),
-  _Destination('/issues', 'nav.issues', Icons.task_alt_rounded),
-  _Destination('/board', 'nav.board', Icons.view_kanban_rounded),
+  _Destination('/dashboard', 'nav.dashboard', LucideIcons.layoutDashboard),
+  _Destination('/projects', 'nav.projects', LucideIcons.folder),
+  _Destination('/teams', 'nav.teams', LucideIcons.usersRound),
+  _Destination('/issues', 'nav.issues', LucideIcons.circleCheckBig),
+  _Destination('/board', 'nav.board', LucideIcons.squareKanban),
 ];
 
 const _secondary = [
-  _Destination('/gantt', 'nav.gantt', Icons.stacked_bar_chart_rounded),
-  _Destination('/timesheet', 'nav.timesheet', Icons.table_chart_rounded),
-  _Destination('/reports', 'nav.reports', Icons.insights_rounded),
-  _Destination('/knowledge', 'nav.knowledge', Icons.menu_book_rounded),
+  _Destination('/gantt', 'nav.gantt', LucideIcons.chartColumnStacked),
+  _Destination('/timesheet', 'nav.timesheet', LucideIcons.table),
+  _Destination('/reports', 'nav.reports', LucideIcons.chartLine),
+  _Destination('/knowledge', 'nav.knowledge', LucideIcons.bookOpen),
 ];
 
 const _bottomTabs = [
-  _Destination('/dashboard', 'nav.dashboard', Icons.dashboard_rounded),
-  _Destination('/issues', 'nav.issues', Icons.task_alt_rounded),
-  _Destination('/board', 'nav.board', Icons.view_kanban_rounded),
-  _Destination('/more', 'nav.more', Icons.grid_view_rounded),
+  _Destination('/dashboard', 'nav.dashboard', LucideIcons.layoutDashboard),
+  _Destination('/issues', 'nav.issues', LucideIcons.circleCheckBig),
+  _Destination('/board', 'nav.board', LucideIcons.squareKanban),
+  _Destination('/more', 'nav.more', LucideIcons.layoutGrid),
 ];
 
 /// Responsive scaffold:
@@ -141,6 +143,7 @@ String? _subPageTitleKey(String location) {
   if (location.startsWith('/knowledge/')) return 'nav.knowledge';
   if (location.startsWith('/boards/')) return 'nav.board';
   if (location.startsWith('/projects/')) return 'board.boards';
+  if (location.startsWith('/teams/')) return 'nav.teams';
   return null;
 }
 
@@ -153,6 +156,7 @@ String _subPageBackRoute(String location) {
   if (location.startsWith('/knowledge/')) return '/knowledge';
   if (location.startsWith('/boards/')) return '/board';
   if (location.startsWith('/projects/')) return '/projects';
+  if (location.startsWith('/teams/')) return '/teams';
   return '/dashboard';
 }
 
@@ -177,6 +181,9 @@ bool _isActive(String location, String navRoute) {
   }
   if (navRoute == '/projects') {
     return location.startsWith('/projects');
+  }
+  if (navRoute == '/teams') {
+    return location.startsWith('/teams');
   }
   return location.startsWith(navRoute);
 }
@@ -303,7 +310,7 @@ class _NavRail extends StatelessWidget {
               ),
               child: collapsed
                   ? _RailIconButton(
-                      icon: Icons.add_rounded,
+                      icon: LucideIcons.plus,
                       active: false,
                       amber: true,
                       tooltip: 'New issue',
@@ -340,7 +347,7 @@ class _NavRail extends StatelessWidget {
                             textStyle: const TextStyle(
                                 fontWeight: FontWeight.w600, fontSize: 13.5),
                           ),
-                          icon: const Icon(Icons.add_rounded, size: 18),
+                          icon: const Icon(LucideIcons.plus, size: 18),
                           label: const Text('New issue'),
                         ),
                       ),
@@ -621,7 +628,7 @@ class _HivoraTopBar extends StatelessWidget {
       final current = all.firstWhere(
         (d) => _isActive(location, d.route),
         orElse: () =>
-            const _Destination('/', 'nav.dashboard', Icons.home_rounded),
+            const _Destination('/', 'nav.dashboard', LucideIcons.house),
       );
       titleText = context.t(current.labelKey);
     }
@@ -654,7 +661,7 @@ class _HivoraTopBar extends StatelessWidget {
                   onPressed: onBack,
                   visualDensity: VisualDensity.compact,
                   tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  icon: Icon(Icons.arrow_back_rounded,
+                  icon: Icon(LucideIcons.arrowLeft,
                       size: 20, color: AppColors.inkSoft),
                 ),
                 const SizedBox(width: 4),
@@ -673,7 +680,7 @@ class _HivoraTopBar extends StatelessWidget {
                         Text(context.t('appbar.workspace'), style: segStyle),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Icon(Icons.chevron_right_rounded,
+                          child: Icon(LucideIcons.chevronRight,
                               size: 16, color: AppColors.inkFaint),
                         ),
                       ],
@@ -693,7 +700,7 @@ class _HivoraTopBar extends StatelessWidget {
               _NotificationBell(active: location.startsWith('/notifications')),
               const SizedBox(width: 4),
               _TopIconButton(
-                icon: Icons.settings_rounded,
+                icon: LucideIcons.settings,
                 tooltip: context.t('nav.settings'),
                 active: location.startsWith('/settings'),
                 onTap: () => context.go('/settings'),
@@ -716,7 +723,7 @@ class _TopSearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     if (compact) {
       return _TopIconButton(
-        icon: Icons.search_rounded,
+        icon: LucideIcons.search,
         tooltip: context.t('appbar.search'),
         onTap: () => openGlobalSearch(context),
       );
@@ -736,7 +743,7 @@ class _TopSearchField extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             child: Row(
               children: [
-                Icon(Icons.search_rounded,
+                Icon(LucideIcons.search,
                     size: 16, color: AppColors.inkFaint),
                 const SizedBox(width: 9),
                 Expanded(
@@ -916,7 +923,7 @@ class _NotificationBellState extends State<_NotificationBell> {
             child: CompositedTransformTarget(
               link: _link,
               child: _TopIconButton(
-                icon: Icons.notifications_none_rounded,
+                icon: LucideIcons.bell,
                 tooltip: context.t('nav.notifications'),
                 active: widget.active || _open,
                 onTap: _toggle,
@@ -1104,7 +1111,7 @@ class _NotifPopoverCard extends StatelessWidget {
                             color: AppColors.inkSoft),
                       ),
                       const SizedBox(width: 6),
-                      Icon(Icons.arrow_forward_rounded,
+                      Icon(LucideIcons.arrowRight,
                           size: 15, color: AppColors.inkSoft),
                     ],
                   ),
@@ -1206,17 +1213,17 @@ class _NotifRow extends StatelessWidget {
 
 /// Leading icon + tint for a notification type.
 (IconData, Color) _notifVisual(String type) => switch (type.toUpperCase()) {
-      'MENTION' => (Icons.alternate_email_rounded, AppColors.stReview),
+      'MENTION' => (LucideIcons.atSign, AppColors.stReview),
       'ASSIGN' ||
       'ASSIGNED' ||
       'ASSIGNMENT' =>
-        (Icons.assignment_ind_rounded, AppColors.stTodo),
-      'COMMENT' => (Icons.mode_comment_outlined, AppColors.stProgress),
+        (LucideIcons.userCheck, AppColors.stTodo),
+      'COMMENT' => (LucideIcons.messageSquare, AppColors.stProgress),
       'REVIEW' ||
       'REVIEW_REQUEST' =>
-        (Icons.rate_review_rounded, AppColors.stReview),
-      'DUE' || 'DEADLINE' => (Icons.event_rounded, AppColors.priHigh),
-      _ => (Icons.notifications_rounded, AppColors.inkSoft),
+        (LucideIcons.messageSquareText, AppColors.stReview),
+      'DUE' || 'DEADLINE' => (LucideIcons.calendarDays, AppColors.priHigh),
+      _ => (LucideIcons.bell, AppColors.inkSoft),
     };
 
 /// Compact relative time ("now", "8m", "2h", "3d", "5w").
@@ -1443,7 +1450,7 @@ class _GlassTopBar extends StatelessWidget {
       final current = all.firstWhere(
         (d) => _isActive(location, d.route),
         orElse: () =>
-            const _Destination('/', 'nav.dashboard', Icons.home_rounded),
+            const _Destination('/', 'nav.dashboard', LucideIcons.house),
       );
       titleText = context.t(current.labelKey);
     }
@@ -1494,7 +1501,7 @@ class _GlassTopBar extends StatelessWidget {
                 ? Tooltip(
                     message: MaterialLocalizations.of(context).backButtonTooltip,
                     child: GlassIconButton(
-                      icon: Icon(Icons.arrow_back_rounded, color: AppColors.ink),
+                      icon: Icon(LucideIcons.arrowLeft, color: AppColors.ink),
                       onPressed: onBack,
                       size: 40,
                       // Self-contained: no app-wide LiquidGlassLayer needed.
@@ -1610,7 +1617,7 @@ class _GlassActionCapsule extends StatelessWidget {
               _TopSearchField(compact: true),
               _NotificationBell(active: location.startsWith('/notifications')),
               _TopIconButton(
-                icon: Icons.settings_rounded,
+                icon: LucideIcons.settings,
                 tooltip: context.t('nav.settings'),
                 active: location.startsWith('/settings'),
                 onTap: () => context.go('/settings'),
@@ -1662,12 +1669,13 @@ class _MoreSheet extends StatelessWidget {
   final AuthUser? user;
 
   static const _items = [
-    _Destination('/projects', 'nav.projects', Icons.folder_rounded),
-    _Destination('/gantt', 'nav.gantt', Icons.stacked_bar_chart_rounded),
-    _Destination('/timesheet', 'nav.timesheet', Icons.table_chart_rounded),
-    _Destination('/reports', 'nav.reports', Icons.insights_rounded),
-    _Destination('/knowledge', 'nav.knowledge', Icons.menu_book_rounded),
-    _Destination('/settings', 'nav.settings', Icons.settings_rounded),
+    _Destination('/projects', 'nav.projects', LucideIcons.folder),
+    _Destination('/teams', 'nav.teams', LucideIcons.usersRound),
+    _Destination('/gantt', 'nav.gantt', LucideIcons.chartColumnStacked),
+    _Destination('/timesheet', 'nav.timesheet', LucideIcons.table),
+    _Destination('/reports', 'nav.reports', LucideIcons.chartLine),
+    _Destination('/knowledge', 'nav.knowledge', LucideIcons.bookOpen),
+    _Destination('/settings', 'nav.settings', LucideIcons.settings),
     // Notifications intentionally omitted — they live in the always-visible
     // top bar bell, so they need no entry in the overflow sheet.
   ];
@@ -1743,7 +1751,7 @@ class _MoreSheet extends StatelessWidget {
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(Icons.close_rounded,
+                        icon: Icon(LucideIcons.x,
                             size: 20, color: AppColors.inkSoft),
                       ),
                     ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -473,7 +474,7 @@ class _ProjectPicker extends StatelessWidget {
                       fontSize: 13, fontWeight: FontWeight.w600)),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.expand_more_rounded,
+            Icon(LucideIcons.chevronDown,
                 size: 16, color: AppColors.inkSoft),
           ],
         ),
@@ -897,7 +898,7 @@ class _ViewSwitcher extends StatelessWidget {
               children: [
                 _SwitchChip(
                   label: context.t('gantt.today'),
-                  icon: Icons.my_location_rounded,
+                  icon: LucideIcons.locateFixed,
                   active: false,
                   onTap: onToday,
                 ),

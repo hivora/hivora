@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
     show GlassContainer, LiquidGlassSettings, LiquidRoundedSuperellipse;
@@ -175,7 +176,7 @@ class _LightboxScaffoldState extends State<_LightboxScaffold> {
                   top: 12,
                   right: 12,
                   child: _GlassIconButton(
-                    icon: Icons.close_rounded,
+                    icon: LucideIcons.x,
                     onTap: () => Navigator.of(context).maybePop(),
                   ),
                 ),
@@ -186,7 +187,7 @@ class _LightboxScaffoldState extends State<_LightboxScaffold> {
                     bottom: 56,
                     child: Center(
                       child: _NavButton(
-                        icon: Icons.chevron_left_rounded,
+                        icon: LucideIcons.chevronLeft,
                         enabled: _index > 0,
                         onTap: () => _go(_index - 1),
                       ),
@@ -198,7 +199,7 @@ class _LightboxScaffoldState extends State<_LightboxScaffold> {
                     bottom: 56,
                     child: Center(
                       child: _NavButton(
-                        icon: Icons.chevron_right_rounded,
+                        icon: LucideIcons.chevronRight,
                         enabled: _index < items.length - 1,
                         onTap: () => _go(_index + 1),
                       ),
@@ -338,7 +339,7 @@ class _LightboxScaffoldState extends State<_LightboxScaffold> {
           ),
           const SizedBox(width: 12),
           _GlassIconButton(
-            icon: Icons.download_rounded,
+            icon: LucideIcons.download,
             onTap: () => widget.onDownload(cur),
           ),
         ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/i18n/i18n.dart';
 import '../../../core/models/work_models.dart';
@@ -34,7 +35,7 @@ class GlassSprintHeader extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.bolt_rounded, size: 13, color: Color(0xFF2A2410)),
+          const Icon(LucideIcons.zap, size: 13, color: Color(0xFF2A2410)),
           const SizedBox(width: 4),
           Text(
             context.t('board.active'),

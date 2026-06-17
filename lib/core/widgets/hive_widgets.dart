@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../i18n/i18n.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../theme/hue_colors.dart';
 
 // ════════════════════════════════════════════════════════════════════════
 //  Hivora "Hive" v2 design kit — shared primitives that mirror the
@@ -23,11 +25,11 @@ class _TypeMeta {
 
 const _typeMeta = <String, _TypeMeta>{
   // Backend Issue.Type: TASK, BUG, FEATURE, EPIC (STORY kept for compatibility).
-  'TASK': _TypeMeta(Icons.check_circle_outline_rounded, AppColors.stTodo),
-  'BUG': _TypeMeta(Icons.bug_report_outlined, AppColors.priUrgent),
-  'FEATURE': _TypeMeta(Icons.auto_awesome_rounded, AppColors.stProgress),
-  'EPIC': _TypeMeta(Icons.bolt_rounded, AppColors.stReview),
-  'STORY': _TypeMeta(Icons.bookmark_border_rounded, AppColors.stDone),
+  'TASK': _TypeMeta(LucideIcons.circleCheck, AppColors.stTodo),
+  'BUG': _TypeMeta(LucideIcons.bug, AppColors.priUrgent),
+  'FEATURE': _TypeMeta(LucideIcons.sparkles, AppColors.stProgress),
+  'EPIC': _TypeMeta(LucideIcons.zap, AppColors.stReview),
+  'STORY': _TypeMeta(LucideIcons.bookmark, AppColors.stDone),
 };
 
 _TypeMeta _typeOf(String type) =>
@@ -42,20 +44,20 @@ class _PriMeta {
 const _priMeta = <String, _PriMeta>{
   // Backend Issue.Priority: SHOWSTOPPER, CRITICAL, MAJOR, NORMAL, MINOR.
   'SHOWSTOPPER': _PriMeta(
-    Icons.keyboard_double_arrow_up_rounded,
+    LucideIcons.chevronsUp,
     AppColors.priUrgent,
   ),
-  'CRITICAL': _PriMeta(Icons.keyboard_arrow_up_rounded, AppColors.priUrgent),
-  'MAJOR': _PriMeta(Icons.keyboard_arrow_up_rounded, AppColors.priHigh),
-  'NORMAL': _PriMeta(Icons.drag_handle_rounded, AppColors.priNormal),
-  'MINOR': _PriMeta(Icons.keyboard_arrow_down_rounded, AppColors.priLow),
+  'CRITICAL': _PriMeta(LucideIcons.chevronUp, AppColors.priUrgent),
+  'MAJOR': _PriMeta(LucideIcons.chevronUp, AppColors.priHigh),
+  'NORMAL': _PriMeta(LucideIcons.gripHorizontal, AppColors.priNormal),
+  'MINOR': _PriMeta(LucideIcons.chevronDown, AppColors.priLow),
   // Legacy aliases kept so older data / the design palette still resolve.
   'URGENT': _PriMeta(
-    Icons.keyboard_double_arrow_up_rounded,
+    LucideIcons.chevronsUp,
     AppColors.priUrgent,
   ),
-  'HIGH': _PriMeta(Icons.keyboard_arrow_up_rounded, AppColors.priHigh),
-  'LOW': _PriMeta(Icons.keyboard_arrow_down_rounded, AppColors.priLow),
+  'HIGH': _PriMeta(LucideIcons.chevronUp, AppColors.priHigh),
+  'LOW': _PriMeta(LucideIcons.chevronDown, AppColors.priLow),
 };
 
 _PriMeta _priOf(String pri) =>
@@ -147,12 +149,15 @@ class PriorityFlag extends StatelessWidget {
 
 /// Inline state cell: colored dot + state name (matches `.c-state`).
 class StateDotBadge extends StatelessWidget {
-  const StateDotBadge({super.key, required this.state});
+  const StateDotBadge({super.key, required this.state, this.color});
   final String state;
+
+  /// Overrides the global state-palette color (per-project state hue).
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    final color = AppColors.stateColor(state.toUpperCase());
+    final color = this.color ?? AppColors.stateColor(state.toUpperCase());
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -217,24 +222,30 @@ class _Pill extends StatelessWidget {
 
 /// Subtle label/tag chip (matches `.tag`).
 class LabelTag extends StatelessWidget {
-  const LabelTag(this.label, {super.key});
+  const LabelTag(this.label, {super.key, this.hue});
   final String label;
+
+  /// When set, tints the chip to the project's configured label hue; otherwise
+  /// renders the neutral monochrome chip.
+  final int? hue;
 
   @override
   Widget build(BuildContext context) {
+    final h = hue;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
+        color: h == null ? AppColors.surfaceMuted : hueSoft(h),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: AppColors.hairline2),
+        border: Border.all(
+            color: h == null ? AppColors.hairline2 : hueBorder(h)),
       ),
       child: Text(
         label,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w500,
-          color: AppColors.inkSoft,
+          color: h == null ? AppColors.inkSoft : hueChipText(h),
         ),
       ),
     );
@@ -516,7 +527,7 @@ class PrimaryButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.radiusControl),
         ),
       ),
-      icon: Icon(icon ?? Icons.add_rounded, size: 16),
+      icon: Icon(icon ?? LucideIcons.plus, size: 16),
       label: Text(label),
     );
   }
@@ -549,7 +560,7 @@ class GhostButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.radiusControl),
         ),
       ),
-      icon: Icon(icon ?? Icons.tune_rounded, size: 16),
+      icon: Icon(icon ?? LucideIcons.slidersHorizontal, size: 16),
       label: Text(label),
     );
   }

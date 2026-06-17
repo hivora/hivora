@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
@@ -29,7 +30,7 @@ class UpdateRequiredScreen extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.system_update_rounded,
+                    const Icon(LucideIcons.cloudDownload,
                         size: 56, color: AppColors.navy),
                     const SizedBox(height: 20),
                     Text(

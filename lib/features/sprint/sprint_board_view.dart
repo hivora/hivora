@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/api/api_client.dart';
@@ -613,7 +614,7 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
         final sprint = _activeSprint;
         if (sprint == null) {
           return _EmptyState(
-            icon: Icons.bolt_outlined,
+            icon: LucideIcons.zap,
             title: context.t('sprint.noActive'),
             subtitle: context.t('sprint.noActiveSub'),
           );
@@ -630,7 +631,7 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
         final sprint = _activeSprint;
         if (sprint == null) {
           return _EmptyState(
-            icon: Icons.show_chart_rounded,
+            icon: LucideIcons.chartLine,
             title: context.t('sprint.noActive'),
             subtitle: context.t('sprint.noInsights'),
           );
@@ -662,9 +663,9 @@ class _SprintTabSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <({IconData icon, String label})>[
-      (icon: Icons.list_alt_rounded, label: context.t('sprint.tab.planning')),
-      (icon: Icons.view_column_rounded, label: context.t('sprint.tab.active')),
-      (icon: Icons.show_chart_rounded, label: context.t('sprint.tab.insights')),
+      (icon: LucideIcons.listChecks, label: context.t('sprint.tab.planning')),
+      (icon: LucideIcons.columns3, label: context.t('sprint.tab.active')),
+      (icon: LucideIcons.chartLine, label: context.t('sprint.tab.insights')),
     ];
     return Container(
       padding: const EdgeInsets.all(3),
@@ -756,7 +757,7 @@ class _SprintFilterButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.tune_rounded, size: 16, color: AppColors.inkSoft),
+              Icon(LucideIcons.slidersHorizontal, size: 16, color: AppColors.inkSoft),
               if (!compact) ...[
                 const SizedBox(width: 7),
                 Text(

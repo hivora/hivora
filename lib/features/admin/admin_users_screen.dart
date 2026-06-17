@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
@@ -219,7 +220,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   textStyle: const TextStyle(
                       fontWeight: FontWeight.w600, fontSize: 13),
                 ),
-                icon: const Icon(Icons.person_add_rounded, size: 16),
+                icon: const Icon(LucideIcons.userPlus, size: 16),
                 label: Text(context.t('admin.newUser')),
               ),
             ],
@@ -243,7 +244,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   onChanged: (v) => setState(() => _query = v),
                   decoration: InputDecoration(
                     hintText: context.t('admin.searchUsers'),
-                    prefixIcon: Icon(Icons.search_rounded,
+                    prefixIcon: Icon(LucideIcons.search,
                         size: 18, color: AppColors.inkSoft),
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 10),
@@ -317,7 +318,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.people_outline_rounded,
+                              Icon(LucideIcons.users,
                                   size: 48, color: AppColors.inkFaint),
                               const SizedBox(height: 12),
                               Text(context.t('admin.noUsers'),
@@ -714,7 +715,7 @@ class _UserActions extends StatelessWidget {
     final isAdmin =
         ((user['roles'] as List<dynamic>?) ?? []).contains('ADMIN');
     return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert_rounded,
+      icon: Icon(LucideIcons.ellipsisVertical,
           size: 18, color: AppColors.inkSoft),
       shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -726,8 +727,8 @@ class _UserActions extends StatelessWidget {
             children: [
               Icon(
                 active
-                    ? Icons.person_off_rounded
-                    : Icons.person_rounded,
+                    ? LucideIcons.userX
+                    : LucideIcons.user,
                 size: 16,
                 color:
                     active ? AppColors.danger : AppColors.success,
@@ -751,8 +752,8 @@ class _UserActions extends StatelessWidget {
             children: [
               Icon(
                 isAdmin
-                    ? Icons.shield_rounded
-                    : Icons.shield_outlined,
+                    ? LucideIcons.shield
+                    : LucideIcons.shield,
                 size: 16,
                 color: AppColors.navy,
               ),
@@ -772,7 +773,7 @@ class _UserActions extends StatelessWidget {
             value: 'delete',
             child: Row(
               children: [
-                const Icon(Icons.delete_outline_rounded,
+                const Icon(LucideIcons.trash2,
                     size: 16, color: AppColors.danger),
                 const SizedBox(width: 8),
                 Text(

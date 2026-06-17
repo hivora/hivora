@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -137,7 +138,7 @@ class _Header extends StatelessWidget {
       actions: [
         if (!context.isCompact)
           GhostButton(
-            icon: Icons.tune_rounded,
+            icon: LucideIcons.slidersHorizontal,
             label: context.t('dashboard.customize'),
             onPressed: () => context.go('/settings'),
           ),
@@ -161,25 +162,25 @@ class _KpiRow extends StatelessWidget {
       _Kpi(
         label: context.t('dashboard.kpiToday'),
         value: '$today',
-        icon: Icons.inbox_rounded,
+        icon: LucideIcons.inbox,
         hue: AppColors.stTodo,
       ),
       _Kpi(
         label: context.t('dashboard.inProgress'),
         value: '${completion.inProgress}',
-        icon: Icons.hourglass_top_rounded,
+        icon: LucideIcons.hourglass,
         hue: AppColors.stProgress,
       ),
       _Kpi(
         label: context.t('dashboard.backlog'),
         value: '${completion.backlog}',
-        icon: Icons.layers_rounded,
+        icon: LucideIcons.layers,
         hue: AppColors.stBacklog,
       ),
       _Kpi(
         label: context.t('dashboard.done'),
         value: '${completion.done}',
-        icon: Icons.check_circle_rounded,
+        icon: LucideIcons.circleCheckBig,
         hue: AppColors.stDone,
       ),
     ];
@@ -745,7 +746,7 @@ class _CardHead extends StatelessWidget {
                       ),
                       const SizedBox(width: 3),
                       const Icon(
-                        Icons.arrow_forward_rounded,
+                        LucideIcons.arrowRight,
                         size: 13,
                         color: AppColors.accentStrong,
                       ),

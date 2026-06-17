@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/i18n/i18n.dart';
 import '../../../core/theme/app_colors.dart';
@@ -30,7 +31,7 @@ class _AdminSecuritySectionState extends State<AdminSecuritySection> {
       children: [
         // ─── Password policy ─────────────────────────────────────
         AdminSectionCard(
-          icon: Icons.password_rounded,
+          icon: LucideIcons.keyRound,
           title: context.t('admin.passwordPolicy'),
           subtitle: context.t('admin.passwordPolicyHint'),
           children: [
@@ -49,7 +50,7 @@ class _AdminSecuritySectionState extends State<AdminSecuritySection> {
 
         // ─── Brute-force protection ───────────────────────────────
         AdminSectionCard(
-          icon: Icons.gpp_bad_rounded,
+          icon: LucideIcons.shieldX,
           title: context.t('admin.bruteForce'),
           subtitle: context.t('admin.bruteForceHint'),
           children: [
@@ -85,7 +86,7 @@ class _AdminSecuritySectionState extends State<AdminSecuritySection> {
 
         // ─── Session ─────────────────────────────────────────────
         AdminSectionCard(
-          icon: Icons.timer_rounded,
+          icon: LucideIcons.timer,
           title: context.t('admin.sessionPolicy'),
           subtitle: context.t('admin.sessionPolicyHint'),
           children: [
@@ -113,7 +114,7 @@ class _AdminSecuritySectionState extends State<AdminSecuritySection> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.verified_user_rounded,
+              const Icon(LucideIcons.shieldCheck,
                   size: 18, color: AppColors.accentStrong),
               const SizedBox(width: 10),
               Expanded(

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hex_mark.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter/services.dart';
@@ -136,13 +137,13 @@ class _SheetActions extends StatelessWidget {
         IconButton(
           tooltip: context.t('issues.copyLink'),
           onPressed: onCopyLink,
-          icon: Icon(Icons.link_rounded, size: 20, color: AppColors.inkSoft),
+          icon: Icon(LucideIcons.link, size: 20, color: AppColors.inkSoft),
         ),
         IconButton(
           tooltip: context.t('common.delete'),
           onPressed: onDelete,
           icon: const Icon(
-            Icons.delete_outline_rounded,
+            LucideIcons.trash2,
             size: 20,
             color: AppColors.danger,
           ),
@@ -150,7 +151,7 @@ class _SheetActions extends StatelessWidget {
         IconButton(
           tooltip: context.t('common.cancel'),
           onPressed: onClose,
-          icon: Icon(Icons.close_rounded, size: 20, color: AppColors.inkSoft),
+          icon: Icon(LucideIcons.x, size: 20, color: AppColors.inkSoft),
         ),
         const SizedBox(width: 16),
       ],
@@ -501,7 +502,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: [for (final t in issue.tags) LabelTag(t)],
+              children: [for (final t in issue.tags) LabelTag(t, hue: _project?.hueForLabel(t))],
             ),
           ],
           const SizedBox(height: 18),
@@ -657,7 +658,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                 : Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: [for (final t in issue.tags) LabelTag(t)],
+                    children: [for (final t in issue.tags) LabelTag(t, hue: _project?.hueForLabel(t))],
                   ),
           ),
           // Sprint
@@ -753,7 +754,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
         GestureDetector(
           onTap: () =>
               _patch({isStart ? 'clearStartDate' : 'clearDueDate': true}),
-          child: Icon(Icons.close_rounded, size: 15, color: AppColors.inkFaint),
+          child: Icon(LucideIcons.x, size: 15, color: AppColors.inkFaint),
         ),
       ],
     );
@@ -824,7 +825,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
               child: Row(
                 children: [
                   const Icon(
-                    Icons.timelapse_rounded,
+                    LucideIcons.timer,
                     size: 16,
                     color: AppColors.accentStrong,
                   ),
@@ -897,7 +898,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                   style: IconButton.styleFrom(backgroundColor: AppColors.navy),
                   onPressed: _submitComment,
                   icon: const Icon(
-                    Icons.send_rounded,
+                    LucideIcons.send,
                     color: Colors.white,
                     size: 18,
                   ),
@@ -966,7 +967,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   // ── pickers ────────────────────────────────────────────────────────────
 
   Future<void> _pickStatus() async {
-    final states = _project?.workflowStates ?? [_issue!.state];
+    final states = _project?.stateNames ?? [_issue!.state];
     final chosen = await _showOptions<String>(
       title: context.t('issues.status'),
       options: [
@@ -1001,7 +1002,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     final issue = _issue;
     if (issue == null) return;
     final available = <String>{
-      ...?_project?.labels,
+      ...?_project?.labelNames,
       ...issue.tags,
     }.where((l) => !_deletedLabels.contains(l)).toList();
     var didDelete = false;
@@ -1235,7 +1236,7 @@ class _DetailRow extends StatelessWidget {
             ),
             if (onTap != null)
               Icon(
-                Icons.unfold_more_rounded,
+                LucideIcons.chevronsUpDown,
                 size: 16,
                 color: AppColors.inkFaint,
               ),
@@ -1419,7 +1420,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
 
   /// Loads sprints + a default status for the selected project.
   Future<void> _loadProjectScoped() async {
-    _state ??= _project?.workflowStates.firstOrNull;
+    _state ??= _project?.stateNames.firstOrNull;
     _sprints = const [];
     final pid = _projectId;
     if (pid == null) return;
@@ -1669,7 +1670,10 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
                 : Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: [for (final t in _labels) LabelTag(t)],
+                    children: [
+                      for (final t in _labels)
+                        LabelTag(t, hue: _project?.hueForLabel(t)),
+                    ],
                   ),
           ),
           _DetailRow(
@@ -1789,7 +1793,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
               _dueDate = null;
             }
           }),
-          child: Icon(Icons.close_rounded, size: 15, color: AppColors.inkFaint),
+          child: Icon(LucideIcons.x, size: 15, color: AppColors.inkFaint),
         ),
       ],
     );
@@ -1814,7 +1818,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
   }
 
   Future<void> _pickStatus() async {
-    final states = _project?.workflowStates ?? const <String>[];
+    final states = _project?.stateNames ?? const <String>[];
     final chosen = await _pickOption<String>(
       context,
       title: context.t('issues.status'),
@@ -1851,7 +1855,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
   Future<void> _pickLabels() async {
     final pid = _projectId;
     final available = <String>{
-      ...?_project?.labels,
+      ...?_project?.labelNames,
       ..._labels,
     }.where((l) => !_deletedLabels.contains(l)).toList();
     final result = await showLabelPicker(
@@ -1970,7 +1974,7 @@ class _RouteTopBar extends StatelessWidget {
           IconButton(
             onPressed: onClose,
             icon: Icon(
-              Icons.arrow_back_rounded,
+              LucideIcons.arrowLeft,
               size: 20,
               color: AppColors.inkSoft,
             ),
@@ -1990,13 +1994,13 @@ class _RouteTopBar extends StatelessWidget {
           IconButton(
             tooltip: context.t('issues.copyLink'),
             onPressed: onCopyLink,
-            icon: Icon(Icons.link_rounded, size: 20, color: AppColors.inkSoft),
+            icon: Icon(LucideIcons.link, size: 20, color: AppColors.inkSoft),
           ),
           IconButton(
             tooltip: context.t('common.delete'),
             onPressed: onDelete,
             icon: const Icon(
-              Icons.delete_outline_rounded,
+              LucideIcons.trash2,
               size: 20,
               color: AppColors.danger,
             ),
@@ -2044,13 +2048,13 @@ class _InlineTitleEditor extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _SquareButton(
-              icon: Icons.check_rounded,
+              icon: LucideIcons.check,
               color: AppColors.success,
               onTap: onSave,
             ),
             const SizedBox(width: 8),
             _SquareButton(
-              icon: Icons.close_rounded,
+              icon: LucideIcons.x,
               color: AppColors.danger,
               onTap: onCancel,
             ),
@@ -2330,7 +2334,7 @@ class _ActivityTile extends StatelessWidget {
         if (from != null) _ChangeChip(from),
         if (from != null)
           Icon(
-            Icons.arrow_forward_rounded,
+            LucideIcons.arrowRight,
             size: 14,
             color: AppColors.inkFaint,
           ),
@@ -2469,7 +2473,7 @@ class _PeoplePickerState extends State<_PeoplePicker> {
                 onChanged: (v) => setState(() => _query = v),
                 decoration: InputDecoration(
                   isDense: true,
-                  prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                  prefixIcon: const Icon(LucideIcons.search, size: 18),
                   hintText: context.t('issues.searchPeople'),
                   filled: true,
                   fillColor: AppColors.surfaceMuted,
@@ -2493,7 +2497,7 @@ class _PeoplePickerState extends State<_PeoplePicker> {
                       leading: CircleAvatar(
                         backgroundColor: AppColors.accentSoft,
                         child: Icon(
-                          Icons.person_rounded,
+                          LucideIcons.user,
                           color: AppColors.accentStrong,
                           size: 18,
                         ),
@@ -2509,7 +2513,7 @@ class _PeoplePickerState extends State<_PeoplePicker> {
                       leading: CircleAvatar(
                         backgroundColor: AppColors.canvas2,
                         child: Icon(
-                          Icons.block_rounded,
+                          LucideIcons.ban,
                           color: AppColors.inkSoft,
                           size: 18,
                         ),
@@ -2533,7 +2537,7 @@ class _PeoplePickerState extends State<_PeoplePicker> {
                       ),
                       trailing: u.id == widget.meId
                           ? const Icon(
-                              Icons.star_rounded,
+                              LucideIcons.star,
                               size: 16,
                               color: AppColors.accent,
                             )
