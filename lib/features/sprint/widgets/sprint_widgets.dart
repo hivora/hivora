@@ -140,38 +140,41 @@ class CapacityBar extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 5),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: SizedBox(
-              height: 8,
-              child: committed == 0
-                  ? ColoredBox(color: AppColors.canvas2)
-                  : Row(
-                      children: [
-                        Expanded(
-                          flex: flex(b.done),
-                          child: ColoredBox(color: SprintTokens.done),
-                        ),
-                        Expanded(
-                          flex: flex(b.progress),
-                          child: ColoredBox(color: SprintTokens.progress),
-                        ),
-                        Expanded(
-                          flex: flex(b.todo),
-                          child: ColoredBox(
-                            color: over
-                                ? SprintTokens.over
-                                : SprintTokens.todo,
-                          ),
-                        ),
-                        // Remaining capacity track.
-                        if (cap > committed)
-                          Expanded(
-                            flex: flex(cap - committed),
-                            child: ColoredBox(color: AppColors.canvas2),
-                          ),
-                      ],
+          // A defined pill track (surface fill + hairline border) with the
+          // done/in-progress/todo segments filling it; the uncovered part is
+          // the track itself, so remaining capacity reads as the empty pill
+          // (mirrors `.cap-bar` in sprint.css).
+          Container(
+            height: 8,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(color: AppColors.hairline),
+            ),
+            child: Row(
+              children: [
+                if (b.done > 0)
+                  Expanded(
+                    flex: flex(b.done),
+                    child: ColoredBox(color: SprintTokens.done),
+                  ),
+                if (b.progress > 0)
+                  Expanded(
+                    flex: flex(b.progress),
+                    child: ColoredBox(color: SprintTokens.progress),
+                  ),
+                if (b.todo > 0)
+                  Expanded(
+                    flex: flex(b.todo),
+                    child: ColoredBox(
+                      color: over ? SprintTokens.over : SprintTokens.todo,
                     ),
+                  ),
+                // Remaining capacity = the empty pill track showing through.
+                if (denom > committed)
+                  Expanded(flex: flex(denom - committed), child: const SizedBox()),
+              ],
             ),
           ),
         ],

@@ -8,6 +8,7 @@ import '../../core/i18n/i18n.dart';
 import '../../core/models/team_models.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../deletion/delete_flows.dart';
 import 'team_modal_kit.dart';
 import 'team_widgets.dart';
 
@@ -30,14 +31,10 @@ Future<bool?> showEditTeamModal(BuildContext context, Team team) {
   );
 }
 
-/// Delete-team modal (type-to-confirm). Returns true if deleted.
+/// Delete-team modal: warns about the access members lose, then streams the
+/// cascade over SSE. Returns true if deleted.
 Future<bool?> showDeleteTeamModal(BuildContext context, Team team) {
-  final repo = context.read<HivoraRepository>();
-  return showTeamModal<bool>(
-    context,
-    _DeleteTeamBody(repo: repo, team: team),
-    width: 460,
-  );
+  return showDeleteTeamFlow(context, teamId: team.id, teamName: team.name);
 }
 
 class _TeamFormBody extends StatefulWidget {
@@ -233,120 +230,3 @@ class _TeamFormBodyState extends State<_TeamFormBody> {
   }
 }
 
-class _DeleteTeamBody extends StatefulWidget {
-  const _DeleteTeamBody({required this.repo, required this.team});
-
-  final HivoraRepository repo;
-  final Team team;
-
-  @override
-  State<_DeleteTeamBody> createState() => _DeleteTeamBodyState();
-}
-
-class _DeleteTeamBodyState extends State<_DeleteTeamBody> {
-  final _confirm = TextEditingController();
-  bool _busy = false;
-  String? _error;
-
-  bool get _ok =>
-      _confirm.text.trim().toLowerCase() ==
-      widget.team.name.trim().toLowerCase();
-
-  @override
-  void dispose() {
-    _confirm.dispose();
-    super.dispose();
-  }
-
-  Future<void> _delete() async {
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      await widget.repo.deleteTeam(widget.team.id);
-      if (mounted) Navigator.of(context).pop(true);
-    } on ApiFailure catch (failure) {
-      setState(() {
-        _busy = false;
-        _error = failure.message;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final memberCount = widget.team.members.length;
-    return ModalShell(
-      icon: LucideIcons.trash2,
-      iconColor: AppColors.danger,
-      iconBg: AppColors.dangerSoft,
-      title: context.t(
-        'teams.deleteTitle',
-        variables: {'name': widget.team.name},
-      ),
-      subtitle: context.t('teams.deleteSubtitle'),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(13),
-            decoration: BoxDecoration(
-              color: AppColors.surface.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(AppTheme.radiusControl),
-              border: Border.all(color: AppColors.hairline),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(LucideIcons.info, size: 16, color: AppColors.accentStrong),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    context.t(
-                      'teams.deleteWarn',
-                      variables: {'count': '$memberCount'},
-                      count: memberCount,
-                    ),
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      height: 1.4,
-                      color: AppColors.inkSoft,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          FieldLabel(
-            context.t(
-              'teams.deleteConfirmLabel',
-              variables: {'name': widget.team.name},
-            ),
-          ),
-          TextField(
-            controller: _confirm,
-            autofocus: true,
-            onChanged: (_) => setState(() {}),
-            decoration: teamFieldDecoration(context, hint: widget.team.name),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 14),
-            Text(
-              _error!,
-              style: const TextStyle(color: AppColors.danger, fontSize: 12.5),
-            ),
-          ],
-        ],
-      ),
-      footer: ModalFooter(
-        primaryLabel: context.t('teams.deleteCta'),
-        primaryIcon: LucideIcons.trash2,
-        danger: true,
-        busy: _busy,
-        onPrimary: _ok ? _delete : null,
-      ),
-    );
-  }
-}

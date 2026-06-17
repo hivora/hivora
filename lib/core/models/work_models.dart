@@ -522,6 +522,7 @@ class BoardColumnView extends Equatable {
     required this.states,
     required this.issues,
     this.wipLimit,
+    this.hue,
   });
 
   final String name;
@@ -529,18 +530,22 @@ class BoardColumnView extends Equatable {
   final List<Issue> issues;
   final int? wipLimit;
 
+  /// Configured oklch hue of this column's workflow state (server-derived).
+  final int? hue;
+
   factory BoardColumnView.fromJson(Map<String, dynamic> json) =>
       BoardColumnView(
         name: json['name'] as String? ?? '',
         states: _stringList(json['states']),
         wipLimit: json['wipLimit'] as int?,
+        hue: (json['hue'] as num?)?.toInt(),
         issues: ((json['issues'] as List<dynamic>?) ?? [])
             .map((i) => Issue.fromJson(i as Map<String, dynamic>))
             .toList(),
       );
 
   @override
-  List<Object?> get props => [name, states, issues];
+  List<Object?> get props => [name, states, issues, hue];
 }
 
 class BoardView extends Equatable {

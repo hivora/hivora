@@ -16,13 +16,22 @@ import '../../core/models/core_models.dart';
 import '../../core/models/work_models.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/hue_colors.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
 import '../sprint/modals/estimate_dialog.dart' show showStoryPointsDialog;
+import '../sprint/modals/glass_modal.dart' show showGlassModal;
 import 'attachments/attachments_section.dart';
 import 'issue_labels.dart';
 import 'issue_markdown.dart';
 import 'work_log_sheet.dart';
+
+/// The project's configured colour for a workflow-state name, or null to fall
+/// back to the global state palette (`AppColors.stateColor`).
+Color? _projStateColor(Project? project, String state) {
+  final hue = project?.hueForState(state);
+  return hue == null ? null : hueColor(hue);
+}
 
 /// Centered dialog that can grow much wider than the wolt default so the
 /// two-column issue detail has room on desktop.
@@ -398,6 +407,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           _RouteTopBar(
             issue: issue,
             busy: _busy,
+            stateColor: _projStateColor(_project, issue.state),
             onCopyLink: copyIssueLink,
             onDelete: () => _confirmDelete(issue),
             onClose: () => Navigator.of(context).maybePop(),
@@ -601,7 +611,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           _DetailRow(
             label: context.t('issues.status'),
             onTap: _pickStatus,
-            child: StateDotBadge(state: issue.state),
+            child: StateDotBadge(state: issue.state, color: _projStateColor(_project, issue.state)),
           ),
           // Assignee + "assign to me"
           _DetailRow(
@@ -971,7 +981,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     final chosen = await _showOptions<String>(
       title: context.t('issues.status'),
       options: [
-        for (final s in states) (value: s, child: StateDotBadge(state: s)),
+        for (final s in states) (value: s, child: StateDotBadge(state: s, color: _projStateColor(_project, s))),
       ],
     );
     if (chosen != null) await _patch({'state': chosen});
@@ -1158,29 +1168,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   }
 
   Future<void> _confirmDelete(Issue issue) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(dialogContext.t('issues.deleteTitle')),
-        content: Text(
-          dialogContext.t(
-            'issues.deleteBody',
-            variables: {'id': issue.readableId},
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(dialogContext.t('common.cancel')),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(dialogContext.t('common.delete')),
-          ),
-        ],
-      ),
+    final confirmed = await showGlassModal<bool>(
+      context,
+      width: 420,
+      builder: (_) => _DeleteIssueConfirm(issue: issue),
     );
     if (confirmed == true) {
       try {
@@ -1191,6 +1182,122 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
         _toast(failure.message);
       }
     }
+  }
+}
+
+// ─────────────────────── Delete confirmation ───────────────────────────────
+
+/// Destructive confirm presented on the app's Liquid-Glass modal material
+/// (matches the Teams `ModalShell`/`ModalFooter` language: danger icon chip,
+/// brand-font title, hairline-divided footer with a red primary action).
+class _DeleteIssueConfirm extends StatelessWidget {
+  const _DeleteIssueConfirm({required this.issue});
+
+  final Issue issue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 12, 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.dangerSoft,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(LucideIcons.trash2, size: 20, color: AppColors.danger),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      context.t('issues.deleteTitle'),
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontBrand,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      context.t(
+                        'issues.deleteBody',
+                        variables: {'id': issue.readableId},
+                      ),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        height: 1.4,
+                        color: AppColors.inkSoft,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                visualDensity: VisualDensity.compact,
+                icon: Icon(LucideIcons.x, size: 20, color: AppColors.inkSoft),
+              ),
+            ],
+          ),
+        ),
+        Divider(height: 1, color: AppColors.hairline2),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          child: SafeArea(
+            top: false,
+            child: Row(
+              children: [
+                const Spacer(),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(
+                    context.t('common.cancel'),
+                    style: TextStyle(
+                      color: AppColors.inkSoft,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.danger,
+                    foregroundColor: Colors.white,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    textStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppTheme.radiusControl),
+                    ),
+                  ),
+                  icon: const Icon(LucideIcons.trash2, size: 16),
+                  label: Text(context.t('common.delete')),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -1630,7 +1737,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
                 ? null
                 : _pickStatus,
             child: _state != null
-                ? StateDotBadge(state: _state!)
+                ? StateDotBadge(state: _state!, color: _projStateColor(_project, _state!))
                 : Text(
                     context.t('issues.noValue'),
                     style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
@@ -1823,7 +1930,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
       context,
       title: context.t('issues.status'),
       options: [
-        for (final s in states) (value: s, child: StateDotBadge(state: s)),
+        for (final s in states) (value: s, child: StateDotBadge(state: s, color: _projStateColor(_project, s))),
       ],
     );
     if (chosen != null) setState(() => _state = chosen);
@@ -1954,6 +2061,7 @@ class _RouteTopBar extends StatelessWidget {
   const _RouteTopBar({
     required this.issue,
     required this.busy,
+    this.stateColor,
     required this.onCopyLink,
     required this.onDelete,
     required this.onClose,
@@ -1961,6 +2069,7 @@ class _RouteTopBar extends StatelessWidget {
 
   final Issue issue;
   final bool busy;
+  final Color? stateColor;
   final VoidCallback onCopyLink;
   final VoidCallback onDelete;
   final VoidCallback onClose;
@@ -1981,7 +2090,7 @@ class _RouteTopBar extends StatelessWidget {
           ),
           IdMono(issue.readableId, color: AppColors.inkSoft),
           const SizedBox(width: 10),
-          StateDotBadge(state: issue.state),
+          StateDotBadge(state: issue.state, color: stateColor),
           if (busy) ...[
             const SizedBox(width: 10),
             const SizedBox(

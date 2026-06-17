@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../models/content_models.dart';
 import '../models/core_models.dart';
+import '../models/deletion_models.dart';
 import '../models/search_api.dart';
 import '../models/team_models.dart';
 import '../models/work_models.dart';
@@ -669,4 +670,69 @@ class HivoraRepository {
         .map((a) => TeamActivity.fromJson(a as Map<String, dynamic>))
         .toList();
   }
+
+  // --- Cascading deletion ---------------------------------------------------
+
+  /// Counts driving the board delete confirmation (sprints, issues to detach).
+  Future<BoardDeletionImpact> boardDeletionImpact(String boardId) async =>
+      BoardDeletionImpact.fromJson(
+        await _api.get('/api/v1/boards/$boardId/deletion-impact')
+            as Map<String, dynamic>,
+      );
+
+  /// Affected boards/issues/etc. + the projects issues could migrate into.
+  Future<ProjectDeletionImpact> projectDeletionImpact(String projectId) async =>
+      ProjectDeletionImpact.fromJson(
+        await _api.get('/api/v1/projects/$projectId/deletion-impact')
+            as Map<String, dynamic>,
+      );
+
+  /// The access (members/projects/boards/issues) members lose with the team.
+  Future<TeamDeletionImpact> teamDeletionImpact(String teamId) async =>
+      TeamDeletionImpact.fromJson(
+        await _api.get('/api/v1/teams/$teamId/deletion-impact')
+            as Map<String, dynamic>,
+      );
+
+  /// Raw SSE byte stream of a board deletion (parse with [parseSse] →
+  /// [DeleteEvent.tryParse]). Cancel via [cancelToken] to abort listening.
+  Future<Stream<List<int>>> boardDeleteStream(
+    String boardId, {
+    CancelToken? cancelToken,
+  }) =>
+      _api.openEventStream(
+        '/api/v1/boards/$boardId/delete-stream',
+        cancelToken: cancelToken,
+      );
+
+  /// Raw SSE byte stream of a project deletion. [strategy]/[migrateToProjectId]
+  /// are required only when the project still has issues.
+  Future<Stream<List<int>>> projectDeleteStream(
+    String projectId, {
+    IssueStrategy? strategy,
+    String? migrateToProjectId,
+    CancelToken? cancelToken,
+  }) {
+    final query = <String, String>{
+      'issueStrategy': ?strategy?.wire,
+      'migrateToProjectId': ?migrateToProjectId,
+    };
+    final suffix = query.isEmpty
+        ? ''
+        : '?${query.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
+    return _api.openEventStream(
+      '/api/v1/projects/$projectId/delete-stream$suffix',
+      cancelToken: cancelToken,
+    );
+  }
+
+  /// Raw SSE byte stream of a team deletion.
+  Future<Stream<List<int>>> teamDeleteStream(
+    String teamId, {
+    CancelToken? cancelToken,
+  }) =>
+      _api.openEventStream(
+        '/api/v1/teams/$teamId/delete-stream',
+        cancelToken: cancelToken,
+      );
 }

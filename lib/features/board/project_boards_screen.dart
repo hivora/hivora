@@ -15,6 +15,7 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/soft_card.dart';
 import '../../core/widgets/status_widgets.dart';
+import '../deletion/delete_flows.dart';
 import '../shell/page_chrome.dart';
 
 /// Lists all boards for a single project and allows creating new ones.
@@ -69,6 +70,15 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
       ],
     );
     if (created != null) _cubit.load();
+  }
+
+  Future<void> _deleteBoard(AgileBoard board) async {
+    final deleted = await showDeleteBoardFlow(
+      context,
+      boardId: board.id,
+      boardName: board.name,
+    );
+    if (deleted == true) _cubit.load();
   }
 
   @override
@@ -215,6 +225,7 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
                               (context, index) => _BoardCard(
                                 board: boardList[index],
                                 index: index,
+                                onDelete: () => _deleteBoard(boardList[index]),
                               ),
                               childCount: boardList.length,
                             ),
@@ -231,10 +242,15 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
 }
 
 class _BoardCard extends StatelessWidget {
-  const _BoardCard({required this.board, required this.index});
+  const _BoardCard({
+    required this.board,
+    required this.index,
+    required this.onDelete,
+  });
 
   final AgileBoard board;
   final int index;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -275,6 +291,33 @@ class _BoardCard extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              const Spacer(),
+              PopupMenuButton<String>(
+                tooltip: '',
+                padding: EdgeInsets.zero,
+                icon: Icon(
+                  LucideIcons.ellipsisVertical,
+                  size: 16,
+                  color: AppColors.inkSoft,
+                ),
+                onSelected: (_) => onDelete(),
+                itemBuilder: (context) => [
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        const Icon(
+                          LucideIcons.trash2,
+                          size: 15,
+                          color: AppColors.danger,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(context.t('board.deleteBoard')),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

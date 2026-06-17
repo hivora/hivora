@@ -15,8 +15,10 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/hue_colors.dart';
 import '../../../core/widgets/hive_loader.dart';
 import '../../search/search_tokens.dart';
+import '../../deletion/delete_flows.dart';
 import '../../shell/page_chrome.dart';
 import 'archive_section.dart';
+import 'danger_section.dart';
 import 'general_section.dart';
 import 'labels_section.dart';
 import 'members_section.dart';
@@ -389,6 +391,19 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
     }
   }
 
+  /// Opens the streamed delete flow; on success leaves settings so the projects
+  /// list (which reloads when this route pops) no longer shows the project.
+  Future<void> _deleteProject() async {
+    final project = _saved ?? _draft;
+    if (project == null) return;
+    final deleted = await showDeleteProjectFlow(
+      context,
+      projectId: project.id,
+      projectName: project.name,
+    );
+    if (deleted == true && mounted) Navigator.of(context).maybePop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final draft = _draft;
@@ -480,6 +495,8 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                         onChanged: (v) =>
                             _mutate((d) => d.copyWith(archived: v)),
                       ),
+                      const SizedBox(height: 16),
+                      DangerSection(onDelete: _deleteProject),
                     ],
                   ),
                 ),

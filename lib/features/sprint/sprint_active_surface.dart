@@ -6,6 +6,7 @@ import '../../core/models/work_models.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/hue_colors.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../board/board_filter.dart';
 import 'widgets/glass_sprint_header.dart';
@@ -104,9 +105,12 @@ class _SprintColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final overWip = column.wipLimit != null && issues.length > column.wipLimit!;
-    final dotColor = AppColors.stateColor(
-      column.states.isNotEmpty ? column.states.first : column.name,
-    );
+    // Prefer the project's configured state hue; fall back to the global palette.
+    final dotColor = column.hue != null
+        ? hueColor(column.hue!)
+        : AppColors.stateColor(
+            column.states.isNotEmpty ? column.states.first : column.name,
+          );
     final countLabel = column.wipLimit != null
         ? '${issues.length}/${column.wipLimit}'
         : '${issues.length}';
@@ -193,7 +197,7 @@ class _SprintColumn extends StatelessWidget {
                           separatorBuilder: (_, _) => const SizedBox(height: 9),
                           itemBuilder: (context, index) {
                             final issue = issues[index];
-                            final card = _SprintCard(issue: issue);
+                            final card = _SprintCard(issue: issue, accent: dotColor);
                             return Draggable<Issue>(
                               data: issue,
                               dragAnchorStrategy: childDragAnchorStrategy,
@@ -206,6 +210,7 @@ class _SprintColumn extends StatelessWidget {
                                   Opacity(opacity: 0.35, child: card),
                               child: _SprintCard(
                                 issue: issue,
+                                accent: dotColor,
                                 onOpen: () => onOpenIssue(issue),
                               ),
                             );
@@ -222,14 +227,18 @@ class _SprintColumn extends StatelessWidget {
 }
 
 class _SprintCard extends StatelessWidget {
-  const _SprintCard({required this.issue, this.onOpen});
+  const _SprintCard({required this.issue, this.accent, this.onOpen});
 
   final Issue issue;
+
+  /// Project-configured state color for this card's column; falls back to the
+  /// global palette when unknown.
+  final Color? accent;
   final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
-    final accent = AppColors.stateColor(issue.state.toUpperCase());
+    final accent = this.accent ?? AppColors.stateColor(issue.state.toUpperCase());
     final due = dueLabel(issue.dueDate);
     return Container(
       decoration: BoxDecoration(
