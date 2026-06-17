@@ -154,49 +154,123 @@ GoRouter buildRouter({
         builder: (context, state, child) =>
             AppShell(location: state.matchedLocation, child: child),
         routes: [
-          GoRoute(path: '/dashboard', builder: (_, _) => const DashboardScreen()),
-          GoRoute(path: '/projects', builder: (_, _) => const ProjectsScreen()),
-          GoRoute(path: '/issues', builder: (_, state) {
-            return IssuesScreen(projectId: state.uri.queryParameters['projectId']);
-          }),
+          GoRoute(
+            path: '/dashboard',
+            pageBuilder: (_, state) => _fadeUpPage(state, const DashboardScreen()),
+          ),
+          GoRoute(
+            path: '/projects',
+            pageBuilder: (_, state) => _fadeUpPage(state, const ProjectsScreen()),
+          ),
+          GoRoute(
+            path: '/issues',
+            pageBuilder: (_, state) => _fadeUpPage(
+              state,
+              IssuesScreen(projectId: state.uri.queryParameters['projectId']),
+            ),
+          ),
           GoRoute(
             path: '/issues/:id',
-            builder: (_, state) =>
-                IssueDetailScreen(issueId: state.pathParameters['id']!),
+            pageBuilder: (_, state) => _fadeUpPage(
+              state,
+              IssueDetailScreen(issueId: state.pathParameters['id']!),
+            ),
           ),
-          GoRoute(path: '/board', builder: (_, _) => const BoardScreen()),
+          GoRoute(
+            path: '/board',
+            pageBuilder: (_, state) => _fadeUpPage(state, const BoardScreen()),
+          ),
           GoRoute(
             path: '/boards/:id',
-            builder: (_, state) =>
-                KanbanBoardScreen(boardId: state.pathParameters['id']!),
+            pageBuilder: (_, state) => _fadeUpPage(
+              state,
+              KanbanBoardScreen(boardId: state.pathParameters['id']!),
+            ),
           ),
           GoRoute(
             path: '/projects/:id/boards',
-            builder: (_, state) => ProjectBoardsScreen(
-              projectId: state.pathParameters['id']!,
-              projectName: (state.extra as String?) ?? '',
+            pageBuilder: (_, state) => _fadeUpPage(
+              state,
+              ProjectBoardsScreen(
+                projectId: state.pathParameters['id']!,
+                projectName: (state.extra as String?) ?? '',
+              ),
             ),
           ),
-          GoRoute(path: '/gantt', builder: (_, _) => const GanttScreen()),
-          GoRoute(path: '/timesheet', builder: (_, _) => const TimesheetScreen()),
-          GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
-          GoRoute(path: '/knowledge', builder: (_, _) => const KnowledgeScreen()),
           GoRoute(
-            path: '/knowledge/:id',
-            builder: (_, state) =>
-                ArticleScreen(articleId: state.pathParameters['id']!),
+            path: '/gantt',
+            pageBuilder: (_, state) => _fadeUpPage(state, const GanttScreen()),
           ),
           GoRoute(
-              path: '/notifications',
-              builder: (_, _) => const NotificationsScreen()),
-          GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
-          GoRoute(path: '/admin', builder: (_, _) => const AdminScreen()),
+            path: '/timesheet',
+            pageBuilder: (_, state) => _fadeUpPage(state, const TimesheetScreen()),
+          ),
+          GoRoute(
+            path: '/reports',
+            pageBuilder: (_, state) => _fadeUpPage(state, const ReportsScreen()),
+          ),
+          GoRoute(
+            path: '/knowledge',
+            pageBuilder: (_, state) => _fadeUpPage(state, const KnowledgeScreen()),
+          ),
+          GoRoute(
+            path: '/knowledge/:id',
+            pageBuilder: (_, state) => _fadeUpPage(
+              state,
+              ArticleScreen(articleId: state.pathParameters['id']!),
+            ),
+          ),
+          GoRoute(
+            path: '/notifications',
+            pageBuilder: (_, state) =>
+                _fadeUpPage(state, const NotificationsScreen()),
+          ),
+          GoRoute(
+            path: '/settings',
+            pageBuilder: (_, state) => _fadeUpPage(state, const SettingsScreen()),
+          ),
+          GoRoute(
+            path: '/admin',
+            pageBuilder: (_, state) => _fadeUpPage(state, const AdminScreen()),
+          ),
           GoRoute(
             path: '/admin/users',
-            builder: (_, _) => const AdminUsersScreen(),
+            pageBuilder: (_, state) => _fadeUpPage(state, const AdminUsersScreen()),
           ),
         ],
       ),
     ],
   );
 }
+
+/// v2 page transition: a short, soft rise-up + fade for the incoming page.
+///
+/// Replaces the platform default (a horizontal Cupertino slide on macOS/desktop
+/// where the new page flies in from the right and the old one slides out left,
+/// briefly overlapping). Here the new page eases up a hair from below while
+/// fading in; the outgoing page stays put underneath and is simply covered, so
+/// there is no horizontal overlap. Quick (220ms in / 160ms out) and gentle.
+CustomTransitionPage<void> _fadeUpPage(GoRouterState state, Widget child) =>
+    CustomTransitionPage<void>(
+      key: state.pageKey,
+      transitionDuration: const Duration(milliseconds: 300),
+      reverseTransitionDuration: const Duration(milliseconds: 160),
+      child: child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final eased = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(
+          opacity: eased,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.025),
+              end: Offset.zero,
+            ).animate(eased),
+            child: child,
+          ),
+        );
+      },
+    );
