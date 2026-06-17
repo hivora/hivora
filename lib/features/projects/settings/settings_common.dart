@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
+    show GlassContainer, LiquidGlassSettings, LiquidRoundedSuperellipse;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/i18n/i18n.dart';
@@ -8,6 +10,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/hue_colors.dart';
 import '../../../core/widgets/hive_widgets.dart';
 import '../../../core/widgets/soft_card.dart';
+import '../../search/search_tokens.dart';
+import '../../sprint/modals/glass_modal.dart';
 
 /// One settings card: a [SoftCard] with a [SectionHeader] and body, spaced like
 /// the design's `.ps-block`.
@@ -113,123 +117,221 @@ class FieldLabel extends StatelessWidget {
   }
 }
 
-/// A small round color dot that opens the hue picker when tapped.
-class HueDot extends StatelessWidget {
-  const HueDot({
+/// A small color dot that, when tapped, opens a Liquid Glass hue popover
+/// anchored exactly at the dot (like a popup-menu button). Picking a hue calls
+/// [onPick].
+class GlassHuePicker extends StatelessWidget {
+  const GlassHuePicker({
     super.key,
     required this.hue,
-    required this.onTap,
+    required this.onPick,
+    this.hues = kLabelHues,
     this.size = 14,
   });
 
   final int hue;
-  final VoidCallback onTap;
+  final ValueChanged<int> onPick;
+  final List<int> hues;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      customBorder: const CircleBorder(),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: hueColor(hue),
-          shape: BoxShape.circle,
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 1,
-              spreadRadius: 0.3,
-            ),
-          ],
+    // Builder gives a context whose RenderObject is this dot, so the popover can
+    // be positioned precisely at the tap point.
+    return Builder(
+      builder: (dotContext) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () async {
+          final box = dotContext.findRenderObject() as RenderBox?;
+          if (box == null) return;
+          final picked = await _showGlassColorPopover(
+            dotContext,
+            anchor: box,
+            current: hue,
+            hues: hues,
+          );
+          if (picked != null) onPick(picked);
+        },
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: hueColor(hue),
+            shape: BoxShape.circle,
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 1,
+                spreadRadius: 0.3,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Bottom-sheet hue picker (bounded to the viewport — never overflows). Returns
-/// the chosen hue, or null on dismiss.
-Future<int?> showHuePicker(
+/// Opens a Liquid Glass color popover anchored at [anchor]'s global rect
+/// (clamped to the screen). Returns the chosen hue, or null on dismiss.
+Future<int?> _showGlassColorPopover(
   BuildContext context, {
+  required RenderBox anchor,
   required int current,
-  List<int> hues = kLabelHues,
+  required List<int> hues,
 }) {
-  return showModalBottomSheet<int>(
+  final overlay =
+      Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+  final dotTopLeft = anchor.localToGlobal(Offset.zero, ancestor: overlay);
+  final dotSize = anchor.size;
+  final screen = overlay.size;
+
+  const w = 220.0;
+  const estH = 168.0;
+  const pad = 12.0;
+  const gap = 8.0;
+
+  double left = (dotTopLeft.dx - 6).clamp(pad, screen.width - w - pad);
+  double top = dotTopLeft.dy + dotSize.height + gap;
+  if (top + estH > screen.height - pad) {
+    top = (dotTopLeft.dy - estH - gap).clamp(pad, screen.height - estH - pad);
+  }
+
+  return showGeneralDialog<int>(
     context: context,
-    backgroundColor: AppColors.surface,
+    barrierDismissible: true,
+    barrierLabel: 'color',
+    barrierColor: Colors.transparent,
     useRootNavigator: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (sheetContext) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              sheetContext.t('projectSettings.chooseColor'),
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                for (final h in hues)
-                  GestureDetector(
-                    onTap: () => Navigator.of(sheetContext).pop(h),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: hueColor(h),
-                        borderRadius: BorderRadius.circular(11),
-                        border: Border.all(
-                          color: h == current
-                              ? AppColors.ink
-                              : Colors.transparent,
-                          width: 2.5,
-                        ),
-                      ),
-                      child: h == current
-                          ? const Icon(
-                              LucideIcons.check,
-                              color: Colors.white,
-                              size: 20,
-                            )
-                          : null,
-                    ),
-                  ),
-              ],
-            ),
-          ],
+    transitionDuration: const Duration(milliseconds: 160),
+    pageBuilder: (_, _, _) => Stack(
+      children: [
+        Positioned(
+          left: left,
+          top: top,
+          child: _GlassColorCard(current: current, hues: hues, width: w),
         ),
-      ),
+      ],
     ),
+    transitionBuilder: (_, animation, _, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutBack);
+      return FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(
+          scale: Tween(begin: 0.9, end: 1.0).animate(curved),
+          alignment: Alignment.topLeft,
+          child: child,
+        ),
+      );
+    },
   );
 }
 
-/// Multi-select people picker for adding project members. Returns the chosen
-/// user ids, or null on cancel.
+class _GlassColorCard extends StatelessWidget {
+  const _GlassColorCard({
+    required this.current,
+    required this.hues,
+    required this.width,
+  });
+
+  final int current;
+  final List<int> hues;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = SearchTokens.of(Theme.of(context).brightness);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: tokens.panelShadow,
+      ),
+      child: GlassContainer(
+        useOwnLayer: true,
+        clipBehavior: Clip.antiAlias,
+        shape: const LiquidRoundedSuperellipse(borderRadius: 20),
+        settings: LiquidGlassSettings(
+          glassColor: tokens.tint,
+          blur: 18,
+          thickness: 16,
+          saturation: 1.9,
+          whitenStrength: dark ? 0.04 : 0.0,
+          whitenGated: false,
+          shadowElevation: 0,
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: SizedBox(
+            width: width,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.t('projectSettings.chooseColor'),
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: tokens.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      for (final h in hues)
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(h),
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: hueColor(h),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: h == current
+                                    ? tokens.ink
+                                    : Colors.transparent,
+                                width: 2.5,
+                              ),
+                            ),
+                            child: h == current
+                                ? const Icon(
+                                    LucideIcons.check,
+                                    color: Colors.white,
+                                    size: 18,
+                                  )
+                                : null,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Multi-select people picker for adding project members, presented in the
+/// app's Liquid Glass modal (same material as the sprint/team modals). Returns
+/// the chosen user ids, or null on cancel.
 Future<List<String>?> showMemberPicker(
   BuildContext context, {
   required List<DirectoryUser> candidates,
   required String projectName,
 }) {
-  return showModalBottomSheet<List<String>>(
-    context: context,
-    isScrollControlled: true,
-    useRootNavigator: true,
-    backgroundColor: AppColors.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (sheetContext) =>
+  return showGlassModal<List<String>>(
+    context,
+    width: 520,
+    builder: (modalContext) =>
         _MemberPicker(candidates: candidates, projectName: projectName),
   );
 }
@@ -256,150 +358,173 @@ class _MemberPickerState extends State<_MemberPicker> {
           u.displayName.toLowerCase().contains(q) ||
           (u.title ?? '').toLowerCase().contains(q);
     }).toList();
-    final insets = MediaQuery.of(context).viewInsets.bottom;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: insets),
-      child: DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        maxChildSize: 0.92,
-        builder: (context, scrollController) => Column(
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.hairline2,
-                borderRadius: BorderRadius.circular(2),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GlassModalHeader(
+          icon: LucideIcons.userPlus,
+          title: context.t('projectSettings.addMembers'),
+          subtitle: context.t(
+            'projectSettings.addMembersSub',
+            variables: {'name': widget.projectName},
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
+          child: TextField(
+            onChanged: (v) => setState(() => _query = v),
+            decoration: glassInputDecoration(
+              hint: context.t('projectSettings.searchPeople'),
+            ).copyWith(
+              prefixIcon: Icon(
+                LucideIcons.search,
+                size: 18,
+                color: AppColors.inkSoft,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          context.t('projectSettings.addMembers'),
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                          ),
+          ),
+        ),
+        Flexible(
+          child: filtered.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: Text(
+                      context.t('projectSettings.everyoneMember'),
+                      style: TextStyle(color: AppColors.inkSoft),
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, i) {
+                    final u = filtered[i];
+                    return _MemberRow(
+                      user: u,
+                      selected: _selected.contains(u.id),
+                      onTap: () => setState(
+                        () => _selected.contains(u.id)
+                            ? _selected.remove(u.id)
+                            : _selected.add(u.id),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        GlassModalFooter(
+          confirmLabel: _selected.isEmpty
+              ? context.t('projectSettings.add')
+              : context.t(
+                  'projectSettings.addN',
+                  variables: {'count': '${_selected.length}'},
+                ),
+          confirmIcon: LucideIcons.userPlus,
+          onConfirm: _selected.isEmpty
+              ? null
+              : () => Navigator.of(context).pop(_selected.toList()),
+        ),
+      ],
+    );
+  }
+}
+
+/// One selectable person row on the glass material — avatar, name, role and a
+/// rounded check box (filled when selected), matching the design.
+class _MemberRow extends StatelessWidget {
+  const _MemberRow({
+    required this.user,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final DirectoryUser user;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: AppColors.surface.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+              border: Border.all(
+                color: selected ? AppColors.accentLine : AppColors.hairline,
+              ),
+            ),
+            child: Row(
+              children: [
+                HiveAvatar(
+                  name: user.displayName,
+                  imageUrl: user.avatarUrl,
+                  size: 36,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
+                      ),
+                      if (user.title != null)
                         Text(
-                          context.t(
-                            'projectSettings.addMembersSub',
-                            variables: {'name': widget.projectName},
-                          ),
+                          user.title!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 12.5,
+                            fontSize: 12,
                             color: AppColors.inkSoft,
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: TextField(
-                autofocus: false,
-                onChanged: (v) => setState(() => _query = v),
-                decoration: InputDecoration(
-                  isDense: true,
-                  prefixIcon: const Icon(LucideIcons.search, size: 18),
-                  hintText: context.t('projectSettings.searchPeople'),
                 ),
-              ),
+                const SizedBox(width: 10),
+                _CheckBox(on: selected),
+              ],
             ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: filtered.isEmpty
-                  ? Center(
-                      child: Text(
-                        context.t('projectSettings.everyoneMember'),
-                        style: TextStyle(color: AppColors.inkSoft),
-                      ),
-                    )
-                  : ListView.builder(
-                      controller: scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: filtered.length,
-                      itemBuilder: (context, i) {
-                        final u = filtered[i];
-                        final on = _selected.contains(u.id);
-                        return ListTile(
-                          onTap: () => setState(
-                            () => on
-                                ? _selected.remove(u.id)
-                                : _selected.add(u.id),
-                          ),
-                          leading: HiveAvatar(
-                            name: u.displayName,
-                            imageUrl: u.avatarUrl,
-                            size: 36,
-                          ),
-                          title: Text(
-                            u.displayName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          subtitle: u.title == null ? null : Text(u.title!),
-                          trailing: Icon(
-                            on
-                                ? LucideIcons.circleCheckBig
-                                : LucideIcons.circle,
-                            color: on ? AppColors.accent : AppColors.inkFaint,
-                          ),
-                        );
-                      },
-                    ),
-            ),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(context.t('common.cancel')),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: PrimaryButton(
-                        icon: LucideIcons.userPlus,
-                        label: _selected.isEmpty
-                            ? context.t('projectSettings.add')
-                            : context.t(
-                                'projectSettings.addN',
-                                variables: {'count': '${_selected.length}'},
-                              ),
-                        onPressed: _selected.isEmpty
-                            ? null
-                            : () =>
-                                  Navigator.of(context).pop(_selected.toList()),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _CheckBox extends StatelessWidget {
+  const _CheckBox({required this.on});
+  final bool on;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 22,
+      height: 22,
+      decoration: BoxDecoration(
+        color: on ? AppColors.accent : AppColors.surface.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: on ? AppColors.accent : AppColors.hairline2),
+      ),
+      child: on
+          ? const Icon(LucideIcons.check, size: 14, color: Colors.white)
+          : null,
     );
   }
 }

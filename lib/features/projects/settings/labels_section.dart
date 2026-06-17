@@ -105,10 +105,7 @@ class _LabelsSectionState extends State<LabelsSection> {
                     label: l,
                     controller: _controllers[l.id]!,
                     onRename: (v) => widget.onRename(l.id, v),
-                    onRecolor: () async {
-                      final hue = await showHuePicker(context, current: l.hue);
-                      if (hue != null) widget.onRecolor(l.id, hue);
-                    },
+                    onPickColor: (hue) => widget.onRecolor(l.id, hue),
                     onRemove: () => widget.onRemove(l.id),
                   ),
               ],
@@ -126,14 +123,14 @@ class _LabelChip extends StatelessWidget {
     required this.label,
     required this.controller,
     required this.onRename,
-    required this.onRecolor,
+    required this.onPickColor,
     required this.onRemove,
   });
 
   final ProjectLabel label;
   final TextEditingController controller;
   final ValueChanged<String> onRename;
-  final VoidCallback onRecolor;
+  final ValueChanged<int> onPickColor;
   final VoidCallback onRemove;
 
   @override
@@ -149,7 +146,7 @@ class _LabelChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          HueDot(hue: label.hue, onTap: onRecolor),
+          GlassHuePicker(hue: label.hue, onPick: onPickColor),
           const SizedBox(width: 8),
           ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 40, maxWidth: 130),
@@ -162,10 +159,18 @@ class _LabelChip extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   color: ink,
                 ),
-                decoration: const InputDecoration(
-                  isCollapsed: true,
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
+                // Transparent inside the chip; an underline in the label's own
+                // ink appears on focus (reference `.lbl-in:focus`).
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: false,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 2),
+                  enabledBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.transparent),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: ink, width: 1.2),
+                  ),
                 ),
               ),
             ),

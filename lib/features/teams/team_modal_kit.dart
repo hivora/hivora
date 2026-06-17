@@ -1,39 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
 import '../../core/i18n/i18n.dart';
 import '../../core/models/team_models.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../sprint/modals/glass_modal.dart' show showGlassModal;
 import 'team_widgets.dart';
 
 // ════════════════════════════════════════════════════════════════════════
-//  Shared building blocks for the Teams modals: a self-contained glass-ish
-//  shell (pinned header + scrolling body + pinned footer), field labels,
-//  the role segmented control, color/icon pickers and the access picker.
-//  Every modal caps its height and scrolls its body so it never overflows.
+//  Shared building blocks for the Teams modals. Every modal is presented on
+//  the app's signature Liquid-Glass material (via [showGlassModal]) — a
+//  blurred, tinted panel with a spring entrance. The shell pins the header &
+//  footer and scrolls the body so it never overflows; controls use translucent
+//  fills so the glass reads through.
 // ════════════════════════════════════════════════════════════════════════
 
-/// Presents [pageChild] as a Wolt modal — a centered dialog on wide screens,
-/// a bottom sheet on phones. Returns the value the body pops with.
-Future<T?> showTeamModal<T>(BuildContext context, Widget pageChild) {
-  return WoltModalSheet.show<T>(
-    context: context,
-    useRootNavigator: true,
-    barrierDismissible: true,
-    modalTypeBuilder: (ctx) => MediaQuery.sizeOf(ctx).width >= 760
-        ? WoltModalType.dialog()
-        : WoltModalType.bottomSheet(),
-    pageListBuilder: (modalContext) => [
-      WoltModalSheetPage(
-        backgroundColor: AppColors.surface,
-        surfaceTintColor: Colors.transparent,
-        hasTopBarLayer: false,
-        child: pageChild,
-      ),
-    ],
-  );
+/// Translucent control fill so the Liquid-Glass panel shows through.
+Color get _fill => AppColors.surface.withValues(alpha: 0.7);
+Color get _fillSoft => AppColors.surface.withValues(alpha: 0.5);
+
+/// Presents [pageChild] on the shared Liquid-Glass modal material. Returns the
+/// value the body pops with.
+Future<T?> showTeamModal<T>(
+  BuildContext context,
+  Widget pageChild, {
+  double width = 560,
+}) {
+  return showGlassModal<T>(context, width: width, builder: (_) => pageChild);
 }
 
 /// Header (icon · title/subtitle · close) + scrolling body + pinned footer.
@@ -119,11 +113,7 @@ class ModalShell extends StatelessWidget {
                 IconButton(
                   onPressed: () => Navigator.of(context).maybePop(),
                   visualDensity: VisualDensity.compact,
-                  icon: Icon(
-                    LucideIcons.x,
-                    size: 20,
-                    color: AppColors.inkSoft,
-                  ),
+                  icon: Icon(LucideIcons.x, size: 20, color: AppColors.inkSoft),
                 ),
               ],
             ),
@@ -264,7 +254,7 @@ class RoleSegmented extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
+        color: _fill,
         borderRadius: BorderRadius.circular(AppTheme.radiusControl),
         border: Border.all(color: AppColors.hairline),
       ),
@@ -407,7 +397,7 @@ class IconPicker extends StatelessWidget {
           () {
             final on = selected == name;
             return Material(
-              color: on ? AppColors.accentSoft : AppColors.surfaceMuted,
+              color: on ? AppColors.accentSoft : _fill,
               borderRadius: BorderRadius.circular(9),
               child: InkWell(
                 onTap: () => onChanged(name),
@@ -455,7 +445,7 @@ class CheckRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppColors.accentSoft : AppColors.surfaceMuted,
+      color: selected ? AppColors.accentSoft : _fill,
       borderRadius: BorderRadius.circular(AppTheme.radiusControl),
       child: InkWell(
         onTap: onTap,
@@ -593,7 +583,7 @@ class AccessPicker extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.canvas2,
+              color: _fillSoft,
               borderRadius: BorderRadius.circular(AppTheme.radiusControl),
               border: Border.all(color: AppColors.hairline2),
             ),
@@ -642,7 +632,7 @@ class AccessPicker extends StatelessWidget {
   ) {
     final on = scope == value;
     return Material(
-      color: on ? AppColors.accentSoft : AppColors.surfaceMuted,
+      color: on ? AppColors.accentSoft : _fill,
       borderRadius: BorderRadius.circular(AppTheme.radiusControl),
       child: InkWell(
         onTap: () => onScope(value),
@@ -661,7 +651,7 @@ class AccessPicker extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color: on ? AppColors.surface : AppColors.canvas2,
+                  color: on ? AppColors.surface : _fillSoft,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
@@ -744,7 +734,7 @@ InputDecoration teamFieldDecoration(BuildContext context, {String? hint}) =>
       isDense: true,
       hintText: hint,
       filled: true,
-      fillColor: AppColors.surfaceMuted,
+      fillColor: _fill,
       contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppTheme.radiusControl),

@@ -299,7 +299,7 @@ class _ModeToggle extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
+        color: AppColors.surface.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(AppTheme.radiusControl),
         border: Border.all(color: AppColors.hairline),
       ),
@@ -377,7 +377,7 @@ class _LeadDropdown extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13),
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
+        color: AppColors.surface.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(AppTheme.radiusControl),
         border: Border.all(color: AppColors.hairline),
       ),

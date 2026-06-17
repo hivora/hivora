@@ -95,6 +95,11 @@ class _WorkflowSectionState extends State<WorkflowSection> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             buildDefaultDragHandles: false,
+            // Default proxy wraps the row in an elevated square Material with a
+            // hard shadow; render it transparently so the row keeps its own
+            // rounded card while dragging.
+            proxyDecorator: (child, index, animation) =>
+                Material(type: MaterialType.transparency, child: child),
             itemCount: widget.states.length,
             onReorderItem: widget.onReorder,
             itemBuilder: (context, i) {
@@ -110,10 +115,7 @@ class _WorkflowSectionState extends State<WorkflowSection> {
                   isResolved: isResolved,
                   canDelete: canDelete,
                   onRename: (v) => widget.onRename(s.id, v),
-                  onRecolor: () async {
-                    final hue = await showHuePicker(context, current: s.hue);
-                    if (hue != null) widget.onRecolor(s.id, hue);
-                  },
+                  onPickColor: (hue) => widget.onRecolor(s.id, hue),
                   onToggleResolved: () => widget.onToggleResolved(s.name),
                   onDelete: () => widget.onDelete(s.id),
                 ),
@@ -140,7 +142,7 @@ class _StateRow extends StatelessWidget {
     required this.isResolved,
     required this.canDelete,
     required this.onRename,
-    required this.onRecolor,
+    required this.onPickColor,
     required this.onToggleResolved,
     required this.onDelete,
   });
@@ -151,7 +153,7 @@ class _StateRow extends StatelessWidget {
   final bool isResolved;
   final bool canDelete;
   final ValueChanged<String> onRename;
-  final VoidCallback onRecolor;
+  final ValueChanged<int> onPickColor;
   final VoidCallback onToggleResolved;
   final VoidCallback onDelete;
 
@@ -179,7 +181,7 @@ class _StateRow extends StatelessWidget {
               ),
             ),
           ),
-          HueDot(hue: state.hue, onTap: onRecolor, size: 11),
+          GlassHuePicker(hue: state.hue, onPick: onPickColor, size: 11),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
@@ -189,10 +191,18 @@ class _StateRow extends StatelessWidget {
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
               ),
+              // Transparent field; only an accent underline appears on focus,
+              // matching the reference (`.st-in`).
               decoration: const InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
+                isDense: true,
+                filled: false,
                 contentPadding: EdgeInsets.symmetric(vertical: 4),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.transparent),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.accent, width: 1.5),
+                ),
               ),
             ),
           ),

@@ -10,6 +10,7 @@ import '../../core/models/content_models.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/hive_empty_state.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
 import '../../core/widgets/status_widgets.dart';
@@ -80,14 +81,9 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
                     ),
                     const SizedBox(height: 20),
                     if (roots.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(40),
-                        child: Text(
-                          context.t('knowledge.empty'),
-                          textAlign: TextAlign.center,
-                          style:
-                              TextStyle(color: AppColors.textSecondary),
-                        ),
+                      HiveEmptyState(
+                        title: context.t('knowledge.title'),
+                        message: context.t('knowledge.empty'),
                       ),
                     for (final root in roots)
                       _ArticleNode(article: root, all: articles, depth: 0),

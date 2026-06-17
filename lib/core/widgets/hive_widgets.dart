@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -5,6 +6,24 @@ import '../i18n/i18n.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/hue_colors.dart';
+
+/// App-wide toggle — Cupertino style (the product's switch convention), tinted
+/// with the honey accent when on. Use this instead of Material [Switch].
+class HiveSwitch extends StatelessWidget {
+  const HiveSwitch({super.key, required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoSwitch(
+      value: value,
+      onChanged: onChanged,
+      activeTrackColor: AppColors.accent,
+    );
+  }
+}
 
 // ════════════════════════════════════════════════════════════════════════
 //  Hivora "Hive" v2 design kit — shared primitives that mirror the

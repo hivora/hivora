@@ -89,6 +89,7 @@ class SprintPlanningSurface extends StatelessWidget {
                 isActive: s.id == activeSprintId,
                 issues: (issuesBySprint[s.id] ?? const [])
                     .where(filter.matches)
+                    .where(_matchesQuery)
                     .toList(),
                 selected: selected,
                 onToggleSelect: onToggleSelect,
@@ -145,22 +146,49 @@ class SprintPlanningSurface extends StatelessWidget {
     );
   }
 
+  /// Free-text match used to filter sprint issues in-memory, mirroring the
+  /// server-side backlog search (id / title / tags). The backlog list is
+  /// already query-filtered upstream, so this only narrows the sprint groups.
+  bool _matchesQuery(Issue issue) {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    return issue.readableId.toLowerCase().contains(q) ||
+        issue.title.toLowerCase().contains(q) ||
+        issue.tags.any((t) => t.toLowerCase().contains(q));
+  }
+
   Widget _toolbar(BuildContext context) {
+    final createButton = PrimaryButton(
+      label: context.t('sprint.createSprint'),
+      onPressed: onCreateSprint,
+    );
+    final search = _SearchField(query: query, onQuery: onQuery);
     return Padding(
       padding: const EdgeInsets.only(top: 4),
-      child: Row(
-        children: [
-          PrimaryButton(
-            label: context.t('sprint.createSprint'),
-            onPressed: onCreateSprint,
-          ),
-          const Spacer(),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 320),
-            child: _SearchField(query: query, onQuery: onQuery),
-          ),
-        ],
-      ),
+      // Phone: button + search share a single row, search flexes into the
+      // remaining width so it never overflows the viewport. Desktop keeps the
+      // button left and a fixed-width search pinned to the right.
+      child: context.isCompact
+          ? Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                createButton,
+                Expanded(child: search),
+              ],
+            )
+          : Row(
+              children: [
+                createButton,
+                const Spacer(),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  child: search,
+                ),
+              ],
+            ),
     );
   }
 }
@@ -194,7 +222,7 @@ class _SearchFieldState extends State<_SearchField> {
         isDense: true,
         prefixIcon: Icon(LucideIcons.search, size: 18, color: AppColors.inkFaint),
         prefixIconConstraints: const BoxConstraints(minWidth: 38),
-        hintText: context.t('sprint.filterBacklog'),
+        hintText: context.t('sprint.filterIssues'),
         filled: true,
         fillColor: AppColors.surface,
         contentPadding: const EdgeInsets.symmetric(vertical: 11),

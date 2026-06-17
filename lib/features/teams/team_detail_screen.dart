@@ -286,10 +286,7 @@ class _Header extends StatelessWidget {
                         ),
                       ),
                       if (team.createdAt != null)
-                        _meta(
-                          LucideIcons.calendar,
-                          _date(team.createdAt!),
-                        ),
+                        _meta(LucideIcons.calendar, _date(team.createdAt!)),
                     ],
                   ),
                 ],

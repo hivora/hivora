@@ -53,6 +53,7 @@ Future<bool?> showManageMemberModal(
       projectsById: projectsById,
       isSelf: isSelf,
     ),
+    width: 520,
   );
 }
 
@@ -186,9 +187,7 @@ class _AddMembersBodyState extends State<_AddMembersBody> with _ProjectLookup {
                 count: _selected.length,
               )
             : context.t('common.continueAction'),
-        primaryIcon: stepTwo
-            ? LucideIcons.userPlus
-            : LucideIcons.arrowRight,
+        primaryIcon: stepTwo ? LucideIcons.userPlus : LucideIcons.arrowRight,
         busy: _busy,
         onPrimary: stepTwo
             ? (canAdd ? _commit : null)
@@ -232,7 +231,7 @@ class _AddMembersBodyState extends State<_AddMembersBody> with _ProjectLookup {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
         decoration: BoxDecoration(
-          color: AppColors.surfaceMuted,
+          color: AppColors.surface.withValues(alpha: 0.7),
           borderRadius: BorderRadius.circular(AppTheme.radiusControl),
           border: Border.all(color: AppColors.hairline),
         ),
@@ -381,11 +380,7 @@ class _ManageMemberBodyState extends State<_ManageMemberBody>
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  LucideIcons.info,
-                  size: 14,
-                  color: AppColors.inkFaint,
-                ),
+                Icon(LucideIcons.info, size: 14, color: AppColors.inkFaint),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -477,7 +472,9 @@ class _Stepper extends StatelessWidget {
           width: 22,
           height: 22,
           decoration: BoxDecoration(
-            color: on ? AppColors.accent : AppColors.surfaceMuted,
+            color: on
+                ? AppColors.accent
+                : AppColors.surface.withValues(alpha: 0.7),
             shape: BoxShape.circle,
           ),
           alignment: Alignment.center,

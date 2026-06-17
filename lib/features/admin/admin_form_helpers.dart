@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/hive_widgets.dart';
 
 /// Card that groups related admin settings with an icon, title and subtitle.
 class AdminSectionCard extends StatelessWidget {
@@ -256,9 +257,8 @@ class _ProviderTileState extends State<ProviderTile> {
           childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
           title: Row(
             children: [
-              Switch(
+              HiveSwitch(
                 value: enabled,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 onChanged: (value) {
                   setState(() => widget.section['enabled'] = value);
                   widget.onChanged();

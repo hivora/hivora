@@ -395,6 +395,8 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      _BackLink(onTap: () => Navigator.of(context).maybePop()),
+                      const SizedBox(height: 14),
                       _Header(draft: draft),
                       const SizedBox(height: 20),
                       GeneralSection(
@@ -457,6 +459,41 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
           onSave: _save,
         ),
       ],
+    );
+  }
+}
+
+/// "← All projects" back link above the project header.
+class _BackLink extends StatelessWidget {
+  const _BackLink({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(LucideIcons.arrowLeft, size: 16, color: AppColors.inkSoft),
+              const SizedBox(width: 7),
+              Text(
+                context.t('projectSettings.allProjects'),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.inkSoft,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

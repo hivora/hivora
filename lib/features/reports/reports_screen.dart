@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../core/widgets/hive_empty_state.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -321,11 +322,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       );
     }
     if (_projects.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 60),
-        child: Center(
-            child: Text(context.t('projects.empty'),
-                style: TextStyle(color: AppColors.inkSoft))),
+      return HiveEmptyState(
+        title: context.t('reports.title'),
+        message: context.t('projects.empty'),
       );
     }
 
@@ -615,10 +614,10 @@ class _BarReportCard extends StatelessWidget {
           _SectionTitle(title),
           const SizedBox(height: 14),
           if (data.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              child: Text(context.t('reports.empty'),
-                  style: TextStyle(color: AppColors.inkFaint)),
+            HiveEmptyState(
+              card: false,
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              title: context.t('reports.empty'),
             )
           else
             for (final d in data)

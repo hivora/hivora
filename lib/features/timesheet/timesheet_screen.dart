@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../core/widgets/hive_empty_state.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -127,11 +128,9 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                   style: TextStyle(color: AppColors.textSecondary)),
             )
           else if (_rows.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(40),
-              child: Text(context.t('timesheet.empty'),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary)),
+            HiveEmptyState(
+              title: context.t('timesheet.title'),
+              message: context.t('timesheet.empty'),
             )
           else
             SoftCard(

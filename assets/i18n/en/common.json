@@ -572,6 +572,7 @@
     "completeSprint": "Complete sprint",
     "planned": "Planned",
     "filterBacklog": "Filter backlog…",
+    "filterIssues": "Filter issues…",
     "addIssue": "Add issue",
     "addBacklogItem": "Add backlog item",
     "dragHere": "Drag issues here to plan this sprint, or add one below.",
@@ -784,6 +785,7 @@
     "toastResolvedRequired": "Keep at least one resolved state",
     "toastMinStates": "A workflow needs at least 2 states",
     "toastDuplicateLabel": "That label already exists",
-    "toastSaved": "Project settings saved"
+    "toastSaved": "Project settings saved",
+    "allProjects": "All projects"
   }
 }

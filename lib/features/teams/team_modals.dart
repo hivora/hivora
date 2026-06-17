@@ -17,7 +17,7 @@ export 'team_project_modal.dart';
 /// Create-team modal. Returns the created [Team] (so the caller can open it).
 Future<Team?> showCreateTeamModal(BuildContext context) {
   final repo = context.read<HivoraRepository>();
-  return showTeamModal<Team>(context, _TeamFormBody(repo: repo));
+  return showTeamModal<Team>(context, _TeamFormBody(repo: repo), width: 580);
 }
 
 /// Edit-team modal. Returns true if the team was saved.
@@ -26,13 +26,18 @@ Future<bool?> showEditTeamModal(BuildContext context, Team team) {
   return showTeamModal<bool>(
     context,
     _TeamFormBody(repo: repo, existing: team),
+    width: 580,
   );
 }
 
 /// Delete-team modal (type-to-confirm). Returns true if deleted.
 Future<bool?> showDeleteTeamModal(BuildContext context, Team team) {
   final repo = context.read<HivoraRepository>();
-  return showTeamModal<bool>(context, _DeleteTeamBody(repo: repo, team: team));
+  return showTeamModal<bool>(
+    context,
+    _DeleteTeamBody(repo: repo, team: team),
+    width: 460,
+  );
 }
 
 class _TeamFormBody extends StatefulWidget {
@@ -287,18 +292,14 @@ class _DeleteTeamBodyState extends State<_DeleteTeamBody> {
           Container(
             padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(
-              color: AppColors.surfaceMuted,
+              color: AppColors.surface.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(AppTheme.radiusControl),
               border: Border.all(color: AppColors.hairline),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  LucideIcons.info,
-                  size: 16,
-                  color: AppColors.accentStrong,
-                ),
+                Icon(LucideIcons.info, size: 16, color: AppColors.accentStrong),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(

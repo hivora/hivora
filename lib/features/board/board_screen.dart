@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../core/widgets/hive_empty_state.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -168,25 +169,15 @@ class _BoardScreenState extends State<BoardScreen> {
         ),
         if (_boards.isEmpty)
           SliverFillRemaining(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    LucideIcons.squareKanban,
-                    size: 56,
-                    color: AppColors.textSecondary,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    context.t('board.empty'),
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  FilledButton.icon(
+            hasScrollBody: false,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                  horizontal: context.pageGutter, vertical: 24),
+              child: Center(
+                child: HiveEmptyState(
+                  title: context.t('board.title'),
+                  message: context.t('board.empty'),
+                  action: FilledButton.icon(
                     onPressed: _showCreate,
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.accent,
@@ -195,7 +186,7 @@ class _BoardScreenState extends State<BoardScreen> {
                     icon: const Icon(LucideIcons.plus, size: 18),
                     label: Text(context.t('board.newBoard')),
                   ),
-                ],
+                ),
               ),
             ),
           )

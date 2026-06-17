@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../core/widgets/hive_empty_state.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -135,12 +136,17 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   const SliverFillRemaining(child: Center(child: HiveLoader()))
                 else if (projects.isEmpty)
                   SliverFillRemaining(
-                    child: Center(
-                      child: Text(
-                        _showArchived
-                            ? context.t('projects.emptyArchived')
-                            : context.t('projects.empty'),
-                        style: TextStyle(color: AppColors.textSecondary),
+                    hasScrollBody: false,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: context.pageGutter, vertical: 24),
+                      child: Center(
+                        child: HiveEmptyState(
+                          title: context.t('projects.title'),
+                          message: _showArchived
+                              ? context.t('projects.emptyArchived')
+                              : context.t('projects.empty'),
+                        ),
                       ),
                     ),
                   )

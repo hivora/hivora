@@ -572,6 +572,7 @@
     "completeSprint": "Sprint abschließen",
     "planned": "Geplant",
     "filterBacklog": "Backlog filtern…",
+    "filterIssues": "Vorgänge filtern…",
     "addIssue": "Vorgang hinzufügen",
     "addBacklogItem": "Backlog-Eintrag hinzufügen",
     "dragHere": "Vorgänge hierher ziehen, um den Sprint zu planen, oder unten hinzufügen.",
@@ -784,6 +785,7 @@
     "toastResolvedRequired": "Behalte mindestens einen erledigten Status",
     "toastMinStates": "Ein Workflow braucht mindestens 2 Status",
     "toastDuplicateLabel": "Dieses Stichwort existiert bereits",
-    "toastSaved": "Projekteinstellungen gespeichert"
+    "toastSaved": "Projekteinstellungen gespeichert",
+    "allProjects": "Alle Projekte"
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/i18n/i18n.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/hive_widgets.dart';
 import 'settings_common.dart';
 
 /// Archive card: a switch to archive / restore the project.
@@ -48,12 +49,7 @@ class ArchiveSection extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          Switch(
-            value: archived,
-            activeThumbColor: Colors.white,
-            activeTrackColor: AppColors.accent,
-            onChanged: onChanged,
-          ),
+          HiveSwitch(value: archived, onChanged: onChanged),
         ],
       ),
     );

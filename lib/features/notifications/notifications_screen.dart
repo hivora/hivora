@@ -8,6 +8,7 @@ import '../../core/i18n/i18n.dart';
 import '../../core/models/content_models.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/hive_empty_state.dart';
 import '../../core/widgets/soft_card.dart';
 import '../../core/widgets/status_widgets.dart';
 
@@ -57,14 +58,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     SectionHeader(title: context.t('notifications.title')),
                     const SizedBox(height: 12),
                     if (notifications.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(40),
-                        child: Text(
-                          context.t('notifications.empty'),
-                          textAlign: TextAlign.center,
-                          style:
-                              TextStyle(color: AppColors.textSecondary),
-                        ),
+                      HiveEmptyState(
+                        title: context.t('notifications.title'),
+                        message: context.t('notifications.empty'),
                       ),
                     for (final notification in notifications)
                       Padding(

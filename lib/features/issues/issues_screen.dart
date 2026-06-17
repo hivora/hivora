@@ -14,6 +14,7 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/project_palette.dart';
+import '../../core/widgets/hive_empty_state.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
 import '../../core/widgets/status_widgets.dart';
@@ -196,12 +197,11 @@ class _IssuesScreenState extends State<IssuesScreen> {
                   if (list.isEmpty)
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 80),
-                        child: Center(
-                          child: Text(
-                            context.t('issues.empty'),
-                            style: TextStyle(color: AppColors.inkSoft),
-                          ),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: context.pageGutter, vertical: 40),
+                        child: HiveEmptyState(
+                          title: context.t('nav.issues'),
+                          message: context.t('issues.empty'),
                         ),
                       ),
                     )

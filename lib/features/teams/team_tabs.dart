@@ -885,11 +885,7 @@ class TeamSettingsTab extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 28),
           child: Column(
             children: [
-              Icon(
-                LucideIcons.lock,
-                size: 26,
-                color: AppColors.inkSoft,
-              ),
+              Icon(LucideIcons.lock, size: 26, color: AppColors.inkSoft),
               const SizedBox(height: 10),
               Text(
                 context.t('teams.adminsOnly'),

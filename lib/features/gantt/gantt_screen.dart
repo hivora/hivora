@@ -11,6 +11,7 @@ import '../../core/models/work_models.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/hive_empty_state.dart';
 import '../../core/widgets/hive_loader.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
@@ -161,11 +162,10 @@ class _GanttScreenState extends State<GanttScreen> {
     if (_tasks.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Text(
-            context.t('gantt.empty'),
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondary),
+          padding: EdgeInsets.symmetric(horizontal: context.pageGutter),
+          child: HiveEmptyState(
+            title: context.t('gantt.title'),
+            message: context.t('gantt.empty'),
           ),
         ),
       );
