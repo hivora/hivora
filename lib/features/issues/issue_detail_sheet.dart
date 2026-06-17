@@ -507,14 +507,6 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                 child: Text(issue.title, style: titleStyle),
               ),
             ),
-          if (issue.tags.isNotEmpty && !_editingTitle) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [for (final t in issue.tags) LabelTag(t, hue: _project?.hueForLabel(t))],
-            ),
-          ],
           const SizedBox(height: 18),
           _sectionLabel(context.t('issues.description')),
           const SizedBox(height: 8),
@@ -579,11 +571,11 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   );
 
   Widget _attachmentsSection(Issue issue) => AttachmentsSection(
-        issueId: widget.issueId,
-        initial: issue.attachments,
-        userNames: _names,
-        onChanged: widget.onChanged,
-      );
+    issueId: widget.issueId,
+    initial: issue.attachments,
+    userNames: _names,
+    onChanged: widget.onChanged,
+  );
 
   Widget _detailsCard(Issue issue) {
     final assigneeName = issue.assigneeId != null
@@ -611,7 +603,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           _DetailRow(
             label: context.t('issues.status'),
             onTap: _pickStatus,
-            child: StateDotBadge(state: issue.state, color: _projStateColor(_project, issue.state)),
+            child: StateDotBadge(
+              state: issue.state,
+              color: _projStateColor(_project, issue.state),
+            ),
           ),
           // Assignee + "assign to me"
           _DetailRow(
@@ -668,7 +663,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                 : Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: [for (final t in issue.tags) LabelTag(t, hue: _project?.hueForLabel(t))],
+                    children: [
+                      for (final t in issue.tags)
+                        LabelTag(t, hue: _project?.hueForLabel(t)),
+                    ],
                   ),
           ),
           // Sprint
@@ -981,7 +979,11 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     final chosen = await _showOptions<String>(
       title: context.t('issues.status'),
       options: [
-        for (final s in states) (value: s, child: StateDotBadge(state: s, color: _projStateColor(_project, s))),
+        for (final s in states)
+          (
+            value: s,
+            child: StateDotBadge(state: s, color: _projStateColor(_project, s)),
+          ),
       ],
     );
     if (chosen != null) await _patch({'state': chosen});
@@ -1085,9 +1087,11 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       subtitle: '${issue.readableId} · ${issue.title}',
     );
     if (result != null) {
-      await _patch(result.points == null
-          ? {'clearStoryPoints': true}
-          : {'storyPoints': result.points});
+      await _patch(
+        result.points == null
+            ? {'clearStoryPoints': true}
+            : {'storyPoints': result.points},
+      );
     }
   }
 
@@ -1214,7 +1218,11 @@ class _DeleteIssueConfirm extends StatelessWidget {
                   color: AppColors.dangerSoft,
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(LucideIcons.trash2, size: 20, color: AppColors.danger),
+                child: Icon(
+                  LucideIcons.trash2,
+                  size: 20,
+                  color: AppColors.danger,
+                ),
               ),
               const SizedBox(width: 13),
               Expanded(
@@ -1278,15 +1286,18 @@ class _DeleteIssueConfirm extends StatelessWidget {
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.danger,
                     foregroundColor: Colors.white,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 13,
+                    ),
                     textStyle: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppTheme.radiusControl),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.radiusControl,
+                      ),
                     ),
                   ),
                   icon: const Icon(LucideIcons.trash2, size: 16),
@@ -1737,7 +1748,10 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
                 ? null
                 : _pickStatus,
             child: _state != null
-                ? StateDotBadge(state: _state!, color: _projStateColor(_project, _state!))
+                ? StateDotBadge(
+                    state: _state!,
+                    color: _projStateColor(_project, _state!),
+                  )
                 : Text(
                     context.t('issues.noValue'),
                     style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
@@ -1930,7 +1944,11 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
       context,
       title: context.t('issues.status'),
       options: [
-        for (final s in states) (value: s, child: StateDotBadge(state: s, color: _projStateColor(_project, s))),
+        for (final s in states)
+          (
+            value: s,
+            child: StateDotBadge(state: s, color: _projStateColor(_project, s)),
+          ),
       ],
     );
     if (chosen != null) setState(() => _state = chosen);
@@ -2442,11 +2460,7 @@ class _ActivityTile extends StatelessWidget {
       children: [
         if (from != null) _ChangeChip(from),
         if (from != null)
-          Icon(
-            LucideIcons.arrowRight,
-            size: 14,
-            color: AppColors.inkFaint,
-          ),
+          Icon(LucideIcons.arrowRight, size: 14, color: AppColors.inkFaint),
         if (to != null) _ChangeChip(to),
       ],
     );
