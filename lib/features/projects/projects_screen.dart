@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/widgets/hive_empty_state.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/hivora_repository.dart';
+import '../../core/blocs/auth_bloc.dart';
 import '../../core/blocs/fetch_cubit.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/core_models.dart';
@@ -15,8 +16,10 @@ import '../../core/models/work_models.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/hue_colors.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
+import '../sprint/modals/glass_modal.dart';
 
 typedef _ProjectsData = ({
   List<Project> active,
@@ -185,18 +188,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   Future<void> _showCreate() async {
     final repository = context.read<HivoraRepository>();
-    final created = await WoltModalSheet.show<Project?>(
-      context: context,
-      pageListBuilder: (modalContext) => [
-        WoltModalSheetPage(
-          backgroundColor: AppColors.surface,
-          hasTopBarLayer: false,
-          child: RepositoryProvider.value(
-            value: repository,
-            child: const _CreateProjectBody(),
-          ),
-        ),
-      ],
+    final meId = context.read<AuthBloc>().state.user?.id;
+    final created = await showGlassModal<Project>(
+      context,
+      width: 580,
+      builder: (modalContext) => RepositoryProvider.value(
+        value: repository,
+        child: _CreateProjectBody(meId: meId),
+      ),
     );
     if (created != null) _cubit.load();
   }
@@ -464,20 +463,50 @@ class _Stat extends StatelessWidget {
   }
 }
 
+/// "New project" creation modal, rendered on the app's Liquid Glass material
+/// (same as the sprint/team modals) and matching the design: glyph + name/key,
+/// description, lead, accent color and the default-workflow note.
 class _CreateProjectBody extends StatefulWidget {
-  const _CreateProjectBody();
+  const _CreateProjectBody({required this.meId});
+
+  final String? meId;
 
   @override
   State<_CreateProjectBody> createState() => _CreateProjectBodyState();
 }
 
 class _CreateProjectBodyState extends State<_CreateProjectBody> {
-  final _formKey = GlobalKey<FormState>();
   final _key = TextEditingController();
   final _name = TextEditingController();
   final _description = TextEditingController();
+
+  List<DirectoryUser> _users = const [];
+  String? _leadId;
+  int _hue = kProjectHues.first.hue;
   bool _saving = false;
   String? _error;
+
+  static final _keyPattern = RegExp(r'^[A-Z][A-Z0-9]{1,9}$');
+
+  @override
+  void initState() {
+    super.initState();
+    _leadId = widget.meId;
+    _name.addListener(_refresh);
+    _key.addListener(_refresh);
+    _loadUsers();
+  }
+
+  Future<void> _loadUsers() async {
+    try {
+      final users = await context.read<HivoraRepository>().users();
+      if (mounted) setState(() => _users = users);
+    } on ApiFailure {
+      // Lead picker simply stays limited to the current user.
+    }
+  }
+
+  void _refresh() => setState(() {});
 
   @override
   void dispose() {
@@ -487,81 +516,165 @@ class _CreateProjectBodyState extends State<_CreateProjectBody> {
     super.dispose();
   }
 
+  bool get _valid =>
+      _name.text.trim().isNotEmpty && _keyPattern.hasMatch(_key.text.trim());
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              context.t('projects.new'),
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+    final compact = context.isCompact;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GlassModalHeader(
+          icon: LucideIcons.folderPlus,
+          title: context.t('projects.new'),
+          subtitle: context.t('projects.newSubtitle'),
+        ),
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 4, 22, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _identityRow(compact),
+                const SizedBox(height: 16),
+                GlassField(
+                  label: context.t('projects.descriptionOptional'),
+                  child: TextField(
+                    controller: _description,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: glassInputDecoration(
+                      hint: context.t('projectSettings.descHint'),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _leadAndColor(compact),
+                const SizedBox(height: 16),
+                GlassInfoLine(
+                  icon: LucideIcons.info,
+                  child: Text(
+                    context.t('projects.defaultWorkflowInfo'),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      height: 1.45,
+                      color: AppColors.inkSoft,
+                    ),
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _error!,
+                    style: const TextStyle(
+                      color: AppColors.danger,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: _name,
-              decoration: InputDecoration(
-                labelText: context.t('projects.name'),
-              ),
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? context.t('errors.required')
-                  : null,
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _key,
-              textCapitalization: TextCapitalization.characters,
-              decoration: InputDecoration(
-                labelText: context.t('projects.key'),
-                helperText: context.t('projects.keyHelp'),
-              ),
-              validator: (value) =>
-                  RegExp(r'^[A-Za-z][A-Za-z0-9]{1,9}$').hasMatch(value ?? '')
-                  ? null
-                  : context.t('errors.invalidProjectKey'),
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _description,
-              minLines: 2,
-              maxLines: 4,
-              decoration: InputDecoration(
-                labelText: context.t('issues.description'),
-              ),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                style: const TextStyle(color: AppColors.danger),
-                textAlign: TextAlign.center,
-              ),
-            ],
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: HiveLoader(strokeWidth: 2, color: Colors.white),
-                    )
-                  : Text(context.t('common.create')),
-            ),
-          ],
+          ),
+        ),
+        GlassModalFooter(
+          confirmLabel: context.t('common.create'),
+          confirmIcon: LucideIcons.check,
+          busy: _saving,
+          onConfirm: _valid ? _save : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _identityRow(bool compact) {
+    final glyph = _GlyphPreview(hue: _hue, keyText: _key.text);
+    final nameField = GlassField(
+      label: context.t('projects.name'),
+      child: TextField(
+        controller: _name,
+        autofocus: true,
+        decoration: glassInputDecoration(hint: 'e.g. Billing & Plans'),
+      ),
+    );
+    final keyField = GlassField(
+      label: context.t('projects.key'),
+      child: TextField(
+        controller: _key,
+        textCapitalization: TextCapitalization.characters,
+        maxLength: 10,
+        style: const TextStyle(fontFamily: AppTheme.fontMono),
+        inputFormatters: [_UpperAlphaNumFormatter()],
+        decoration: glassInputDecoration(hint: 'BILL').copyWith(
+          counterText: '',
         ),
       ),
+    );
+
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              glyph,
+              const SizedBox(width: 12),
+              Expanded(child: nameField),
+            ],
+          ),
+          const SizedBox(height: 14),
+          keyField,
+        ],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        glyph,
+        const SizedBox(width: 12),
+        Expanded(child: nameField),
+        const SizedBox(width: 12),
+        SizedBox(width: 104, child: keyField),
+      ],
+    );
+  }
+
+  Widget _leadAndColor(bool compact) {
+    final lead = GlassField(
+      label: context.t('projects.projectLead'),
+      child: _LeadDropdown(
+        users: _users,
+        meId: widget.meId,
+        value: _leadId,
+        onChanged: (v) => setState(() => _leadId = v),
+      ),
+    );
+    final color = GlassField(
+      label: context.t('projects.color'),
+      child: _AccentSwatches(
+        selected: _hue,
+        onPick: (h) => setState(() => _hue = h),
+      ),
+    );
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [lead, const SizedBox(height: 16), color],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: lead),
+        const SizedBox(width: 16),
+        Flexible(child: color),
+      ],
     );
   }
 
   Future<void> _save() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (!_valid || _saving) return;
     setState(() {
       _saving = true;
       _error = null;
@@ -573,6 +686,8 @@ class _CreateProjectBodyState extends State<_CreateProjectBody> {
         description: _description.text.trim().isEmpty
             ? null
             : _description.text.trim(),
+        color: hexForHue(_hue),
+        leadId: _leadId,
       );
       if (mounted) Navigator.of(context).pop(project);
     } on ApiFailure catch (failure) {
@@ -581,5 +696,133 @@ class _CreateProjectBodyState extends State<_CreateProjectBody> {
         _error = failure.message;
       });
     }
+  }
+}
+
+/// Live glyph tile previewing the project's key + accent in the create modal.
+class _GlyphPreview extends StatelessWidget {
+  const _GlyphPreview({required this.hue, required this.keyText});
+  final int hue;
+  final String keyText;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = keyText.isEmpty
+        ? 'P'
+        : keyText.substring(0, keyText.length.clamp(0, 3));
+    return Container(
+      width: 54,
+      height: 54,
+      margin: const EdgeInsets.only(top: 22),
+      decoration: BoxDecoration(
+        color: hueSoft(hue),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: AppTheme.fontMono,
+          fontWeight: FontWeight.w700,
+          fontSize: 15,
+          color: hueInk(hue),
+        ),
+      ),
+    );
+  }
+}
+
+/// Project-lead dropdown rendered on the glass material.
+class _LeadDropdown extends StatelessWidget {
+  const _LeadDropdown({
+    required this.users,
+    required this.meId,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final List<DirectoryUser> users;
+  final String? meId;
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = users.isEmpty && value != null
+        ? [
+            DropdownMenuItem(value: value, child: Text(context.t('projects.you'))),
+          ]
+        : [
+            for (final u in users)
+              DropdownMenuItem(
+                value: u.id,
+                child: Text(
+                  u.id == meId
+                      ? '${u.displayName} (${context.t('projects.you')})'
+                      : u.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ];
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      isExpanded: true,
+      icon: Icon(LucideIcons.chevronsUpDown, size: 16, color: AppColors.inkSoft),
+      decoration: glassInputDecoration(),
+      items: items,
+      onChanged: onChanged,
+    );
+  }
+}
+
+/// Static accent-color swatch row for the create modal.
+class _AccentSwatches extends StatelessWidget {
+  const _AccentSwatches({required this.selected, required this.onPick});
+  final int selected;
+  final ValueChanged<int> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final c in kProjectHues)
+          GestureDetector(
+            onTap: () => onPick(c.hue),
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: hueSwatch(c.hue),
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(
+                  color: c.hue == selected ? AppColors.ink : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Uppercases and strips non-[A-Z0-9] as the project key is typed.
+class _UpperAlphaNumFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text.toUpperCase().replaceAll(
+      RegExp('[^A-Z0-9]'),
+      '',
+    );
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
   }
 }

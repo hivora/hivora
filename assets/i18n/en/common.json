@@ -257,7 +257,13 @@
     "archived": "Archived",
     "emptyArchived": "Archived projects show up here.",
     "summary": "{{active}} active · {{archived}} archived",
-    "settings": "Settings"
+    "settings": "Settings",
+    "newSubtitle": "Set it up now — tune workflow & labels in settings after.",
+    "projectLead": "Project lead",
+    "color": "Color",
+    "descriptionOptional": "Description · optional",
+    "defaultWorkflowInfo": "Starts with the default workflow — Backlog → Open → In Progress → In Review → Done (resolved: Done) — editable any time in Project settings.",
+    "you": "You"
   },
   "board": {
     "title": "Agile Boards",

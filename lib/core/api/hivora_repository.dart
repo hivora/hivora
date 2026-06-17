@@ -94,6 +94,7 @@ class HivoraRepository {
     required String name,
     String? description,
     String? color,
+    String? leadId,
   }) async => Project.fromJson(
     await _api.post(
           '/api/v1/projects',
@@ -102,6 +103,7 @@ class HivoraRepository {
             'name': name,
             'description': ?description,
             'color': ?color,
+            'leadId': ?leadId,
           },
         )
         as Map<String, dynamic>,
