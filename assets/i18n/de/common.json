@@ -10,7 +10,8 @@
     "edit": "Bearbeiten",
     "empty": "Hier ist noch nichts",
     "continueAction": "Weiter",
-    "of": "von"
+    "of": "von",
+    "add": "Hinzufügen"
   },
   "delete": {
     "cta": "Löschen",
@@ -582,7 +583,16 @@
     "deleteConfirmBody": "Dadurch wird das Konto dauerhaft gelöscht und alle Zugänge werden entzogen. Zugewiesene Aufgaben werden freigegeben. Diese Aktion kann nicht rückgängig gemacht werden.",
     "deleteFinalTitle": "Dauerhaftes Löschen bestätigen",
     "deleteFinalBody": "Gib zur Bestätigung den Benutzernamen {{username}} unten ein. {{name}} wird dauerhaft gelöscht.",
-    "userDeleted": "{{name}} wurde gelöscht"
+    "userDeleted": "{{name}} wurde gelöscht",
+    "app": "App",
+    "appReleases": "App-Versionen",
+    "appReleasesHint": "Versionsanforderungen und Richtlinien für die Mobil- und Web-App.",
+    "minVersion": "Minimale App-Version",
+    "privacyPolicyUrl": "Datenschutz-URL",
+    "featureFlags": "Feature-Flags",
+    "featureFlagsHint": "Optionale Client-Funktionen per Name schalten. Wird der App bei jedem Start übermittelt.",
+    "featureFlagsEmpty": "Noch keine Feature-Flags definiert.",
+    "featureFlagName": "Flag-Name"
   },
   "sprint": {
     "tab": {

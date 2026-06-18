@@ -12,6 +12,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../shell/page_chrome.dart';
 import 'admin_sso_section.dart';
+import 'sections/admin_app_section.dart';
 import 'sections/admin_email_section.dart';
 import 'sections/admin_general_section.dart';
 import 'sections/admin_notifications_section.dart';
@@ -21,6 +22,7 @@ import 'sections/admin_security_section.dart';
 
 enum _AdminSection {
   general,
+  app,
   authentication,
   email,
   notifications,
@@ -39,6 +41,7 @@ typedef _SectionMeta = ({
 
 const _navItems = <_SectionMeta>[
   (section: _AdminSection.general,        icon: LucideIcons.building2,       labelKey: 'admin.general',           group: 'navGeneral'),
+  (section: _AdminSection.app,            icon: LucideIcons.smartphone,      labelKey: 'admin.app',               group: 'navGeneral'),
   (section: _AdminSection.security,       icon: LucideIcons.shield,         labelKey: 'admin.security',          group: 'navGeneral'),
   (section: _AdminSection.authentication, icon: LucideIcons.lock,           labelKey: 'admin.authentication',    group: 'navIntegrations'),
   (section: _AdminSection.email,          icon: LucideIcons.mail,           labelKey: 'admin.email',             group: 'navIntegrations'),
@@ -196,6 +199,7 @@ class _AdminScreenState extends State<AdminScreen> {
 /// in-pane section header).
 String _sectionTitleKey(_AdminSection section) => switch (section) {
       _AdminSection.general => 'admin.general',
+      _AdminSection.app => 'admin.app',
       _AdminSection.authentication => 'admin.authentication',
       _AdminSection.email => 'admin.email',
       _AdminSection.notifications => 'admin.pushNotifications',
@@ -418,6 +422,8 @@ class _MobileDetailView extends StatelessWidget {
   Widget _sectionBody(_AdminSection sec) => switch (sec) {
         _AdminSection.general =>
           AdminGeneralSection(settings: settings),
+        _AdminSection.app =>
+          AdminAppSection(settings: settings),
         _AdminSection.authentication =>
           AdminSsoSection(settings: settings),
         _AdminSection.email =>
@@ -547,6 +553,7 @@ class _DesktopSectionContent extends StatelessWidget {
 
   String _title(BuildContext context) => switch (section) {
         _AdminSection.general => context.t('admin.general'),
+        _AdminSection.app => context.t('admin.app'),
         _AdminSection.authentication => context.t('admin.authentication'),
         _AdminSection.email => context.t('admin.email'),
         _AdminSection.notifications => context.t('admin.pushNotifications'),
@@ -620,6 +627,8 @@ class _DesktopSectionContent extends StatelessWidget {
   Widget _body() => switch (section) {
         _AdminSection.general =>
           AdminGeneralSection(settings: settings),
+        _AdminSection.app =>
+          AdminAppSection(settings: settings),
         _AdminSection.authentication =>
           AdminSsoSection(settings: settings),
         _AdminSection.email =>

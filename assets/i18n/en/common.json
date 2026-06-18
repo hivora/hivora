@@ -10,7 +10,8 @@
     "edit": "Edit",
     "empty": "Nothing here yet",
     "continueAction": "Continue",
-    "of": "of"
+    "of": "of",
+    "add": "Add"
   },
   "delete": {
     "cta": "Delete",
@@ -582,7 +583,16 @@
     "deleteConfirmBody": "This permanently deletes the account and revokes all access. Assigned issues will be unassigned. This action cannot be undone.",
     "deleteFinalTitle": "Confirm permanent deletion",
     "deleteFinalBody": "To confirm, type the username {{username}} below. {{name}} will be permanently deleted.",
-    "userDeleted": "{{name}} was deleted"
+    "userDeleted": "{{name}} was deleted",
+    "app": "App",
+    "appReleases": "App releases",
+    "appReleasesHint": "Version requirements and policies served to the mobile and web apps.",
+    "minVersion": "Minimum app version",
+    "privacyPolicyUrl": "Privacy policy URL",
+    "featureFlags": "Feature flags",
+    "featureFlagsHint": "Toggle optional client features by name. Served to apps on every start.",
+    "featureFlagsEmpty": "No feature flags defined yet.",
+    "featureFlagName": "Flag name"
   },
   "sprint": {
     "tab": {
