@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 class SearchTokens {
   const SearchTokens({
     required this.tint,
+    required this.glassFill,
     required this.tintStrong,
     required this.edge,
     required this.edgeSoft,
@@ -28,6 +29,11 @@ class SearchTokens {
 
   /// Panel base tint (the translucent glass fill).
   final Color tint;
+
+  /// Light glass-color fed to the liquid-glass lens. Much lower alpha than
+  /// [tint] — the iOS-26 effect is refraction + specular, not an opaque fill;
+  /// a heavy fill buries the glass and reads as a flat card.
+  final Color glassFill;
 
   /// Stronger tint for active chips / footer.
   final Color tintStrong;
@@ -56,6 +62,7 @@ class SearchTokens {
   /// Light glass (`.gs-root`).
   static const light = SearchTokens(
     tint: Color.fromRGBO(252, 251, 248, 0.62),
+    glassFill: Color.fromRGBO(252, 251, 248, 0.22),
     tintStrong: Color.fromRGBO(252, 251, 248, 0.80),
     edge: Color.fromRGBO(255, 255, 255, 0.85),
     edgeSoft: Color.fromRGBO(255, 255, 255, 0.35),
@@ -90,6 +97,7 @@ class SearchTokens {
   /// Dark glass (`.gs-root[data-theme="dark"]`).
   static const dark = SearchTokens(
     tint: Color.fromRGBO(34, 32, 60, 0.58),
+    glassFill: Color.fromRGBO(30, 28, 52, 0.28),
     tintStrong: Color.fromRGBO(38, 36, 66, 0.80),
     edge: Color.fromRGBO(255, 255, 255, 0.20),
     edgeSoft: Color.fromRGBO(255, 255, 255, 0.07),
