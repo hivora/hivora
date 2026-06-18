@@ -1,4 +1,4 @@
-package hinata.asta.hn
+package hinata.ahmadre.com
 
 import io.flutter.embedding.android.FlutterActivity
 

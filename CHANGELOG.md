@@ -32,6 +32,6 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Admin area: runtime SSO configuration (OIDC, OAuth2, SAML, LDAP, Kerberos,
   CAS), e-mail-to-ticket (IMAP) settings, user management
 - Theming per base design (pastel glassmorphism, navy primary), generated
-  native splash screens and launcher icons, bundle id `hinata.asta.hn`
+  native splash screens and launcher icons, bundle id `hinata.ahmadre.com`
 - State management with bloc/hydrated_bloc, routing with go_router,
   CI (analyze, test, Android/Web builds) and Fastlane store pipelines
