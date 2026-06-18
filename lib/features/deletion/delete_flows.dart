@@ -217,6 +217,10 @@ class _DeleteFlowState extends State<_DeleteFlow> {
   StreamSubscription<SseEvent>? _sub;
   bool _disposed = false;
 
+  /// Set when the server explicitly streamed an `error` frame — distinguishes a
+  /// real cascade failure from the transport simply closing the stream.
+  bool _serverError = false;
+
   @override
   void initState() {
     super.initState();
@@ -278,11 +282,17 @@ class _DeleteFlowState extends State<_DeleteFlow> {
       final bytes = await widget.openStream(_choice, _cancel!);
       _sub = parseSse(bytes).listen(
         _onEvent,
-        onDone: _onStreamDone,
-        onError: (_) => _fail(failMsg),
+        onDone: _onStreamEnded,
+        // A transport-level close (dio surfaces the server completing the SSE
+        // response as an error on some adapters) is NOT a failure — the cascade
+        // runs to completion server-side. Only an explicit server `error` frame
+        // counts as a real failure.
+        onError: (_) => _onStreamEnded(),
         cancelOnError: true,
       );
     } catch (_) {
+      // The request itself never started (validation / auth / connection), so
+      // nothing was deleted — surface it.
       _fail(failMsg);
     }
   }
@@ -300,14 +310,16 @@ class _DeleteFlowState extends State<_DeleteFlow> {
       case DeleteEventKind.done:
         _succeed();
       case DeleteEventKind.error:
+        _serverError = true;
         _fail(event.message ?? context.t('delete.failed'));
     }
   }
 
-  // The cascade always completes server-side even if the stream closes early,
-  // so a clean close after we've been deleting is treated as success.
-  void _onStreamDone() {
-    if (_disposed || _stage != _Stage.deleting) return;
+  // The cascade always completes server-side even if the stream closes before a
+  // `done` frame reaches us, so the stream ending (cleanly or via a transport
+  // error) is treated as success — unless the server reported an explicit error.
+  void _onStreamEnded() {
+    if (_disposed || _stage != _Stage.deleting || _serverError) return;
     _succeed();
   }
 

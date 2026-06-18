@@ -874,7 +874,8 @@ class TeamSettingsTab extends StatelessWidget {
 
   Future<void> _delete(BuildContext context) async {
     final deleted = await showDeleteTeamModal(context, data.team);
-    if (deleted == true && context.mounted) context.pop();
+    // Go to a fresh teams overview so the deleted team is gone from the list.
+    if (deleted == true && context.mounted) context.go('/teams');
   }
 
   @override

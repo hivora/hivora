@@ -18,6 +18,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/project_palette.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
+import '../deletion/delete_flows.dart';
 import '../issues/issue_detail_sheet.dart';
 import '../issues/issue_form.dart';
 import '../issues/issues_screen.dart' show IssueRow;
@@ -210,6 +211,7 @@ class _BoardScreenState extends State<BoardScreen> {
                   board: _boards[index],
                   index: index,
                   projects: _projects,
+                  onDeleted: _load,
                 ),
                 childCount: _boards.length,
               ),
@@ -474,6 +476,19 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
 
   // ---- header: title + view switcher ----
 
+  /// Deletes the open board, then leaves for the boards overview (a fresh route
+  /// so the list no longer shows it).
+  Future<void> _deleteThisBoard() async {
+    final view = _view;
+    if (view == null) return;
+    final deleted = await showDeleteBoardFlow(
+      context,
+      boardId: widget.boardId,
+      boardName: view.board.name,
+    );
+    if (deleted == true && mounted) context.go('/board');
+  }
+
   Widget _header(BoardView view) {
     final projectLabel = view.board.projectIds
         .map((id) => _projectNames[id] ?? '')
@@ -487,7 +502,11 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PageHead(title: view.board.name, subtitle: subtitle),
+          PageHead(
+            title: view.board.name,
+            subtitle: subtitle,
+            actions: [_BoardCardMenu(onDelete: _deleteThisBoard)],
+          ),
           const SizedBox(height: 12),
           // Right-aligned, collapsible, responsive-label switcher (mobile).
           _CompactViewSwitcher(
@@ -507,6 +526,8 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
           selected: _viewModes.indexOf(_mode).clamp(0, _viewModes.length - 1),
           onChanged: (i) => setState(() => _mode = _viewModes[i]),
         ),
+        const SizedBox(width: 8),
+        _BoardCardMenu(onDelete: _deleteThisBoard),
       ],
     );
   }
@@ -1210,11 +1231,22 @@ class _BoardListCard extends StatelessWidget {
     required this.board,
     required this.index,
     required this.projects,
+    required this.onDeleted,
   });
 
   final AgileBoard board;
   final int index;
   final List<Project> projects;
+  final Future<void> Function() onDeleted;
+
+  Future<void> _delete(BuildContext context) async {
+    final deleted = await showDeleteBoardFlow(
+      context,
+      boardId: board.id,
+      boardName: board.name,
+    );
+    if (deleted == true) await onDeleted();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1235,35 +1267,41 @@ class _BoardListCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(100),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  board.isScrum
-                      ? LucideIcons.zap
-                      : LucideIcons.columns3,
-                  size: 13,
-                  color: AppColors.navy,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(100),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  context.t(
-                    board.isScrum ? 'board.typeScrum' : 'board.typeKanban',
-                  ),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                    color: AppColors.navy,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      board.isScrum
+                          ? LucideIcons.zap
+                          : LucideIcons.columns3,
+                      size: 13,
+                      color: AppColors.navy,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      context.t(
+                        board.isScrum ? 'board.typeScrum' : 'board.typeKanban',
+                      ),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        color: AppColors.navy,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const Spacer(),
+              _BoardCardMenu(onDelete: () => _delete(context)),
+            ],
           ),
           const SizedBox(height: 10),
           Expanded(
@@ -1292,6 +1330,41 @@ class _BoardListCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Overflow (⋮) menu on a board card with a single "Delete board" action. The
+/// menu absorbs the tap so it doesn't trigger the card's navigation.
+class _BoardCardMenu extends StatelessWidget {
+  const _BoardCardMenu({required this.onDelete});
+
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: '',
+      padding: EdgeInsets.zero,
+      icon: Icon(
+        LucideIcons.ellipsisVertical,
+        size: 16,
+        color: AppColors.inkSoft,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onSelected: (_) => onDelete(),
+      itemBuilder: (context) => [
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              const Icon(LucideIcons.trash2, size: 15, color: AppColors.danger),
+              const SizedBox(width: 10),
+              Text(context.t('board.deleteBoard')),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
