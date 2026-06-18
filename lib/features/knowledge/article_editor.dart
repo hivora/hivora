@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/content_models.dart';
 import '../../core/theme/app_colors.dart';
@@ -12,7 +12,7 @@ import '../../core/theme/app_colors.dart';
 /// Create or edit a knowledge base article (Markdown content).
 Future<Article?> showArticleEditor(BuildContext context,
     {Article? existing, String? parentId}) {
-  final repository = context.read<HivoraRepository>();
+  final repository = context.read<HinataRepository>();
   return WoltModalSheet.show<Article?>(
     context: context,
     pageListBuilder: (modalContext) => [
@@ -121,7 +121,7 @@ class _ArticleEditorBodyState extends State<_ArticleEditorBody> {
       _error = null;
     });
     try {
-      final article = await context.read<HivoraRepository>().saveArticle(
+      final article = await context.read<HinataRepository>().saveArticle(
             id: widget.existing?.id,
             title: _title.text.trim(),
             content: _content.text,

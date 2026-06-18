@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Hivora app are documented here. The format follows
+All notable changes to the Hinata app are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
@@ -11,7 +11,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   update gate (`minAppVersion`), Rocket.Chat-style first-run setup wizard
 - One-time illustrated onboarding covering the key features
 - Authentication: local login with brute-force-aware error handling, SSO
-  buttons (OIDC/OAuth2/SAML) via external browser and `hivora://auth-callback`
+  buttons (OIDC/OAuth2/SAML) via external browser and `hinata://auth-callback`
   deep link, automatic token refresh, session-expiry logout
 - Responsive shell following the base design: pill top navigation on wide
   screens, bottom navigation + "More" sheet on phones; golden-ratio derived
@@ -32,6 +32,6 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Admin area: runtime SSO configuration (OIDC, OAuth2, SAML, LDAP, Kerberos,
   CAS), e-mail-to-ticket (IMAP) settings, user management
 - Theming per base design (pastel glassmorphism, navy primary), generated
-  native splash screens and launcher icons, bundle id `hivora.asta.hn`
+  native splash screens and launcher icons, bundle id `hinata.asta.hn`
 - State management with bloc/hydrated_bloc, routing with go_router,
   CI (analyze, test, Android/Web builds) and Fastlane store pipelines

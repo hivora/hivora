@@ -3,7 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/work_models.dart';
 import '../../core/responsive/responsive.dart';
@@ -52,7 +52,7 @@ enum _Tab { planning, active, insights }
 
 class _ScrumBoardViewState extends State<ScrumBoardView> {
   AgileBoard get _board => widget.view.board;
-  HivoraRepository get _repo => context.read<HivoraRepository>();
+  HinataRepository get _repo => context.read<HinataRepository>();
 
   _Tab _tab = _Tab.planning;
 

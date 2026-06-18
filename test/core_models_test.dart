@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hivora/core/models/core_models.dart';
+import 'package:hinata/core/models/core_models.dart';
 
 void main() {
   group('isVersionBelow', () {

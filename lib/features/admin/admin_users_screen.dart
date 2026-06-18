@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/auth_bloc.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/responsive/responsive.dart';
@@ -49,7 +49,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       _error = null;
     });
     try {
-      _allUsers = await context.read<HivoraRepository>().adminUsers();
+      _allUsers = await context.read<HinataRepository>().adminUsers();
       setState(() => _loading = false);
     } on ApiFailure catch (failure) {
       setState(() {
@@ -96,7 +96,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       Map<String, dynamic> user, Map<String, dynamic> patch) async {
     try {
       await context
-          .read<HivoraRepository>()
+          .read<HinataRepository>()
           .adminUpdateUser(user['id'] as String, patch);
       _load();
     } on ApiFailure catch (failure) {
@@ -145,7 +145,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
     try {
       await context
-          .read<HivoraRepository>()
+          .read<HinataRepository>()
           .adminDeleteUser(user['id'] as String);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -162,7 +162,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   Future<void> _showCreate() async {
-    final repo = context.read<HivoraRepository>();
+    final repo = context.read<HinataRepository>();
     final created = await WoltModalSheet.show<bool?>(
       context: context,
       pageListBuilder: (modalCtx) => [
@@ -999,7 +999,7 @@ class _CreateUserFormState extends State<_CreateUserForm> {
       _error = null;
     });
     try {
-      await context.read<HivoraRepository>().adminCreateUser({
+      await context.read<HinataRepository>().adminCreateUser({
         'email': _email.text.trim(),
         'username': _username.text.trim(),
         'displayName': _displayName.text.trim(),

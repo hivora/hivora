@@ -8,7 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/auth_bloc.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/core_models.dart';
@@ -80,7 +80,7 @@ class _BoardScreenState extends State<BoardScreen> {
       _loading = true;
       _error = null;
     });
-    final repo = context.read<HivoraRepository>();
+    final repo = context.read<HinataRepository>();
     try {
       final results = await Future.wait([
         repo.projects(),
@@ -291,7 +291,7 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
       _loading = true;
       _error = null;
     });
-    final repo = context.read<HivoraRepository>();
+    final repo = context.read<HinataRepository>();
     try {
       final results = await Future.wait([
         repo.boardView(widget.boardId, sprintId: _sprintId),
@@ -333,7 +333,7 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
 
   /// Backlog = issues of the board's projects that aren't in any sprint.
   Future<List<Issue>> _loadBacklog(
-    HivoraRepository repo,
+    HinataRepository repo,
     List<String> projectIds,
   ) async {
     if (projectIds.isEmpty) return const [];
@@ -398,7 +398,7 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
   Future<void> _moveIssue(Issue issue, BoardColumnView column) async {
     if (column.states.contains(issue.state) || column.states.isEmpty) return;
     try {
-      await context.read<HivoraRepository>().updateIssue(issue.id, {
+      await context.read<HinataRepository>().updateIssue(issue.id, {
         'state': column.states.first,
       });
       await _load();

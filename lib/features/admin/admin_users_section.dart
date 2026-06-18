@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/app_avatar.dart';
@@ -35,7 +35,7 @@ class _AdminUsersSectionState extends State<AdminUsersSection> {
       _error = null;
     });
     try {
-      _users = await context.read<HivoraRepository>().adminUsers();
+      _users = await context.read<HinataRepository>().adminUsers();
       setState(() => _loading = false);
     } on ApiFailure catch (failure) {
       setState(() {
@@ -136,7 +136,7 @@ class _AdminUsersSectionState extends State<AdminUsersSection> {
   Future<void> _patch(Map<String, dynamic> user, Map<String, dynamic> patch) async {
     try {
       await context
-          .read<HivoraRepository>()
+          .read<HinataRepository>()
           .adminUpdateUser(user['id'] as String, patch);
       _load();
     } on ApiFailure catch (failure) {
@@ -148,7 +148,7 @@ class _AdminUsersSectionState extends State<AdminUsersSection> {
   }
 
   Future<void> _showCreate() async {
-    final repository = context.read<HivoraRepository>();
+    final repository = context.read<HinataRepository>();
     final created = await WoltModalSheet.show<bool?>(
       context: context,
       pageListBuilder: (modalContext) => [
@@ -281,7 +281,7 @@ class _CreateUserBodyState extends State<_CreateUserBody> {
       _error = null;
     });
     try {
-      await context.read<HivoraRepository>().adminCreateUser({
+      await context.read<HinataRepository>().adminCreateUser({
         'email': _email.text.trim(),
         'username': _username.text.trim(),
         'displayName': _displayName.text.trim(),

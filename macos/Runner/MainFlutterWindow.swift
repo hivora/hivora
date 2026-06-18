@@ -10,8 +10,8 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
-    // Hivora: native Splash-Animation über dem Flutter-View
-    HivoraSplashView.present(over: flutterViewController.view)
+    // Hinata: native Splash-Animation über dem Flutter-View
+    HinataSplashView.present(over: flutterViewController.view)
 
     super.awakeFromNib()
   }

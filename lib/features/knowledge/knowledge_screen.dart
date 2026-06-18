@@ -3,7 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/fetch_cubit.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/content_models.dart';
@@ -30,7 +30,7 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
   @override
   void initState() {
     super.initState();
-    _cubit = FetchCubit(() => context.read<HivoraRepository>().articles())..load();
+    _cubit = FetchCubit(() => context.read<HinataRepository>().articles())..load();
   }
 
   @override

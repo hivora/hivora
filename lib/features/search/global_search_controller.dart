@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/theme_cubit.dart';
 import '../../core/models/search_api.dart';
 import '../../core/storage/app_storage.dart';
@@ -30,7 +30,7 @@ class GlobalSearchController extends ChangeNotifier {
     _recents = storage.recentSearches.toList();
   }
 
-  final HivoraRepository repository;
+  final HinataRepository repository;
   final AppStorage storage;
 
   static const _debounce = Duration(milliseconds: 180);

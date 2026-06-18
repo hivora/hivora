@@ -8,7 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
     show GlassContainer, GlassQuality, LiquidRoundedSuperellipse;
 
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/storage/app_storage.dart';
 import '../../core/theme/app_colors.dart';
@@ -31,7 +31,7 @@ const double _kPhoneBreakpoint = 610;
 /// animation, so it can branch between the desktop spring and the mobile sheet.
 Future<void> openGlobalSearch(BuildContext context) {
   final controller = GlobalSearchController(
-    repository: context.read<HivoraRepository>(),
+    repository: context.read<HinataRepository>(),
     storage: context.read<AppStorage>(),
   );
   // Localise command labels against the launching context, then load async.

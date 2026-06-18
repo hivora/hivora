@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../api/api_client.dart';
-import '../api/hivora_repository.dart';
+import '../api/hinata_repository.dart';
 import '../models/core_models.dart';
 import '../storage/app_storage.dart';
 
@@ -28,7 +28,7 @@ class LoginSubmitted extends AuthEvent {
   List<Object?> get props => [identifier];
 }
 
-/// Tokens arriving via the SSO deep link (hivora://auth-callback).
+/// Tokens arriving via the SSO deep link (hinata://auth-callback).
 class SsoTokensReceived extends AuthEvent {
   const SsoTokensReceived(this.accessToken, this.refreshToken);
 
@@ -64,7 +64,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutRequested>(_onLogout);
   }
 
-  final HivoraRepository repository;
+  final HinataRepository repository;
   final AppStorage storage;
 
   Future<void> _onChecked(AuthChecked event, Emitter<AuthState> emit) async {

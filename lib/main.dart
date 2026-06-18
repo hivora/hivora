@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'app.dart';
 import 'core/api/api_client.dart';
-import 'core/api/hivora_repository.dart';
+import 'core/api/hinata_repository.dart';
 import 'core/storage/app_storage.dart';
 
 Future<void> main() async {
@@ -27,9 +27,9 @@ Future<void> main() async {
 
   final storage = await AppStorage.create();
   final apiClient = ApiClient(storage);
-  final repository = HivoraRepository(apiClient);
+  final repository = HinataRepository(apiClient);
 
-  runApp(HivoraApp(
+  runApp(HinataApp(
     storage: storage,
     apiClient: apiClient,
     repository: repository,

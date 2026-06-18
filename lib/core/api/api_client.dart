@@ -68,7 +68,7 @@ class ApiClient {
   void Function()? onSessionExpired;
 
   /// Language code sent as `Accept-Language` so the server localizes error
-  /// messages. Kept in sync with the app's [LocaleCubit] (see HivoraApp).
+  /// messages. Kept in sync with the app's [LocaleCubit] (see HinataApp).
   String localeCode = 'en';
 
   String get baseUrl => _storage.serverUrl ?? '';

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/fetch_cubit.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/content_models.dart';
@@ -29,7 +29,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
   void initState() {
     super.initState();
     _cubit =
-        FetchCubit(() => context.read<HivoraRepository>().article(widget.articleId))
+        FetchCubit(() => context.read<HinataRepository>().article(widget.articleId))
           ..load();
   }
 

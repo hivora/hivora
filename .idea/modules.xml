@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/hivora.iml" filepath="$PROJECT_DIR$/hivora.iml" />
-      <module fileurl="file://$PROJECT_DIR$/android/hivora_android.iml" filepath="$PROJECT_DIR$/android/hivora_android.iml" />
+      <module fileurl="file://$PROJECT_DIR$/hinata.iml" filepath="$PROJECT_DIR$/hinata.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android/hinata_android.iml" filepath="$PROJECT_DIR$/android/hinata_android.iml" />
     </modules>
   </component>
 </project>

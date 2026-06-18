@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/api/api_client.dart';
-import 'core/api/hivora_repository.dart';
+import 'core/api/hinata_repository.dart';
 import 'core/blocs/app_config_bloc.dart';
 import 'core/blocs/auth_bloc.dart';
 import 'core/blocs/locale_cubit.dart';
@@ -17,8 +17,8 @@ import 'core/storage/app_storage.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 
-class HivoraApp extends StatefulWidget {
-  const HivoraApp({
+class HinataApp extends StatefulWidget {
+  const HinataApp({
     super.key,
     required this.storage,
     required this.apiClient,
@@ -27,13 +27,13 @@ class HivoraApp extends StatefulWidget {
 
   final AppStorage storage;
   final ApiClient apiClient;
-  final HivoraRepository repository;
+  final HinataRepository repository;
 
   @override
-  State<HivoraApp> createState() => _HivoraAppState();
+  State<HinataApp> createState() => _HinataAppState();
 }
 
-class _HivoraAppState extends State<HivoraApp> {
+class _HinataAppState extends State<HinataApp> {
   late final AppConfigBloc _appConfig;
   late final AuthBloc _auth;
   late final GoRouter _router;
@@ -56,11 +56,11 @@ class _HivoraAppState extends State<HivoraApp> {
     _listenForSsoCallback();
   }
 
-  /// Receives hivora://auth-callback?access_token=...&refresh_token=... after
+  /// Receives hinata://auth-callback?access_token=...&refresh_token=... after
   /// a successful OIDC/OAuth2/SAML login in the external browser.
   void _listenForSsoCallback() {
     _linkSubscription = AppLinks().uriLinkStream.listen((uri) {
-      if (uri.scheme == 'hivora' && uri.host == 'auth-callback') {
+      if (uri.scheme == 'hinata' && uri.host == 'auth-callback') {
         final access = uri.queryParameters['access_token'];
         final refresh = uri.queryParameters['refresh_token'];
         if (access != null && refresh != null) {
@@ -102,7 +102,7 @@ class _HivoraAppState extends State<HivoraApp> {
                 // localizes its error messages to the user's chosen language.
                 widget.apiClient.localeCode = locale.languageCode;
                 return MaterialApp.router(
-                  title: 'Hivora',
+                  title: 'Hinata',
                   debugShowCheckedModeBanner: false,
                   theme: AppTheme.light(),
                   darkTheme: AppTheme.dark(),

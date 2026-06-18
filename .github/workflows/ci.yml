@@ -37,7 +37,7 @@ jobs:
       - run: flutter build apk --debug
       - uses: actions/upload-artifact@v4
         with:
-          name: hivora-debug-apk
+          name: hinata-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
 
   build-web:
@@ -54,5 +54,5 @@ jobs:
       - run: flutter build web --release
       - uses: actions/upload-artifact@v4
         with:
-          name: hivora-web
+          name: hinata-web
           path: build/web

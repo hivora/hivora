@@ -1,11 +1,11 @@
 {
-    "name": "hivora",
-    "short_name": "hivora",
+    "name": "hinata",
+    "short_name": "hinata",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#F4F3EF",
     "theme_color": "#D9A032",
-    "description": "Hivora - open source, self-hosted project management.",
+    "description": "Hinata - open source, self-hosted project management.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

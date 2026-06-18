@@ -6,7 +6,7 @@ import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/work_models.dart';
 import '../../core/theme/app_colors.dart';
@@ -46,7 +46,7 @@ Future<Issue?> showIssueForm(
   String? initialState,
   String? initialSprintId,
 }) async {
-  final repository = context.read<HivoraRepository>();
+  final repository = context.read<HinataRepository>();
   final controller = IssueCreateController();
 
   final created = await WoltModalSheet.show<Issue?>(

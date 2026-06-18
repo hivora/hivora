@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/auth_bloc.dart';
 import '../../core/blocs/fetch_cubit.dart';
 import '../../core/i18n/i18n.dart';
@@ -50,7 +50,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
   void initState() {
     super.initState();
     _cubit = FetchCubit<_IssuesData>(() async {
-      final repo = context.read<HivoraRepository>();
+      final repo = context.read<HinataRepository>();
       final results = await Future.wait([
         repo.issues(projectId: widget.projectId, query: _query),
         repo.users(),

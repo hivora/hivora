@@ -1,5 +1,5 @@
-<svg width="960" height="260" viewBox="0 0 960 260" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hivora — self-hosted project and issue tracking">
-  <title>Hivora</title>
+<svg width="960" height="260" viewBox="0 0 960 260" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hinata — self-hosted project and issue tracking">
+  <title>Hinata</title>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="960" y2="260" gradientUnits="userSpaceOnUse">
       <stop stop-color="#211F3D"/>
@@ -29,7 +29,7 @@
   </g>
 
   <!-- wordmark -->
-  <text x="206" y="138" font-family="Sora, 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="92" font-weight="800" letter-spacing="-3" fill="#F4F3EF">hivora</text>
+  <text x="206" y="138" font-family="Sora, 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="92" font-weight="800" letter-spacing="-3" fill="#F4F3EF">hinata</text>
   <!-- amber accent underline -->
   <rect x="210" y="158" width="78" height="5" rx="2.5" fill="#D9A032"/>
   <!-- tagline -->

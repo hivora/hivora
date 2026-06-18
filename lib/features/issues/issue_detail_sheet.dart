@@ -9,7 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/auth_bloc.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/core_models.dart';
@@ -63,7 +63,7 @@ Future<void> showIssueDetailSheet(
   required String issueId,
   VoidCallback? onChanged,
 }) {
-  final repository = context.read<HivoraRepository>();
+  final repository = context.read<HinataRepository>();
   final auth = context.read<AuthBloc>();
   final header = ValueNotifier<Issue?>(null);
   final bodyKey = GlobalKey<IssueDetailBodyState>();
@@ -220,7 +220,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   // up front when an issue is opened.
   _ActivityFilter _activityFilter = _ActivityFilter.comments;
 
-  HivoraRepository get _repo => context.read<HivoraRepository>();
+  HinataRepository get _repo => context.read<HinataRepository>();
 
   @override
   void initState() {
@@ -1460,7 +1460,7 @@ class IssueCreateBody extends StatefulWidget {
 }
 
 class IssueCreateBodyState extends State<IssueCreateBody> {
-  HivoraRepository get _repo => context.read<HivoraRepository>();
+  HinataRepository get _repo => context.read<HinataRepository>();
 
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();

@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import '../api/hivora_repository.dart';
+import '../api/hinata_repository.dart';
 import '../models/core_models.dart';
 import '../storage/app_storage.dart';
 
@@ -80,7 +80,7 @@ class AppConfigBloc extends Bloc<AppConfigEvent, AppConfigState> {
     on<SetupFinished>(_onSetupFinished);
   }
 
-  final HivoraRepository repository;
+  final HinataRepository repository;
   final AppStorage storage;
 
   Future<void> _onStarted(AppConfigStarted event, Emitter<AppConfigState> emit) async {

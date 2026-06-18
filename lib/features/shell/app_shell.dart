@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/auth_bloc.dart';
 import '../../core/blocs/fetch_cubit.dart';
 import '../../core/blocs/theme_cubit.dart';
@@ -213,7 +213,7 @@ class _WideShell extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                _HivoraTopBar(location: location, compact: false),
+                _HinataTopBar(location: location, compact: false),
                 // The top bar already consumes the status-bar inset, so zero the
                 // top padding for the content — keeps context.topGutter at 0 on
                 // wide layouts (no overlay app bar there).
@@ -289,7 +289,7 @@ class _NavRail extends StatelessWidget {
                         HexMark(size: 28, color: AppColors.accent),
                         const SizedBox(width: 10),
                         const Text(
-                          'hivora',
+                          'hinata',
                           style: TextStyle(
                             fontFamily: AppTheme.fontBrand,
                             fontSize: 18,
@@ -605,8 +605,8 @@ class _RailIconButton extends StatelessWidget {
 // breadcrumb, global search, notification bell (with unread dot + popover),
 // settings. The bell + settings live here so they never disappear on mobile.
 
-class _HivoraTopBar extends StatelessWidget {
-  const _HivoraTopBar({required this.location, required this.compact});
+class _HinataTopBar extends StatelessWidget {
+  const _HinataTopBar({required this.location, required this.compact});
 
   final String location;
   final bool compact;
@@ -856,7 +856,7 @@ class _NotificationBellState extends State<_NotificationBell> {
   @override
   void initState() {
     super.initState();
-    _cubit = FetchCubit(() => context.read<HivoraRepository>().notifications())
+    _cubit = FetchCubit(() => context.read<HinataRepository>().notifications())
       ..load();
   }
 
@@ -886,7 +886,7 @@ class _NotificationBellState extends State<_NotificationBell> {
     final unread = items.where((n) => !n.read).map((n) => n.id).toList();
     if (unread.isEmpty) return;
     try {
-      await context.read<HivoraRepository>().markNotificationsRead(unread);
+      await context.read<HinataRepository>().markNotificationsRead(unread);
     } catch (_) {
       // Non-critical; the reload below reflects server truth.
     }
@@ -895,7 +895,7 @@ class _NotificationBellState extends State<_NotificationBell> {
 
   Future<void> _openNotification(AppNotification notification) async {
     _close();
-    final repository = context.read<HivoraRepository>();
+    final repository = context.read<HinataRepository>();
     if (!notification.read) {
       try {
         await repository.markNotificationRead(notification.id);

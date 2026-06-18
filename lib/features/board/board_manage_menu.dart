@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/work_models.dart';
 import '../../core/theme/app_colors.dart';
@@ -231,7 +231,7 @@ class _MenuRow extends StatelessWidget {
 
 /// Liquid-Glass "Rename board" modal. Returns true if the board was renamed.
 Future<bool?> _showRenameBoardModal(BuildContext context, AgileBoard board) {
-  final repo = context.read<HivoraRepository>();
+  final repo = context.read<HinataRepository>();
   return showGlassModal<bool>(
     context,
     width: 460,
@@ -278,7 +278,7 @@ class _RenameBoardBodyState extends State<_RenameBoardBody> {
       _error = null;
     });
     try {
-      await context.read<HivoraRepository>().renameBoard(widget.board.id, name);
+      await context.read<HinataRepository>().renameBoard(widget.board.id, name);
       if (mounted) Navigator.of(context).pop(true);
     } on ApiFailure catch (failure) {
       setState(() {

@@ -8,7 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 /// PDF. SVGs are rasterized with flutter_svg's renderer (far more capable than
 /// the PDF package's built-in SVG engine), so even heavy traced paths embed
 /// cleanly. Raster payloads (PNG/JPEG/…) are passed through unchanged. Returns
-/// null on any failure so the caller can fall back to the Hivora mark.
+/// null on any failure so the caller can fall back to the Hinata mark.
 Future<Uint8List?> logoToPng({
   required List<int> bytes,
   required bool isSvg,

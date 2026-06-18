@@ -70,7 +70,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                             keyboardType: TextInputType.url,
                             autofillHints: const [AutofillHints.url],
                             decoration: InputDecoration(
-                              hintText: 'https://hivora.example.org',
+                              hintText: 'https://hinata.example.org',
                               prefixIcon: const Icon(LucideIcons.server),
                               labelText: context.t('connect.serverUrl'),
                             ),

@@ -1,14 +1,14 @@
 import Cocoa
 
-/// Hivora native Splash-Animation für macOS (Core Animation / AppKit).
+/// Hinata native Splash-Animation für macOS (Core Animation / AppKit).
 /// Gleiche Choreografie wie Android (AVD), iOS (UIKit) und Web (CSS).
-final class HivoraSplashView: NSView {
+final class HinataSplashView: NSView {
 
     // MARK: - Public
 
     /// Über dem Flutter-View einblenden. Aufruf in MainFlutterWindow.awakeFromNib().
     static func present(over flutterView: NSView) {
-        let splash = HivoraSplashView(frame: flutterView.bounds)
+        let splash = HinataSplashView(frame: flutterView.bounds)
         splash.autoresizingMask = [.width, .height]
         flutterView.addSubview(splash)
         splash.start()
@@ -19,7 +19,7 @@ final class HivoraSplashView: NSView {
     private let markContainer = CALayer()
     private let hexLayer = CAShapeLayer()
     private let barLayer = CAShapeLayer()
-    private let wordmark = NSTextField(labelWithString: "hivora")
+    private let wordmark = NSTextField(labelWithString: "hinata")
 
     private var isDark: Bool {
         effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
@@ -70,7 +70,7 @@ final class HivoraSplashView: NSView {
 
         wordmark.font = Self.soraFont(size: fontSize)
         wordmark.attributedStringValue = NSAttributedString(
-            string: "hivora",
+            string: "hinata",
             attributes: [.kern: -0.03 * fontSize, .foregroundColor: inkColor]
         )
         wordmark.sizeToFit()

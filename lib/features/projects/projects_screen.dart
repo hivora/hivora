@@ -7,7 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/auth_bloc.dart';
 import '../../core/blocs/fetch_cubit.dart';
 import '../../core/i18n/i18n.dart';
@@ -42,7 +42,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   void initState() {
     super.initState();
     _cubit = FetchCubit<_ProjectsData>(() async {
-      final repo = context.read<HivoraRepository>();
+      final repo = context.read<HinataRepository>();
       final results = await Future.wait([
         repo.projects(),
         repo.projects(archived: true),
@@ -187,7 +187,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   Future<void> _showCreate() async {
-    final repository = context.read<HivoraRepository>();
+    final repository = context.read<HinataRepository>();
     final meId = context.read<AuthBloc>().state.user?.id;
     final created = await showGlassModal<Project>(
       context,
@@ -504,7 +504,7 @@ class _CreateProjectBodyState extends State<_CreateProjectBody> {
 
   Future<void> _loadUsers() async {
     try {
-      final users = await context.read<HivoraRepository>().users();
+      final users = await context.read<HinataRepository>().users();
       if (mounted) setState(() => _users = users);
     } on ApiFailure {
       // Lead picker simply stays limited to the current user.
@@ -685,7 +685,7 @@ class _CreateProjectBodyState extends State<_CreateProjectBody> {
       _error = null;
     });
     try {
-      final project = await context.read<HivoraRepository>().createProject(
+      final project = await context.read<HinataRepository>().createProject(
         key: _key.text.trim().toUpperCase(),
         name: _name.text.trim(),
         description: _description.text.trim().isEmpty

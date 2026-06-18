@@ -8,9 +8,9 @@ import '../models/team_models.dart';
 import '../models/work_models.dart';
 import 'api_client.dart';
 
-/// Single REST gateway for the Hivora server API (v1).
-class HivoraRepository {
-  HivoraRepository(this._api);
+/// Single REST gateway for the Hinata server API (v1).
+class HinataRepository {
+  HinataRepository(this._api);
 
   final ApiClient _api;
 

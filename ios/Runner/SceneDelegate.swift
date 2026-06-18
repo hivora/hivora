@@ -10,10 +10,10 @@ class SceneDelegate: FlutterSceneDelegate {
   ) {
     super.scene(scene, willConnectTo: session, options: connectionOptions)
 
-    // Hivora: native Splash-Animation über dem Flutter-View starten
+    // Hinata: native Splash-Animation über dem Flutter-View starten
     if let windowScene = scene as? UIWindowScene,
        let window = windowScene.windows.first {
-      HivoraSplashView.present(in: window)
+      HinataSplashView.present(in: window)
     }
   }
 }

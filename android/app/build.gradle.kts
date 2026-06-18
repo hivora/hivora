@@ -17,7 +17,7 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "hivora.asta.hn"
+    namespace = "hinata.asta.hn"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -31,7 +31,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "hivora.asta.hn"
+        applicationId = "hinata.asta.hn"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

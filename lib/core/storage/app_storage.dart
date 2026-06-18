@@ -11,7 +11,7 @@ class AppStorage {
   static const _kRefreshToken = 'refresh_token';
   static const _kOnboardingDone = 'onboarding_done';
   static const _kLocale = 'locale';
-  static const _kRecentSearch = 'hivora.recentSearch.v1';
+  static const _kRecentSearch = 'hinata.recentSearch.v1';
 
   /// Maximum number of recent global-search queries kept on device.
   static const recentSearchMax = 6;

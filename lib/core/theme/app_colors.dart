@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Hivora "Hive" design tokens — redesign 2026.
+/// Hinata "Hive" design tokens — redesign 2026.
 /// Navy nav-rail · warm-paper workspace · honey-amber signature accent.
 ///
 /// Neutral surface/ink tokens are theme-aware: they resolve against the

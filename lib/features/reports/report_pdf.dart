@@ -28,7 +28,7 @@ class ReportPdfData {
 
   /// Organization logo as ready-to-embed raster bytes (PNG/JPEG). SVG logos are
   /// rasterized before this point. Rendered in the header when present;
-  /// otherwise the Hivora wordmark + hex mark is shown.
+  /// otherwise the Hinata wordmark + hex mark is shown.
   final Uint8List? logoBytes;
   final String projectName;
   final DateTime generatedAt;
@@ -41,10 +41,10 @@ class ReportPdfData {
 
 PdfColor _c(Color c) => PdfColor.fromInt(c.toARGB32());
 
-/// The Hivora hex signet (pointy-top hexagon + centre bar), amber stroke.
+/// The Hinata hex signet (pointy-top hexagon + centre bar), amber stroke.
 /// Tiny and simple, so it always renders in the PDF SVG engine — used as the
 /// branding fallback when no org logo is configured/available.
-const _hivoraMarkSvg =
+const _hinataMarkSvg =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">'
     '<g fill="none" stroke="#D9A032" stroke-width="11" '
     'stroke-linecap="round" stroke-linejoin="round">'
@@ -69,14 +69,14 @@ Future<void> shareReportPdf(ReportPdfData data) async {
       .replaceAll(RegExp(r'^-+|-+$'), '');
   await Printing.sharePdf(
     bytes: await doc.save(),
-    filename: 'hivora-report-$safeProject-$stamp.pdf',
+    filename: 'hinata-report-$safeProject-$stamp.pdf',
   );
 }
 
 Future<pw.Document> _buildDocument(ReportPdfData data) async {
   final doc = pw.Document(
-    title: 'Hivora · ${data.projectName}',
-    author: 'Hivora',
+    title: 'Hinata · ${data.projectName}',
+    author: 'Hinata',
   );
 
   final df = _fmtDate(data.generatedAt);
@@ -103,7 +103,7 @@ Future<pw.Document> _buildDocument(ReportPdfData data) async {
         alignment: pw.Alignment.centerRight,
         margin: const pw.EdgeInsets.only(top: 10),
         child: pw.Text(
-          'Hivora · page ${context.pageNumber}/${context.pagesCount}',
+          'Hinata · page ${context.pageNumber}/${context.pagesCount}',
           style: const pw.TextStyle(fontSize: 9, color: _inkFaint),
         ),
       ),
@@ -114,7 +114,7 @@ Future<pw.Document> _buildDocument(ReportPdfData data) async {
 
 pw.Widget _header(ReportPdfData data, String generated, pw.Widget? logo) {
   // The org logo is rendered inside the navy band, in the same top-left slot
-  // the Hivora wordmark fallback occupies.
+  // the Hinata wordmark fallback occupies.
   return pw.Container(
     padding: const pw.EdgeInsets.all(20),
     decoration: const pw.BoxDecoration(
@@ -145,10 +145,10 @@ pw.Widget _header(ReportPdfData data, String generated, pw.Widget? logo) {
                     pw.SizedBox(
                       width: 26,
                       height: 26,
-                      child: pw.SvgImage(svg: _hivoraMarkSvg),
+                      child: pw.SvgImage(svg: _hinataMarkSvg),
                     ),
                     pw.SizedBox(width: 9),
-                    pw.Text('hivora',
+                    pw.Text('hinata',
                         style: pw.TextStyle(
                             color: PdfColors.white,
                             fontSize: 19,

@@ -363,7 +363,7 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
                         mainAxisSize: MainAxisSize.min,
                         spacing: 10,
                         children: [
-                          /// The amber Hivora hex-mark with a small "x" badge
+                          /// The amber Hinata hex-mark with a small "x" badge
                           /// stacked at its top-right corner, signalling that
                           /// there is nothing left to filter here.
                           HexMark(size: 34, color: tokens.inkFaint),

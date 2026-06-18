@@ -11,7 +11,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/app_config_bloc.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/content_models.dart';
@@ -63,7 +63,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       _loading = true;
       _error = null;
     });
-    final repo = context.read<HivoraRepository>();
+    final repo = context.read<HinataRepository>();
     try {
       final results = await Future.wait([repo.projects(), repo.users()]);
       _projects = results[0] as List<Project>;
@@ -88,7 +88,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       _loading = true;
       _error = null;
     });
-    final repo = context.read<HivoraRepository>();
+    final repo = context.read<HinataRepository>();
     final now = DateTime.now();
     final from =
         now.subtract(const Duration(days: 30)).toIso8601String().substring(0, 10);
@@ -166,7 +166,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (format == 'pdf') {
       // Pull the freshest branding so a logo configured after app start is
       // picked up; fall back to whatever was cached at launch.
-      final repo = context.read<HivoraRepository>();
+      final repo = context.read<HinataRepository>();
       final cached = context.read<AppConfigBloc>().state.meta;
       ServerMeta? meta = cached;
       try {
@@ -232,7 +232,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return ReportPdfData(
       orgName: (meta?.organizationName?.trim().isNotEmpty ?? false)
           ? meta!.organizationName!.trim()
-          : 'Hivora',
+          : 'Hinata',
       logoBytes: logoPng,
       projectName: _projectName(),
       generatedAt: DateTime.now(),

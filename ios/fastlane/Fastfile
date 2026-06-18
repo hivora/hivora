@@ -15,7 +15,7 @@ platform :ios do
          "--export-options-plist", "ios/ExportOptions.plist")
     end
     upload_to_testflight(
-      ipa: "../build/ios/ipa/hivora.ipa",
+      ipa: "../build/ios/ipa/hinata.ipa",
       skip_waiting_for_build_processing: true
     )
   end

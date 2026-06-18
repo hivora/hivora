@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 
-/// Hivora hex-mark: a stroked pointy-top hexagon with a horizontal centre bar.
+/// Hinata hex-mark: a stroked pointy-top hexagon with a horizontal centre bar.
 /// SVG source (viewBox 0 0 120 120):
 ///   path d="M60 14 99.8 37v46L60 106 20.2 83V37Z"   ← hexagon
 ///   path d="M20.2 60h79.6"                           ← centre bar
@@ -23,7 +23,7 @@ class HexMark extends StatelessWidget {
 }
 
 /// Full brand lockup used on the connect / onboarding screens:
-/// the hex signet in an amber-tinted rounded tile, "hivora" wordmark below.
+/// the hex signet in an amber-tinted rounded tile, "hinata" wordmark below.
 class HivBrandLockup extends StatelessWidget {
   const HivBrandLockup({super.key, this.hexSize = 64});
   final double hexSize;
@@ -47,7 +47,7 @@ class HivBrandLockup extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'hivora',
+          'hinata',
           style: TextStyle(
             fontFamily: AppTheme.fontBrand,
             fontSize: hexSize * 0.34,

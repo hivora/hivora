@@ -5,7 +5,7 @@ import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/core_models.dart';
 import '../../core/models/work_models.dart';
@@ -45,7 +45,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       _loading = true;
       _error = null;
     });
-    final repository = context.read<HivoraRepository>();
+    final repository = context.read<HinataRepository>();
     try {
       final results = await Future.wait([
         repository.timesheet(_from, _to),

@@ -11,7 +11,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/api/api_client.dart';
-import '../../../core/api/hivora_repository.dart';
+import '../../../core/api/hinata_repository.dart';
 import '../../../core/api/sse.dart';
 import '../../../core/blocs/app_config_bloc.dart';
 import '../../../core/i18n/i18n.dart';
@@ -78,7 +78,7 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
   Timer? _reconnect;
   int _reconnectAttempts = 0;
 
-  HivoraRepository get _repo => context.read<HivoraRepository>();
+  HinataRepository get _repo => context.read<HinataRepository>();
 
   UploadLimits get _limits {
     try {

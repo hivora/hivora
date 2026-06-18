@@ -3,7 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/auth_bloc.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/core_models.dart';
@@ -647,7 +647,7 @@ class TeamProjectsTab extends StatelessWidget {
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    final repo = context.read<HivoraRepository>();
+    final repo = context.read<HinataRepository>();
     final messenger = ScaffoldMessenger.of(context);
     final errText = context.t('errors.unexpected');
     try {

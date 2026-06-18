@@ -1,19 +1,19 @@
 import UIKit
 
-/// Hivora native Splash-Animation (Core Animation, kein Flutter-Frame nötig).
+/// Hinata native Splash-Animation (Core Animation, kein Flutter-Frame nötig).
 /// Choreografie identisch zu Android (AVD) und Web (CSS):
 ///   0.10s  Hexagon zeichnet sich auf      (0.62s, fast-out-slow-in)
 ///   0.50s  Querbalken zieht durch          (0.38s)
 ///   0.62s  weicher Pop 0.94 -> 1.0         (Spring)
 ///   0.88s  Wortmarke steigt auf            (0.55s)
 ///   1.90s  Overlay blendet aus und entfernt sich selbst
-final class HivoraSplashView: UIView {
+final class HinataSplashView: UIView {
 
     // MARK: - Public
 
     /// Über dem Flutter-View einblenden. Aufruf in SceneDelegate / AppDelegate.
     static func present(in window: UIWindow) {
-        let splash = HivoraSplashView(frame: window.bounds)
+        let splash = HinataSplashView(frame: window.bounds)
         splash.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         window.addSubview(splash)
         splash.start()
@@ -56,7 +56,7 @@ final class HivoraSplashView: UIView {
         self.layer.addSublayer(markContainer)
 
         wordmark.attributedText = NSAttributedString(
-            string: "hivora",
+            string: "hinata",
             attributes: [.kern: -0.03 * 34]
         )
         wordmark.textColor = inkColor
@@ -77,7 +77,7 @@ final class HivoraSplashView: UIView {
 
         wordmark.font = Self.soraFont(size: fontSize)
         wordmark.attributedText = NSAttributedString(
-            string: "hivora",
+            string: "hinata",
             attributes: [.kern: -0.03 * fontSize]
         )
         wordmark.sizeToFit()

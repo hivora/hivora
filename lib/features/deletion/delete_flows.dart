@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/api/sse.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/deletion_models.dart';
@@ -29,7 +29,7 @@ Future<bool?> showDeleteBoardFlow(
   required String boardId,
   required String boardName,
 }) {
-  final repo = context.read<HivoraRepository>();
+  final repo = context.read<HinataRepository>();
   return _show(
     context,
     _DeleteFlow(
@@ -51,7 +51,7 @@ Future<bool?> showDeleteProjectFlow(
   required String projectId,
   required String projectName,
 }) {
-  final repo = context.read<HivoraRepository>();
+  final repo = context.read<HinataRepository>();
   return _show(
     context,
     _DeleteFlow(
@@ -77,7 +77,7 @@ Future<bool?> showDeleteTeamFlow(
   required String teamId,
   required String teamName,
 }) {
-  final repo = context.read<HivoraRepository>();
+  final repo = context.read<HinataRepository>();
   return _show(
     context,
     _DeleteFlow(

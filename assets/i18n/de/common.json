@@ -74,7 +74,7 @@
   },
   "connect": {
     "title": "Mit deinem Server verbinden",
-    "subtitle": "Hivora ist self-hosted. Gib die URL des Hivora-Servers deiner Organisation ein, um zu starten.",
+    "subtitle": "Hinata ist self-hosted. Gib die URL des Hinata-Servers deiner Organisation ein, um zu starten.",
     "serverUrl": "Server-URL",
     "invalidUrl": "Bitte eine gültige http(s)-URL eingeben",
     "action": "Verbinden",
@@ -450,7 +450,7 @@
       "clear": "Leeren"
     },
     "empty": {
-      "title": "Durchsuche alles in Hivora",
+      "title": "Durchsuche alles in Hinata",
       "subtitle": "Finde Vorgänge, Projekte, Personen, Boards und Dokumente — oder führe einen Befehl aus. Tippe los."
     },
     "noMatch": "Keine Treffer für „{{q}}“",
@@ -460,7 +460,7 @@
       "open": "öffnen",
       "scope": "Bereich"
     },
-    "brand": "Hivora Suche",
+    "brand": "Hinata Suche",
     "cmd": {
       "dashboard": "Zum Dashboard",
       "projects": "Zu Projekte",
@@ -551,7 +551,7 @@
     "sessionPolicyHint": "Wie lange Benutzer ohne Aktivität angemeldet bleiben.",
     "sessionLifetime": "Sitzungsdauer",
     "hours": "Std.",
-    "owaspNote": "Hivora erzwingt standardmäßig OWASP Top 10 Schutzmaßnahmen. Die obigen Einstellungen ermöglichen eine weitere Härtung für deine spezifische Umgebung.",
+    "owaspNote": "Hinata erzwingt standardmäßig OWASP Top 10 Schutzmaßnahmen. Die obigen Einstellungen ermöglichen eine weitere Härtung für deine spezifische Umgebung.",
     "auditLog": "Audit-Protokoll",
     "auditLogSoon": "Audit-Protokoll kommt bald",
     "auditLogHint": "Alle Admin-Aktionen und Anmeldeereignisse werden hier mit Zeitstempeln und Akteursdetails aufgelistet.",

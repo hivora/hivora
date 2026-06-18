@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-/// Hivora's signature loading indicator — the hex-mark logo brought to life.
+/// Hinata's signature loading indicator — the hex-mark logo brought to life.
 ///
-/// A luminous "worker" comet traces the hexagonal honeycomb cell of the Hivora
+/// A luminous "worker" comet traces the hexagonal honeycomb cell of the Hinata
 /// logo while the centre bar shimmers in sync and the whole cell breathes
 /// gently. It is built purely from a single [AnimationController] and
 /// [CustomPaint] — no external packages, no fragment shaders that need runtime

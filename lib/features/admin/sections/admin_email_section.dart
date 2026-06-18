@@ -88,14 +88,14 @@ class _AdminEmailSectionState extends State<AdminEmailSection> {
               AdminField(
                 label: context.t('admin.smtpFromAddress'),
                 initialValue:
-                    (_smtp['fromAddress'] as String?) ?? 'hivora@localhost',
+                    (_smtp['fromAddress'] as String?) ?? 'hinata@localhost',
                 onChanged: (v) => _smtp['fromAddress'] = v,
                 keyboardType: TextInputType.emailAddress,
               ),
               AdminField(
                 label: context.t('admin.smtpFromName'),
                 initialValue:
-                    (_smtp['fromName'] as String?) ?? 'Hivora',
+                    (_smtp['fromName'] as String?) ?? 'Hinata',
                 onChanged: (v) => _smtp['fromName'] = v,
               ),
             ],

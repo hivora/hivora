@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// Hivora "Hive" Material theme — redesign 2026.
+/// Hinata "Hive" Material theme — redesign 2026.
 ///
 /// Key shifts from the old pastel-glassmorphism theme:
 ///   • Tighter radii: cards 14 (was 28), controls 10 — crisp, not bubbly.

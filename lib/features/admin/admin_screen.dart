@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
@@ -83,7 +83,7 @@ class _AdminScreenState extends State<AdminScreen> {
       _error = null;
     });
     try {
-      _settings = await context.read<HivoraRepository>().adminSettings();
+      _settings = await context.read<HinataRepository>().adminSettings();
       setState(() => _loading = false);
     } on ApiFailure catch (failure) {
       setState(() {
@@ -98,7 +98,7 @@ class _AdminScreenState extends State<AdminScreen> {
     setState(() => _saving = true);
     try {
       _settings =
-          await context.read<HivoraRepository>().updateAdminSettings(_settings!);
+          await context.read<HinataRepository>().updateAdminSettings(_settings!);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(context.t('admin.saved'))));

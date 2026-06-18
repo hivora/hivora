@@ -1,11 +1,11 @@
 <!-- Logo -->
 <p align="center">
-  <img src="assets/branding/hivora_banner.svg" alt="Hivora" width="640">
+  <img src="assets/branding/hinata_banner.svg" alt="Hinata" width="640">
 </p>
 
 <!-- Tagline -->
 <p align="center">
-  <b>Open-source, self-hosted project &amp; issue tracking — the Flutter app for the <a href="https://github.com/Ahmadre/Hivora-Server">Hivora Server</a>.</b><br>
+  <b>Open-source, self-hosted project &amp; issue tracking — the Flutter app for the <a href="https://github.com/Ahmadre/Hinata-Server">Hinata Server</a>.</b><br>
   <sub>One codebase · Android · iOS · Web · macOS · no user or board limits, ever.</sub>
 </p>
 
@@ -29,9 +29,9 @@
 
 ---
 
-## 🍯 Why Hivora
+## 🍯 Why Hinata
 
-Hivora is a fully responsive, localized project-management client that runs from
+Hinata is a fully responsive, localized project-management client that runs from
 a **single Flutter codebase** on phone, tablet, web and desktop. Layout adapts
 through golden-ratio-derived breakpoints (no fixed pixel widths), and the UI
 ships in **English (UK)** and **Deutsch (Deutschland)** via i18next — with error
@@ -73,9 +73,9 @@ messages localized **by the server** through the `Accept-Language` header.
 |:-:|---|---|
 | 🔌 | **Connect** | On first start the app asks for your server URL and only continues once the server answers. |
 | 🛡️ | **Version gate** | The app compares its version with the server's `minAppVersion` on every start and forces an update when required. |
-| 🧙 | **Setup wizard** | A fresh server is configured directly in the app (organization + first admin) — unless bootstrapped via `HIVORA_SETUP_*`. |
+| 🧙 | **Setup wizard** | A fresh server is configured directly in the app (organization + first admin) — unless bootstrapped via `HINATA_SETUP_*`. |
 | 🧭 | **Onboarding** | A one-time illustrated tour of the key features. |
-| 🔑 | **Sign in** | Local credentials, or SSO (OpenID Connect, OAuth 2.0, SAML, LDAP — e.g. Synology SSO). SSO returns via the `hivora://auth-callback` deep link. |
+| 🔑 | **Sign in** | Local credentials, or SSO (OpenID Connect, OAuth 2.0, SAML, LDAP — e.g. Synology SSO). SSO returns via the `hinata://auth-callback` deep link. |
 
 ---
 
@@ -116,9 +116,9 @@ messages localized **by the server** through the `Accept-Language` header.
 ```mermaid
 flowchart LR
     UI["🖼️ Features<br/>(screens & widgets)"] --> BLOC["🧠 Bloc / Cubit<br/>state"]
-    BLOC --> REPO["📦 HivoraRepository"]
+    BLOC --> REPO["📦 HinataRepository"]
     REPO --> API["🌐 ApiClient<br/>(dio + token refresh)"]
-    API -->|"REST /api/v1<br/>Accept-Language"| SRV["☕ Hivora Server"]
+    API -->|"REST /api/v1<br/>Accept-Language"| SRV["☕ Hinata Server"]
     SRV -.->|"SSE live updates"| BLOC
     ROUTER["🧭 go_router<br/>auth-aware redirects"] -.-> UI
     I18N["🌍 i18next<br/>en · de"] -.-> UI
@@ -175,7 +175,7 @@ dart run flutter_launcher_icons          # regenerate app icons
 </details>
 
 Start the backend as described in
-[Hivora-Server/README.md](../Hivora-Server/README.md), then point the app at
+[Hinata-Server/README.md](../Hinata-Server/README.md), then point the app at
 `http://localhost:8080` (Android emulator: `http://10.0.2.2:8080`).
 
 ---
@@ -201,8 +201,8 @@ Pushing a `v*` tag triggers [release.yml](.github/workflows/release.yml):
 
 </details>
 
-> **Store compliance** — bundle id `hivora.asta.hn`; the privacy-policy URL shown
-> in the app comes from the server (`HIVORA_PRIVACY_POLICY_URL`), required for App
+> **Store compliance** — bundle id `hinata.asta.hn`; the privacy-policy URL shown
+> in the app comes from the server (`HINATA_PRIVACY_POLICY_URL`), required for App
 > Store / Play Store review and GDPR (DSGVO). The UI is accessibility-minded
 > (BFSG): scalable text, semantic widgets, sufficient contrast.
 

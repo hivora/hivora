@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/app_config_bloc.dart';
 import '../../core/blocs/auth_bloc.dart';
 import '../../core/i18n/i18n.dart';
@@ -55,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _loadProviders() async {
     try {
-      final providers = await context.read<HivoraRepository>().ssoProviders();
+      final providers = await context.read<HinataRepository>().ssoProviders();
       if (mounted) setState(() => _providers = providers);
     } catch (_) {
       // SSO buttons are optional; password login stays available.
@@ -103,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            organization ?? 'Hivora',
+                            organization ?? 'Hinata',
                             textAlign: TextAlign.center,
                             style: Theme.of(context)
                                 .textTheme
@@ -263,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // background, which is exactly the bug we're fixing.
         return;
       }
-      // Native: the server redirects back via hivora://auth-callback.
+      // Native: the server redirects back via hinata://auth-callback.
       await launchUrl(uri, mode: LaunchMode.externalApplication);
       // The external browser took over; restore the buttons so the user can
       // retry if they return without completing the login.

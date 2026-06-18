@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
-import '../../../core/api/hivora_repository.dart';
+import '../../../core/api/hinata_repository.dart';
 import '../../../core/blocs/auth_bloc.dart';
 import '../../../core/i18n/i18n.dart';
 import '../../../core/models/core_models.dart';
@@ -101,7 +101,7 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
       _loadError = null;
     });
     try {
-      final repo = context.read<HivoraRepository>();
+      final repo = context.read<HinataRepository>();
       final results = await Future.wait([
         repo.project(widget.projectId),
         repo.users(),
@@ -382,7 +382,7 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
         'archived': d.archived,
         if (_stateMigrations.isNotEmpty) 'stateMigrations': _stateMigrations,
       };
-      final repo = context.read<HivoraRepository>();
+      final repo = context.read<HinataRepository>();
       final updated = await repo.updateProject(d.id, patch);
       // Counts changed once issues were reassigned/deleted.
       final usage = await repo.projectStateUsage(d.id);

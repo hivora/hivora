@@ -26,7 +26,7 @@ class HiveSwitch extends StatelessWidget {
 }
 
 // ════════════════════════════════════════════════════════════════════════
-//  Hivora "Hive" v2 design kit — shared primitives that mirror the
+//  Hinata "Hive" v2 design kit — shared primitives that mirror the
 //  reference web prototype (./Design/v2). Every workspace screen builds
 //  from these so cards, badges, glyphs and motion stay 1:1 consistent.
 // ════════════════════════════════════════════════════════════════════════

@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/auth_bloc.dart';
 import '../../core/blocs/fetch_cubit.dart';
 import '../../core/i18n/i18n.dart';
@@ -44,7 +44,7 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
   void initState() {
     super.initState();
     _cubit = FetchCubit<_BoardsData>(() async {
-      final repo = context.read<HivoraRepository>();
+      final repo = context.read<HinataRepository>();
       final me = context.read<AuthBloc>().state.user;
       final results = await Future.wait([
         repo.boards(projectId: widget.projectId),
@@ -76,7 +76,7 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
   }
 
   Future<void> _showCreate() async {
-    final repository = context.read<HivoraRepository>();
+    final repository = context.read<HinataRepository>();
     final created = await WoltModalSheet.show<AgileBoard?>(
       context: context,
       pageListBuilder: (modalContext) => [
@@ -459,7 +459,7 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
       _error = null;
     });
     try {
-      final board = await context.read<HivoraRepository>().createBoard(
+      final board = await context.read<HinataRepository>().createBoard(
         _name.text.trim(),
         [widget.projectId],
       );

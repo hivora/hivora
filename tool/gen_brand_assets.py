@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Hivora v2 brand-asset generator — honey-amber hex-mark on warm paper.
+"""Hinata v2 brand-asset generator — honey-amber hex-mark on warm paper.
 
-Pure stdlib (math + zlib + struct): rasterises the Hivora hex-mark with an
+Pure stdlib (math + zlib + struct): rasterises the Hinata hex-mark with an
 analytic distance field (perfect round caps/joins + 1px AA, matching the in-app
 `HexMark`/`HiveLoader` painter) and writes every platform icon / splash PNG at
 its existing dimensions. No Flutter SDK, Pillow or ImageMagick required.

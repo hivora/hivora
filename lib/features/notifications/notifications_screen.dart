@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/api/hivora_repository.dart';
+import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/fetch_cubit.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/content_models.dart';
@@ -26,7 +26,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void initState() {
     super.initState();
     _cubit =
-        FetchCubit(() => context.read<HivoraRepository>().notifications())..load();
+        FetchCubit(() => context.read<HinataRepository>().notifications())..load();
   }
 
   @override
@@ -121,7 +121,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _open(AppNotification notification) async {
-    final repository = context.read<HivoraRepository>();
+    final repository = context.read<HinataRepository>();
     if (!notification.read) {
       try {
         await repository.markNotificationRead(notification.id);
