@@ -169,13 +169,10 @@ class SprintPlanningSurface extends StatelessWidget {
       // remaining width so it never overflows the viewport. Desktop keeps the
       // button left and a fixed-width search pinned to the right.
       child: context.isCompact
-          ? Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
+          ? Row(
               children: [
                 createButton,
+                const SizedBox(width: 12),
                 Expanded(child: search),
               ],
             )
