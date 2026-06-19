@@ -12,7 +12,13 @@ import 'glass_panel.dart';
 
 /// One selectable row in a [GlassPopupMenu].
 class GlassMenuItem<T> {
-  const GlassMenuItem({required this.value, required this.label, this.leading});
+  const GlassMenuItem({
+    required this.value,
+    required this.label,
+    this.leading,
+    this.color,
+    this.dividerAbove = false,
+  });
 
   /// The value reported back through [GlassPopupMenu.onSelected] when tapped.
   final T value;
@@ -22,6 +28,14 @@ class GlassMenuItem<T> {
 
   /// Optional leading glyph/avatar shown left of the label.
   final Widget? leading;
+
+  /// Optional label colour — e.g. a danger tint for a destructive action.
+  /// Falls back to the standard ink colour when null.
+  final Color? color;
+
+  /// When true, a hairline divider is drawn above this row to separate it from
+  /// the previous group (e.g. before a destructive action).
+  final bool dividerAbove;
 }
 
 /// A reusable liquid-glass replacement for [PopupMenuButton].
@@ -215,12 +229,27 @@ class _GlassPopupMenuDialog<T> extends StatelessWidget {
             itemCount: items.length,
             itemBuilder: (_, i) {
               final item = items[i];
-              return _MenuRow<T>(
+              final row = _MenuRow<T>(
                 tokens: tokens,
                 item: item,
                 selected: item.value == value,
                 onTap: () =>
                     Navigator.of(context).pop(_MenuResult<T>(item.value)),
+              );
+              if (!item.dividerAbove) return row;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    height: 1,
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 5,
+                    ),
+                    color: tokens.hairline,
+                  ),
+                  row,
+                ],
               );
             },
           ),
@@ -305,7 +334,7 @@ class _MenuRowState<T> extends State<_MenuRow<T>> {
                   style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
-                    color: t.ink,
+                    color: widget.item.color ?? t.ink,
                   ),
                 ),
               ),

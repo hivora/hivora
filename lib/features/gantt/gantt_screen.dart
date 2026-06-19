@@ -11,6 +11,7 @@ import '../../core/models/work_models.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/glass_popup_menu.dart';
 import '../../core/widgets/hive_empty_state.dart';
 import '../../core/widgets/hive_loader.dart';
 import '../../core/widgets/hive_widgets.dart';
@@ -446,14 +447,11 @@ class _ProjectPicker extends StatelessWidget {
         ? projects.where((p) => p.id == selected).firstOrNull?.name ??
             projects.first.name
         : projects.first.name;
-    return PopupMenuButton<String>(
-      initialValue: selected,
+    return GlassPopupMenu<String?>(
+      value: selected,
       onSelected: onChanged,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      offset: const Offset(0, 44),
-      itemBuilder: (_) => [
-        for (final p in projects)
-          PopupMenuItem(value: p.id, child: Text(p.name)),
+      items: [
+        for (final p in projects) GlassMenuItem(value: p.id, label: p.name),
       ],
       child: Container(
         constraints: const BoxConstraints(maxWidth: 220),

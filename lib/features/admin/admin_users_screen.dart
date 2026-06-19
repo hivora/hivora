@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../core/widgets/glass_popup_menu.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
@@ -714,77 +715,9 @@ class _UserActions extends StatelessWidget {
     final active = user['active'] == true;
     final isAdmin =
         ((user['roles'] as List<dynamic>?) ?? []).contains('ADMIN');
-    return PopupMenuButton<String>(
-      icon: Icon(LucideIcons.ellipsisVertical,
-          size: 18, color: AppColors.inkSoft),
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      offset: const Offset(0, 36),
-      itemBuilder: (_) => [
-        PopupMenuItem(
-          value: 'toggle_active',
-          child: Row(
-            children: [
-              Icon(
-                active
-                    ? LucideIcons.userX
-                    : LucideIcons.user,
-                size: 16,
-                color:
-                    active ? AppColors.danger : AppColors.success,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                context.t(active
-                    ? 'admin.deactivate'
-                    : 'admin.activate'),
-                style: TextStyle(
-                    color: active
-                        ? AppColors.danger
-                        : AppColors.success),
-              ),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'toggle_admin',
-          child: Row(
-            children: [
-              Icon(
-                isAdmin
-                    ? LucideIcons.shield
-                    : LucideIcons.shield,
-                size: 16,
-                color: AppColors.navy,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                context.t(isAdmin
-                    ? 'admin.removeAdmin'
-                    : 'admin.makeAdmin'),
-              ),
-            ],
-          ),
-        ),
-        // Self-deletion is forbidden by the server too; hidden here for clarity.
-        if (!isSelf) ...[
-          const PopupMenuDivider(),
-          PopupMenuItem(
-            value: 'delete',
-            child: Row(
-              children: [
-                const Icon(LucideIcons.trash2,
-                    size: 16, color: AppColors.danger),
-                const SizedBox(width: 8),
-                Text(
-                  context.t('admin.deleteUser'),
-                  style: const TextStyle(color: AppColors.danger),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
+    return GlassPopupMenu<String>(
+      value: '',
+      width: 220,
       onSelected: (action) {
         switch (action) {
           case 'toggle_active':
@@ -795,6 +728,38 @@ class _UserActions extends StatelessWidget {
             onDelete(user);
         }
       },
+      items: [
+        GlassMenuItem(
+          value: 'toggle_active',
+          label: context.t(active ? 'admin.deactivate' : 'admin.activate'),
+          color: active ? AppColors.danger : AppColors.success,
+          leading: Icon(
+            active ? LucideIcons.userX : LucideIcons.user,
+            size: 16,
+            color: active ? AppColors.danger : AppColors.success,
+          ),
+        ),
+        GlassMenuItem(
+          value: 'toggle_admin',
+          label: context.t(isAdmin ? 'admin.removeAdmin' : 'admin.makeAdmin'),
+          leading: const Icon(LucideIcons.shield, size: 16, color: AppColors.navy),
+        ),
+        // Self-deletion is forbidden by the server too; hidden here for clarity.
+        if (!isSelf)
+          GlassMenuItem(
+            value: 'delete',
+            label: context.t('admin.deleteUser'),
+            color: AppColors.danger,
+            dividerAbove: true,
+            leading: const Icon(LucideIcons.trash2,
+                size: 16, color: AppColors.danger),
+          ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Icon(LucideIcons.ellipsisVertical,
+            size: 18, color: AppColors.inkSoft),
+      ),
     );
   }
 }

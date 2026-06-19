@@ -1257,15 +1257,12 @@ class _SprintSelector extends StatelessWidget {
         ? sprints.where((s) => s.id == selected).firstOrNull?.name ??
               context.t('board.allSprints')
         : context.t('board.allSprints');
-    return PopupMenuButton<String?>(
-      initialValue: selected,
+    return GlassPopupMenu<String?>(
+      value: selected,
       onSelected: onChanged,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      offset: const Offset(0, 40),
-      itemBuilder: (_) => [
-        PopupMenuItem(value: null, child: Text(context.t('board.allSprints'))),
-        for (final s in sprints)
-          PopupMenuItem(value: s.id, child: Text(s.name)),
+      items: [
+        GlassMenuItem(value: null, label: context.t('board.allSprints')),
+        for (final s in sprints) GlassMenuItem(value: s.id, label: s.name),
       ],
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),

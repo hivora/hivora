@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../core/widgets/glass_popup_menu.dart';
 import '../../core/widgets/hive_empty_state.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter/services.dart';
@@ -731,35 +732,24 @@ class _ExportButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
+    return GlassPopupMenu<String>(
+      value: '',
       onSelected: onSelected,
-      tooltip: context.t('reports.export'),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      offset: const Offset(0, 46),
-      itemBuilder: (_) => [
-        PopupMenuItem(
+      items: [
+        GlassMenuItem(
           value: 'pdf',
-          child: Row(children: [
-            const Icon(LucideIcons.fileText, size: 18),
-            const SizedBox(width: 10),
-            Text(context.t('reports.exportPdf')),
-          ]),
+          label: context.t('reports.exportPdf'),
+          leading: const Icon(LucideIcons.fileText, size: 18),
         ),
-        PopupMenuItem(
+        GlassMenuItem(
           value: 'csv',
-          child: Row(children: [
-            const Icon(LucideIcons.table, size: 18),
-            const SizedBox(width: 10),
-            Text(context.t('reports.exportCsv')),
-          ]),
+          label: context.t('reports.exportCsv'),
+          leading: const Icon(LucideIcons.table, size: 18),
         ),
-        PopupMenuItem(
+        GlassMenuItem(
           value: 'json',
-          child: Row(children: [
-            const Icon(LucideIcons.braces, size: 18),
-            const SizedBox(width: 10),
-            Text(context.t('reports.exportJson')),
-          ]),
+          label: context.t('reports.exportJson'),
+          leading: const Icon(LucideIcons.braces, size: 18),
         ),
       ],
       child: Container(
@@ -803,14 +793,11 @@ class _ProjectPicker extends StatelessWidget {
         ? projects.where((p) => p.id == selected).firstOrNull?.name ??
             projects.first.name
         : projects.first.name;
-    return PopupMenuButton<String>(
-      initialValue: selected,
+    return GlassPopupMenu<String?>(
+      value: selected,
       onSelected: onChanged,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      offset: const Offset(0, 46),
-      itemBuilder: (_) => [
-        for (final p in projects)
-          PopupMenuItem(value: p.id, child: Text(p.name)),
+      items: [
+        for (final p in projects) GlassMenuItem(value: p.id, label: p.name),
       ],
       child: Container(
         constraints: const BoxConstraints(maxWidth: 240),
