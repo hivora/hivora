@@ -1386,6 +1386,7 @@ class _CompactShellState extends State<_CompactShell> {
             bottom: 0,
             child: SafeArea(
               top: false,
+              bottom: false,
               child: GlassBottomBar(
                 horizontalPadding: 24,
                 verticalPadding: 16,
