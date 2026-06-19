@@ -25,6 +25,7 @@ end
 # lane context (passing it on triggers an api_key/api_key_path conflict in cert).
 def auth!
   path = ENV["HINATA_ASC_KEY_PATH"]
+  path = File.expand_path(path, __dir__) if path && !path.start_with?("/")
   common = {
     key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
     issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"]
@@ -95,7 +96,7 @@ platform :mac do
       output_directory: PKG_DIR,
       output_name: PKG_NAME,
       export_options: {
-        provisioningProfiles: { APP_IDENTIFIER => "match AppStore #{APP_IDENTIFIER}" }
+        provisioningProfiles: lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING]
       }
     )
   end

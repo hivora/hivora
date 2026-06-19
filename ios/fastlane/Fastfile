@@ -29,6 +29,8 @@ end
 # from the lane context automatically.
 def auth!
   path = ENV["HINATA_ASC_KEY_PATH"]
+  # Resolve a relative .p8 path against the fastlane dir, independent of CWD.
+  path = File.expand_path(path, __dir__) if path && !path.start_with?("/")
   common = {
     key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
     issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"]
@@ -109,7 +111,8 @@ platform :ios do
       output_directory: IPA_DIR,
       output_name: IPA_NAME,
       export_options: {
-        provisioningProfiles: { APP_IDENTIFIER => "match AppStore #{APP_IDENTIFIER}" }
+        # Use the exact profile name match just installed (handles any suffix).
+        provisioningProfiles: lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING]
       }
     )
   end
