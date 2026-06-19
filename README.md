@@ -218,7 +218,7 @@ Pushing a `v*` tag triggers [release.yml](.github/workflows/release.yml):
 
 </details>
 
-> **Store compliance** — bundle id `hinata.ahmadre.com`; the privacy-policy URL shown
+> **Store compliance** — bundle id `com.ahmadre.hinata`; the privacy-policy URL shown
 > in the app comes from the server (`HINATA_PRIVACY_POLICY_URL`), required for App
 > Store / Play Store review and GDPR (DSGVO). The UI is accessibility-minded
 > (BFSG): scalable text, semantic widgets, sufficient contrast.

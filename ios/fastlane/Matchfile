@@ -1,5 +1,13 @@
-git_url(ENV["MATCH_GIT_URL"])
+# Shared certificate + provisioning-profile storage for every Apple platform.
+# Defaults to the project's private certificates repo; override with MATCH_GIT_URL.
+git_url(ENV["MATCH_GIT_URL"] || "https://github.com/hinata-platform/hinata-certificates")
 storage_mode("git")
-type("appstore")
-app_identifier(["hinata.ahmadre.com"])
-readonly(true)
+
+# Defaults; the Fastfile lanes pass an explicit `type:` per call (development /
+# appstore), so these only apply to a bare `fastlane match` invocation.
+type("development")
+app_identifier(["com.ahmadre.hinata"])
+platform("ios")
+
+# Never create/modify certs on CI — only on a maintainer's machine via `bootstrap`.
+readonly(ENV["CI"] == "true")

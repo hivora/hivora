@@ -1,22 +1,139 @@
+# Hinata — iOS release automation.
+#
+# Auth is always via an App Store Connect API key (no Apple ID / 2FA). Signing
+# assets live in the shared match repo (see Matchfile). Build numbers are derived
+# from the latest TestFlight build, so you never bump them by hand.
+#
+#   bundle exec fastlane ios bootstrap   # one-time: create App ID + certs/profiles
+#   bundle exec fastlane ios signing     # fetch certs/profiles (read-only on CI)
+#   bundle exec fastlane ios beta        # build + upload to TestFlight
+#   bundle exec fastlane ios release     # build + submit to the App Store
+
 default_platform(:ios)
 
+APP_IDENTIFIER = "com.ahmadre.hinata".freeze
+WORKSPACE = "Runner.xcworkspace".freeze
+SCHEME = "Runner".freeze
+IPA_DIR = "../build/ios/ipa".freeze
+IPA_NAME = "hinata.ipa".freeze
+
+def ci?
+  ENV["CI"] == "true"
+end
+
+# Sets the global App Store Connect API key so every subsequent action (match,
+# cert, sigh, pilot, deliver) authenticates without an Apple ID / 2FA. Locally it
+# reads the .p8 file (HINATA_ASC_KEY_PATH); on CI the base64 contents
+# (APP_STORE_CONNECT_API_KEY_CONTENT). We never pass the key on to nested actions
+# (that triggers an api_key/api_key_path conflict in `cert`) — they pick it up
+# from the lane context automatically.
+def auth!
+  path = ENV["HINATA_ASC_KEY_PATH"]
+  common = {
+    key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+    issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"]
+  }
+  if path && File.exist?(path)
+    app_store_connect_api_key(**common, key_filepath: path)
+  else
+    app_store_connect_api_key(**common,
+                              key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+                              is_key_content_base64: true)
+  end
+end
+
+# Next build number = (latest TestFlight build for this platform) + 1.
+def next_build_number
+  latest = begin
+    latest_testflight_build_number(app_identifier: APP_IDENTIFIER, platform: "ios")
+  rescue StandardError
+    0
+  end
+  latest.to_i + 1
+end
+
+# Run a flutter command from the repo root (fastlane runs inside ios/).
+def flutter(*args)
+  Dir.chdir("../..") { sh("flutter", *args) }
+end
+
 platform :ios do
-  desc "Build a signed IPA and upload it to TestFlight"
-  lane :beta do
-    setup_ci
-    app_store_connect_api_key(
-      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
-      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
-      key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"]
+  before_all do
+    setup_ci if ci? # ephemeral keychain so match can install the certs
+  end
+
+  desc "One-time: create the dev + App Store signing assets in the match repo"
+  lane :bootstrap do
+    auth!
+    # The App ID + App Store Connect record already exist; match just needs to
+    # create/fetch the certificates + provisioning profiles and push them
+    # (encrypted) to the certificates repo. Run `asc_app` only if you ever need
+    # to (re)create the App Store Connect record.
+    match(type: "development", app_identifier: APP_IDENTIFIER, readonly: false)
+    match(type: "appstore", app_identifier: APP_IDENTIFIER, readonly: false)
+    UI.success("iOS signing assets are in the match repo. CI can now run read-only.")
+  end
+
+  desc "Create the App Store Connect app record (name must be globally unique)"
+  lane :asc_app do |options|
+    auth!
+    produce(
+      app_identifier: APP_IDENTIFIER,
+      app_name: options[:name] || "Hinata",
+      language: "English",
+      skip_devcenter: true
     )
-    match(type: "appstore")
-    Dir.chdir("../..") do
-      sh("flutter", "build", "ipa", "--release",
-         "--export-options-plist", "ios/ExportOptions.plist")
-    end
+  end
+
+  desc "Fetch signing certificates & profiles (read-only on CI)"
+  lane :signing do
+    auth!
+    match(type: "development", app_identifier: APP_IDENTIFIER, readonly: ci?)
+    match(type: "appstore", app_identifier: APP_IDENTIFIER, readonly: ci?)
+  end
+
+  desc "Build a signed App Store IPA"
+  lane :build do
+    auth!
+    match(type: "appstore", app_identifier: APP_IDENTIFIER, readonly: ci?)
+
+    # Bake the Dart/asset bundle + the resolved build number into the Xcode
+    # config; gym then archives, signs and exports the IPA.
+    flutter("build", "ios", "--release", "--no-codesign",
+            "--build-number=#{next_build_number}")
+
+    build_app(
+      workspace: WORKSPACE,
+      scheme: SCHEME,
+      export_method: "app-store",
+      output_directory: IPA_DIR,
+      output_name: IPA_NAME,
+      export_options: {
+        provisioningProfiles: { APP_IDENTIFIER => "match AppStore #{APP_IDENTIFIER}" }
+      }
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    build
     upload_to_testflight(
-      ipa: "../build/ios/ipa/hinata.ipa",
+      ipa: "#{IPA_DIR}/#{IPA_NAME}",
       skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Build and submit to the App Store (does not auto-publish)"
+  lane :release do
+    build
+    upload_to_app_store(
+      ipa: "#{IPA_DIR}/#{IPA_NAME}",
+      submit_for_review: false,
+      automatic_release: false,
+      force: true,
+      precheck_include_in_app_purchases: false,
+      skip_metadata: true,
+      skip_screenshots: true
     )
   end
 end

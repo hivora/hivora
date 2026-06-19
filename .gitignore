@@ -36,3 +36,27 @@ android/upload-keystore.jks
 tool/.venv/
 tool/__pycache__/
 docs/screenshots/raw/
+
+# Secret files
+*.p12
+*.p8
+*.keystore
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.jks
+*.asc
+
+# Fastlane build artifacts & generated output
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/README.md
+**/fastlane/test_output/
+**/fastlane/screenshots/
+*.ipa
+*.pkg
+*.mobileprovision
+*.provisionprofile
+.env.fastlane

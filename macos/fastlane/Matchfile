@@ -1,0 +1,10 @@
+# Shares the same private certificates repo as iOS; profiles are namespaced by
+# platform inside the repo, so there is no collision.
+git_url(ENV["MATCH_GIT_URL"] || "https://github.com/hinata-platform/hinata-certificates")
+storage_mode("git")
+
+type("development")
+app_identifier(["com.ahmadre.hinata"])
+platform("macos")
+
+readonly(ENV["CI"] == "true")

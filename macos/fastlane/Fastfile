@@ -1,0 +1,127 @@
+# Hinata — macOS (Mac App Store) release automation.
+#
+# Mirrors the iOS lanes but targets the Mac platform: match also fetches the
+# "Mac Installer Distribution" certificate so gym can sign the .pkg, and uploads
+# use the macOS (osx) App Store Connect platform.
+#
+#   bundle exec fastlane mac bootstrap   # one-time: App ID + macOS certs/profiles
+#   bundle exec fastlane mac signing     # fetch certs/profiles (read-only on CI)
+#   bundle exec fastlane mac beta        # build + upload to TestFlight (macOS)
+#   bundle exec fastlane mac release     # build + submit to the Mac App Store
+
+default_platform(:mac)
+
+APP_IDENTIFIER = "com.ahmadre.hinata".freeze
+WORKSPACE = "Runner.xcworkspace".freeze
+SCHEME = "Runner".freeze
+PKG_DIR = "../build/macos/pkg".freeze
+PKG_NAME = "hinata.pkg".freeze
+
+def ci?
+  ENV["CI"] == "true"
+end
+
+# Sets the global App Store Connect API key; nested actions read it from the
+# lane context (passing it on triggers an api_key/api_key_path conflict in cert).
+def auth!
+  path = ENV["HINATA_ASC_KEY_PATH"]
+  common = {
+    key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+    issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"]
+  }
+  if path && File.exist?(path)
+    app_store_connect_api_key(**common, key_filepath: path)
+  else
+    app_store_connect_api_key(**common,
+                              key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+                              is_key_content_base64: true)
+  end
+end
+
+def next_build_number
+  latest = begin
+    latest_testflight_build_number(app_identifier: APP_IDENTIFIER, platform: "osx")
+  rescue StandardError
+    0
+  end
+  latest.to_i + 1
+end
+
+def flutter(*args)
+  Dir.chdir("../..") { sh("flutter", *args) }
+end
+
+platform :mac do
+  before_all do
+    setup_ci if ci?
+  end
+
+  desc "One-time: create the macOS dev + App Store signing assets in the match repo"
+  lane :bootstrap do
+    auth!
+    # App ID + App Store Connect record already exist (shared with iOS).
+    match(type: "development", app_identifier: APP_IDENTIFIER,
+          platform: "macos", readonly: false)
+    match(type: "appstore", app_identifier: APP_IDENTIFIER,
+          platform: "macos", additional_cert_types: ["mac_installer_distribution"],
+          readonly: false)
+    UI.success("macOS signing assets are in the match repo. CI can now run read-only.")
+  end
+
+  desc "Fetch signing certificates & profiles (read-only on CI)"
+  lane :signing do
+    auth!
+    match(type: "development", app_identifier: APP_IDENTIFIER,
+          platform: "macos", readonly: ci?)
+    match(type: "appstore", app_identifier: APP_IDENTIFIER,
+          platform: "macos", additional_cert_types: ["mac_installer_distribution"],
+          readonly: ci?)
+  end
+
+  desc "Build a signed Mac App Store .pkg"
+  lane :build do
+    auth!
+    match(type: "appstore", app_identifier: APP_IDENTIFIER,
+          platform: "macos", additional_cert_types: ["mac_installer_distribution"],
+          readonly: ci?)
+
+    flutter("build", "macos", "--release", "--build-number=#{next_build_number}")
+
+    build_app(
+      workspace: WORKSPACE,
+      scheme: SCHEME,
+      platform: "macOS",
+      export_method: "app-store",
+      output_directory: PKG_DIR,
+      output_name: PKG_NAME,
+      export_options: {
+        provisioningProfiles: { APP_IDENTIFIER => "match AppStore #{APP_IDENTIFIER}" }
+      }
+    )
+  end
+
+  desc "Build and upload to TestFlight (macOS)"
+  lane :beta do
+    build
+    upload_to_testflight(
+      pkg: "#{PKG_DIR}/#{PKG_NAME}",
+      app_platform: "osx",
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Build and submit to the Mac App Store (does not auto-publish)"
+  lane :release do
+    build
+    upload_to_app_store(
+      pkg: "#{PKG_DIR}/#{PKG_NAME}",
+      platform: "osx",
+      submit_for_review: false,
+      automatic_release: false,
+      force: true,
+      precheck_include_in_app_purchases: false,
+      skip_metadata: true,
+      skip_screenshots: true
+    )
+  end
+end

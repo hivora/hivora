@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Reference export options for the Mac App Store. The Fastfile passes these
+     inline via gym's export_options, so this file is only for manual
+     `xcodebuild -exportArchive` runs / documentation. -->
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>uploadSymbols</key>
+	<true/>
+</dict>
+</plist>
