@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../models/account_models.dart';
+import '../models/admin_user_models.dart';
 import '../models/content_models.dart';
 import '../models/core_models.dart';
 import '../models/deletion_models.dart';
@@ -678,18 +679,78 @@ class HinataRepository {
       await _api.put('/api/v1/admin/settings', body: settings)
           as Map<String, dynamic>;
 
-  Future<List<Map<String, dynamic>>> adminUsers() async =>
-      ((await _api.get('/api/v1/admin/users')) as List<dynamic>)
-          .cast<Map<String, dynamic>>();
+  // --- Admin · User management ----------------------------------------------
 
-  Future<void> adminCreateUser(Map<String, dynamic> body) =>
-      _api.post('/api/v1/admin/users', body: body);
+  /// One page of the platform user directory + global KPI counts. Filter/sort/
+  /// paginate server-side; a blank [query] / null filters return everything.
+  Future<AdminUserPage> adminUsersPage({
+    String query = '',
+    AdminRole? role,
+    UserStatus? status,
+    UserOrigin? origin,
+    UserSortKey sort = UserSortKey.lastActive,
+    bool desc = true,
+    int page = 1,
+    int perPage = 25,
+  }) async =>
+      AdminUserPage.fromJson(
+        await _api.get('/api/v1/admin/users', query: {
+          'q': ?(query.trim().isEmpty ? null : query.trim()),
+          'role': ?role?.wire,
+          'status': ?status?.wire,
+          'origin': ?origin?.wire,
+          'sort': sort.wire,
+          'dir': desc ? 'desc' : 'asc',
+          'page': '$page',
+          'perPage': '$perPage',
+        }) as Map<String, dynamic>,
+      );
 
-  Future<void> adminUpdateUser(String id, Map<String, dynamic> patch) =>
-      _api.patch('/api/v1/admin/users/$id', body: patch);
+  Future<int> adminInvite({
+    required List<String> emails,
+    required AdminRole role,
+    String? message,
+  }) async {
+    final result = await _api.post('/api/v1/admin/users/invite', body: {
+      'emails': emails,
+      'admin': role == AdminRole.admin,
+      if (message != null && message.trim().isNotEmpty) 'message': message.trim(),
+    });
+    return (result is Map && result['sent'] is num)
+        ? (result['sent'] as num).toInt()
+        : emails.length;
+  }
 
-  Future<void> adminDeleteUser(String id) =>
-      _api.delete('/api/v1/admin/users/$id');
+  Future<void> adminResendInvites(List<String> ids) =>
+      _api.post('/api/v1/admin/users/resend', body: {'ids': ids});
+
+  Future<void> adminSetStatus(List<String> ids, UserStatus status) =>
+      _api.post('/api/v1/admin/users/status',
+          body: {'ids': ids, 'status': status.wire});
+
+  Future<void> adminSetRole(List<String> ids, AdminRole role) =>
+      _api.post('/api/v1/admin/users/role', body: {'ids': ids, 'role': role.wire});
+
+  Future<void> adminSendPasswordReset(List<String> ids) =>
+      _api.post('/api/v1/admin/users/password-reset', body: {'ids': ids});
+
+  Future<void> adminRevokeSessions(List<String> ids) =>
+      _api.post('/api/v1/admin/users/revoke-sessions', body: {'ids': ids});
+
+  Future<void> adminUpdateUserDetails(
+    String id, {
+    String? displayName,
+    String? title,
+    String? email,
+  }) =>
+      _api.patch('/api/v1/admin/users/$id', body: {
+        'displayName': ?displayName,
+        'title': ?title,
+        'email': ?email,
+      });
+
+  Future<void> adminDeleteUsers(List<String> ids) =>
+      _api.post('/api/v1/admin/users/delete', body: {'ids': ids});
 
   // --- Teams ----------------------------------------------------------------
 

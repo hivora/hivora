@@ -18,6 +18,8 @@ class GlassMenuItem<T> {
     this.leading,
     this.color,
     this.dividerAbove = false,
+    this.enabled = true,
+    this.disabledReason,
   });
 
   /// The value reported back through [GlassPopupMenu.onSelected] when tapped.
@@ -36,6 +38,14 @@ class GlassMenuItem<T> {
   /// When true, a hairline divider is drawn above this row to separate it from
   /// the previous group (e.g. before a destructive action).
   final bool dividerAbove;
+
+  /// When false the row is shown greyed-out and is not selectable — used for
+  /// guarded actions (e.g. last-admin, SSO-managed) that should be visible but
+  /// inert per the "disable, don't hide" rule.
+  final bool enabled;
+
+  /// Optional reason shown beneath a disabled row's label (the tooltip text).
+  final String? disabledReason;
 }
 
 /// A reusable liquid-glass replacement for [PopupMenuButton].
@@ -205,7 +215,9 @@ class _GlassPopupMenuDialog<T> extends StatelessWidget {
                 opacity: (anim.value / 0.6).clamp(0.0, 1.0),
                 child: Transform.scale(
                   scale: 0.92 + 0.08 * t,
-                  alignment: placeAbove ? Alignment.bottomLeft : Alignment.topLeft,
+                  alignment: placeAbove
+                      ? Alignment.bottomLeft
+                      : Alignment.topLeft,
                   child: child,
                 ),
               );
@@ -233,8 +245,10 @@ class _GlassPopupMenuDialog<T> extends StatelessWidget {
                 tokens: tokens,
                 item: item,
                 selected: item.value == value,
-                onTap: () =>
-                    Navigator.of(context).pop(_MenuResult<T>(item.value)),
+                onTap: item.enabled
+                    ? () =>
+                          Navigator.of(context).pop(_MenuResult<T>(item.value))
+                    : null,
               );
               if (!item.dividerAbove) return row;
               return Column(
@@ -272,7 +286,10 @@ class _GlassPopupMenuDialog<T> extends StatelessWidget {
       quality: GlassQuality.premium,
       clipBehavior: Clip.antiAlias,
       shape: const LiquidRoundedSuperellipse(borderRadius: _radius),
-      settings: liquidGlassPanelSettings(glassFill: tokens.glassFill, dark: dark),
+      settings: liquidGlassPanelSettings(
+        glassFill: tokens.glassFill,
+        dark: dark,
+      ),
       child: content,
     );
   }
@@ -289,7 +306,7 @@ class _MenuRow<T> extends StatefulWidget {
   final SearchTokens tokens;
   final GlassMenuItem<T> item;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   State<_MenuRow<T>> createState() => _MenuRowState<T>();
@@ -301,55 +318,81 @@ class _MenuRowState<T> extends State<_MenuRow<T>> {
   @override
   Widget build(BuildContext context) {
     final t = widget.tokens;
+    final disabled = !widget.item.enabled;
+    final ink = disabled
+        ? (widget.item.color ?? t.ink).withValues(alpha: 0.4)
+        : (widget.item.color ?? t.ink);
+    final row = GestureDetector(
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 1),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          color: widget.selected
+              ? t.selTint
+              : (_hover && !disabled ? t.rowHover : Colors.transparent),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            if (widget.item.leading != null) ...[
+              SizedBox(
+                width: 22,
+                child: Center(
+                  child: Opacity(
+                    opacity: disabled ? 0.4 : 1,
+                    child: widget.item.leading,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: ink,
+                    ),
+                  ),
+                  if (disabled && widget.item.disabledReason != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Text(
+                        widget.item.disabledReason!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: t.ink.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (widget.selected) ...[
+              const SizedBox(width: 8),
+              Icon(LucideIcons.check, size: 17, color: AppColors.accentStrong),
+            ],
+          ],
+        ),
+      ),
+    );
+    if (disabled) return row;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 1),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-          decoration: BoxDecoration(
-            color: widget.selected
-                ? t.selTint
-                : (_hover ? t.rowHover : Colors.transparent),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            children: [
-              if (widget.item.leading != null) ...[
-                SizedBox(
-                  width: 22,
-                  child: Center(child: widget.item.leading),
-                ),
-                const SizedBox(width: 10),
-              ],
-              Expanded(
-                child: Text(
-                  widget.item.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: widget.item.color ?? t.ink,
-                  ),
-                ),
-              ),
-              if (widget.selected) ...[
-                const SizedBox(width: 8),
-                Icon(
-                  LucideIcons.check,
-                  size: 17,
-                  color: AppColors.accentStrong,
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
+      child: row,
     );
   }
 }

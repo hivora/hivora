@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/account/account_screen.dart';
 import '../../features/admin/admin_screen.dart';
-import '../../features/admin/admin_users_screen.dart';
+import '../../features/admin/users/user_management_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/sso_callback_screen.dart';
 import '../../features/board/board_screen.dart';
@@ -256,7 +256,8 @@ GoRouter buildRouter({
           ),
           GoRoute(
             path: '/admin/users',
-            pageBuilder: (_, state) => _transition(state, const AdminUsersScreen()),
+            pageBuilder: (_, state) =>
+                _transition(state, const UserManagementScreen()),
           ),
         ],
       ),
