@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../core/widgets/glass_popup_menu.dart';
 import '../../core/widgets/hive_empty_state.dart';
 import '../../core/widgets/hive_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -1440,14 +1441,12 @@ class _ProjectFilterChip extends StatelessWidget {
               .name
         : context.t('board.allProjects');
 
-    return PopupMenuButton<String?>(
-      initialValue: selected,
+    return GlassPopupMenu<String?>(
+      value: selected,
       onSelected: onChanged,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      offset: const Offset(0, 36),
-      itemBuilder: (_) => [
-        PopupMenuItem(value: null, child: Text(context.t('board.allProjects'))),
-        ...projects.map((p) => PopupMenuItem(value: p.id, child: Text(p.name))),
+      items: [
+        GlassMenuItem(value: null, label: context.t('board.allProjects')),
+        ...projects.map((p) => GlassMenuItem(value: p.id, label: p.name)),
       ],
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
