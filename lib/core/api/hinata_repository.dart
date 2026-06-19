@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../models/account_models.dart';
 import '../models/content_models.dart';
 import '../models/core_models.dart';
 import '../models/deletion_models.dart';
@@ -39,17 +40,20 @@ class HinataRepository {
 
   // --- Auth -----------------------------------------------------------------
 
-  Future<({String access, String refresh, AuthUser user})> login(
-    String identifier,
-    String password,
-  ) async {
+  /// Authenticates with a password. When the account has 2FA enabled the server
+  /// returns [LoginResult.mfaRequired] with an [LoginResult.mfaToken] the caller
+  /// must complete via [verifyTwoFactor]; otherwise a token pair + user.
+  Future<LoginResult> login(String identifier, String password) async {
     final data =
         await _api.post(
               '/api/v1/auth/login',
               body: {'identifier': identifier, 'password': password},
             )
             as Map<String, dynamic>;
-    return (
+    if (data['mfaRequired'] == true) {
+      return LoginResult.twoFactor(data['mfaToken'] as String);
+    }
+    return LoginResult.tokens(
       access: data['accessToken'] as String,
       refresh: data['refreshToken'] as String,
       user: AuthUser.fromJson(data['user'] as Map<String, dynamic>),
@@ -69,6 +73,123 @@ class HinataRepository {
     '/api/v1/auth/password',
     body: {'currentPassword': current, 'newPassword': next},
   );
+
+  /// Completes a 2FA login challenge. [mfaToken] comes from the login response;
+  /// [code] is a current TOTP or a recovery code. Returns a real token pair.
+  Future<({String access, String refresh, AuthUser user})> verifyTwoFactor(
+    String mfaToken,
+    String code,
+  ) async {
+    final data =
+        await _api.post(
+              '/api/v1/auth/2fa',
+              body: {'mfaToken': mfaToken, 'code': code},
+            )
+            as Map<String, dynamic>;
+    return (
+      access: data['accessToken'] as String,
+      refresh: data['refreshToken'] as String,
+      user: AuthUser.fromJson(data['user'] as Map<String, dynamic>),
+    );
+  }
+
+  // --- Account (/me self-service) -------------------------------------------
+
+  Future<Me> meAccount() async => Me.fromJson(
+    await _api.get('/api/v1/me') as Map<String, dynamic>,
+  );
+
+  Future<Me> updateMyProfile({
+    String? displayName,
+    String? title,
+    String? locale,
+  }) async => Me.fromJson(
+    await _api.patch(
+          '/api/v1/me',
+          body: {
+            'displayName': ?displayName,
+            'title': ?title,
+            'locale': ?locale,
+          },
+        )
+        as Map<String, dynamic>,
+  );
+
+  /// Starts a double-opt-in change of the sign-in email (mails the new address).
+  Future<void> requestEmailChange(String newEmail) =>
+      _api.post('/api/v1/me/email-change', body: {'newEmail': newEmail});
+
+  /// Emails a one-time password-reset link (LOCAL accounts only).
+  Future<void> sendPasswordReset() => _api.post('/api/v1/me/password-reset');
+
+  Future<List<DeviceSession>> sessions() async =>
+      ((await _api.get('/api/v1/me/sessions')) as List<dynamic>)
+          .map((s) => DeviceSession.fromJson(s as Map<String, dynamic>))
+          .toList();
+
+  Future<void> revokeSession(String id) =>
+      _api.delete('/api/v1/me/sessions/$id');
+
+  Future<void> revokeOtherSessions() =>
+      _api.post('/api/v1/me/sessions/revoke-others');
+
+  Future<NotifPrefs> notificationPrefs() async => NotifPrefs.fromJson(
+    await _api.get('/api/v1/me/notification-preferences')
+        as Map<String, dynamic>,
+  );
+
+  Future<NotifPrefs> saveNotificationPrefs(NotifPrefs prefs) async =>
+      NotifPrefs.fromJson(
+        await _api.put(
+              '/api/v1/me/notification-preferences',
+              body: prefs.toJson(),
+            )
+            as Map<String, dynamic>,
+      );
+
+  // 2FA (TOTP) ----------------------------------------------------------------
+
+  Future<TotpSetup> beginTotpSetup() async => TotpSetup.fromJson(
+    await _api.post('/api/v1/me/2fa/totp/setup') as Map<String, dynamic>,
+  );
+
+  /// Verifies the first code, enabling 2FA. Returns the one-time recovery codes.
+  Future<List<String>> verifyTotpSetup(String code) async =>
+      (((await _api.post('/api/v1/me/2fa/totp/verify', body: {'code': code}))
+                  as Map<String, dynamic>)['recoveryCodes']
+              as List<dynamic>)
+          .cast<String>();
+
+  Future<List<String>> regenerateRecoveryCodes(String code) async =>
+      (((await _api.post('/api/v1/me/2fa/recovery-codes/regenerate',
+                      body: {'code': code}))
+                  as Map<String, dynamic>)['recoveryCodes']
+              as List<dynamic>)
+          .cast<String>();
+
+  Future<void> disableTotp(String code) =>
+      _api.post('/api/v1/me/2fa/disable', body: {'code': code});
+
+  // Access overview -----------------------------------------------------------
+
+  Future<List<AccessTeam>> myTeams() async =>
+      ((await _api.get('/api/v1/me/teams')) as List<dynamic>)
+          .map((t) => AccessTeam.fromJson(t as Map<String, dynamic>))
+          .toList();
+
+  Future<List<AccessProject>> myProjects() async =>
+      ((await _api.get('/api/v1/me/projects')) as List<dynamic>)
+          .map((p) => AccessProject.fromJson(p as Map<String, dynamic>))
+          .toList();
+
+  // GDPR ----------------------------------------------------------------------
+
+  /// Requests an async data report (Art. 15); the user is emailed when ready.
+  Future<void> requestDataReport() => _api.post('/api/v1/me/data-report');
+
+  /// Erases the account (Art. 17). The body must literally be `DELETE`.
+  Future<void> deleteMyAccount() =>
+      _api.delete('/api/v1/me', body: {'confirm': 'DELETE'});
 
   // --- Users ----------------------------------------------------------------
 

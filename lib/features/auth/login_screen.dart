@@ -13,6 +13,7 @@ import '../../core/i18n/i18n.dart';
 import '../../core/models/core_models.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/soft_card.dart';
+import '../account/twofa_modals.dart' show OtpInput;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,6 +27,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _identifier = TextEditingController();
   final _password = TextEditingController();
   List<SsoProvider> _providers = const [];
+
+  /// The 2FA code typed during a login challenge.
+  String _otpCode = '';
 
   /// Id of the SSO provider currently launching, or null. Drives the per-button
   /// loader; combined with [AuthStatus.authenticating] it disables every button
@@ -89,6 +93,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   }
                 },
                 builder: (context, state) {
+                  if (state.status == AuthStatus.twoFactorRequired ||
+                      (state.status == AuthStatus.authenticating &&
+                          state.mfaToken != null)) {
+                    return _twoFactorPanel(context, state);
+                  }
                   final passwordBusy =
                       state.status == AuthStatus.authenticating;
                   // While any login is in flight every button is disabled, so a
@@ -234,6 +243,62 @@ class _LoginScreenState extends State<LoginScreen> {
           .read<AuthBloc>()
           .add(LoginSubmitted(_identifier.text.trim(), _password.text));
     }
+  }
+
+  /// The post-password 2FA challenge: a 6-digit OTP (or recovery code) entry.
+  Widget _twoFactorPanel(BuildContext context, AuthState state) {
+    final busy = state.status == AuthStatus.authenticating;
+    return SoftCard(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Icon(LucideIcons.shieldCheck, size: 30, color: AppColors.accentStrong),
+          const SizedBox(height: 14),
+          Text(
+            context.t('auth.twoFactorTitle'),
+            textAlign: TextAlign.center,
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            context.t('auth.twoFactorSubtitle'),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 24),
+          OtpInput(onChanged: (v) => _otpCode = v),
+          const SizedBox(height: 22),
+          FilledButton(
+            onPressed: busy ? null : _submitOtp,
+            child: busy
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: HiveLoader(size: 22, strokeWidth: 2, color: Colors.white),
+                  )
+                : Text(context.t('auth.verify')),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: busy
+                ? null
+                : () => context.read<AuthBloc>().add(const LogoutRequested()),
+            child: Text(context.t('auth.backToSignIn')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _submitOtp() {
+    final code = _otpCode.trim();
+    if (code.length < 6) return;
+    context.read<AuthBloc>().add(TwoFactorSubmitted(code));
   }
 
   Future<void> _launchSso(SsoProvider provider) async {

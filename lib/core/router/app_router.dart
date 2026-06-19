@@ -4,6 +4,7 @@ import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/account/account_screen.dart';
 import '../../features/admin/admin_screen.dart';
 import '../../features/admin/admin_users_screen.dart';
 import '../../features/auth/login_screen.dart';
@@ -23,7 +24,6 @@ import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/projects/projects_screen.dart';
 import '../../features/projects/settings/project_settings_screen.dart';
 import '../../features/reports/reports_screen.dart';
-import '../../features/settings/settings_screen.dart';
 import '../../features/setup/setup_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/teams/team_detail_screen.dart';
@@ -248,7 +248,7 @@ GoRouter buildRouter({
           ),
           GoRoute(
             path: '/settings',
-            pageBuilder: (_, state) => _transition(state, const SettingsScreen()),
+            pageBuilder: (_, state) => _transition(state, const AccountScreen()),
           ),
           GoRoute(
             path: '/admin',

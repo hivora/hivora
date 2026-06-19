@@ -123,6 +123,35 @@ class AuthUser extends Equatable {
   List<Object?> get props => [id, email, username, displayName, roles, title];
 }
 
+/// Outcome of a password login: either a token pair (+ user), or a 2FA
+/// challenge carrying the short-lived [mfaToken] the caller completes with a
+/// TOTP / recovery code before a real session is issued.
+class LoginResult {
+  const LoginResult._({
+    required this.mfaRequired,
+    this.access,
+    this.refresh,
+    this.user,
+    this.mfaToken,
+  });
+
+  factory LoginResult.tokens({
+    required String access,
+    required String refresh,
+    required AuthUser user,
+  }) =>
+      LoginResult._(mfaRequired: false, access: access, refresh: refresh, user: user);
+
+  factory LoginResult.twoFactor(String mfaToken) =>
+      LoginResult._(mfaRequired: true, mfaToken: mfaToken);
+
+  final bool mfaRequired;
+  final String? access;
+  final String? refresh;
+  final AuthUser? user;
+  final String? mfaToken;
+}
+
 class DirectoryUser extends Equatable {
   const DirectoryUser({
     required this.id,

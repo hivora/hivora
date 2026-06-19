@@ -137,7 +137,12 @@
     "invalidCredentials": "Invalid credentials",
     "tooManyAttempts": "Too many failed attempts. Please try again later.",
     "signingIn": "Signing you in…",
-    "ssoFailed": "SSO sign-in failed"
+    "ssoFailed": "SSO sign-in failed",
+    "invalidTwoFactorCode": "Invalid code. Try again.",
+    "twoFactorTitle": "Two-factor authentication",
+    "twoFactorSubtitle": "Enter the 6-digit code from your authenticator app, or a recovery code.",
+    "verify": "Verify",
+    "backToSignIn": "Back to sign in"
   },
   "update": {
     "title": "Update required",

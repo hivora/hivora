@@ -137,7 +137,12 @@
     "invalidCredentials": "Ungültige Zugangsdaten",
     "tooManyAttempts": "Zu viele Fehlversuche. Bitte später erneut versuchen.",
     "signingIn": "Du wirst angemeldet…",
-    "ssoFailed": "SSO-Anmeldung fehlgeschlagen"
+    "ssoFailed": "SSO-Anmeldung fehlgeschlagen",
+    "invalidTwoFactorCode": "Ungültiger Code. Bitte erneut versuchen.",
+    "twoFactorTitle": "Zwei-Faktor-Authentifizierung",
+    "twoFactorSubtitle": "Gib den 6-stelligen Code deiner Authenticator-App oder einen Wiederherstellungscode ein.",
+    "verify": "Bestätigen",
+    "backToSignIn": "Zurück zur Anmeldung"
   },
   "update": {
     "title": "Update erforderlich",

@@ -125,8 +125,8 @@ class ApiClient {
   Future<dynamic> put(String path, {Object? body}) =>
       _run(() => _dio.put<dynamic>('$baseUrl$path', data: body));
 
-  Future<dynamic> delete(String path) =>
-      _run(() => _dio.delete<dynamic>('$baseUrl$path'));
+  Future<dynamic> delete(String path, {Object? body}) =>
+      _run(() => _dio.delete<dynamic>('$baseUrl$path', data: body));
 
   Future<dynamic> upload(
     String path,

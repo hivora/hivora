@@ -47,6 +47,9 @@ dependencies:
   printing: ^5.13.0
   flutter_svg: ^2.0.10
 
+  # QR matrix generation for 2FA enrolment (pure-Dart; painted via CustomPainter)
+  qr: ^3.0.0
+
   # Platform integration
   url_launcher: ^6.3.0
   app_links: ^6.3.0
