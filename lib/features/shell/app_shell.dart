@@ -331,8 +331,8 @@ class _NavRail extends StatelessWidget {
                       icon: LucideIcons.plus,
                       active: false,
                       amber: true,
-                      tooltip: 'New issue',
-                      onTap: () {},
+                      tooltip: context.t('issues.new'),
+                      onTap: () => context.go('/issues'),
                     )
                   : DecoratedBox(
                       // Soft honey glow beneath the CTA (matches the web
@@ -366,7 +366,7 @@ class _NavRail extends StatelessWidget {
                                 fontWeight: FontWeight.w600, fontSize: 13.5),
                           ),
                           icon: const Icon(LucideIcons.plus, size: 18),
-                          label: const Text('New issue'),
+                          label: Text(context.t('issues.new')),
                         ),
                       ),
                     ),
@@ -484,7 +484,7 @@ class _CollapseToggle extends StatelessWidget {
         child: _RailIconButton(
           icon: icon,
           active: false,
-          tooltip: 'Expand sidebar',
+          tooltip: context.t('nav.expandSidebar'),
           onTap: onToggle,
         ),
       );
@@ -505,7 +505,7 @@ class _CollapseToggle extends StatelessWidget {
                 Icon(icon, size: 18, color: AppColors.railFaint),
                 const SizedBox(width: 10),
                 Text(
-                  'Collapse',
+                  context.t('nav.collapse'),
                   style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.railFaint,

@@ -32,7 +32,8 @@ Future<T?> showGlassModal<T>(
     barrierColor: Colors.transparent,
     useRootNavigator: true,
     transitionDuration: const Duration(milliseconds: 380),
-    pageBuilder: (_, _, _) => _GlassModalScaffold(width: width, builder: builder),
+    pageBuilder: (_, _, _) =>
+        _GlassModalScaffold(width: width, builder: builder),
     transitionBuilder: (_, _, _, child) => child,
   );
 }
@@ -46,12 +47,21 @@ class _GlassModalScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    // The on-screen keyboard's height. Subscribing rebuilds the modal as the
+    // keyboard animates in/out so the panel rides above it and its scrollable
+    // body can reveal the focused field.
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
     final mobile = size.width < _kPhoneBreakpoint;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final tokens = SearchTokens.of(Theme.of(context).brightness);
     final anim = ModalRoute.of(context)!.animation!;
     final maxW = mobile ? size.width - 32 : width;
-    final maxH = size.height - (mobile ? 120 : 96);
+    // Cap the panel to the space left above the keyboard so it never hides
+    // behind it; the body scrolls within whatever height remains.
+    final maxH = (size.height - (mobile ? 120 : 96) - keyboard).clamp(
+      160.0,
+      size.height,
+    );
 
     final panel = ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxW, maxHeight: maxH),
@@ -103,34 +113,43 @@ class _GlassModalScaffold extends StatelessWidget {
         ),
         Positioned.fill(
           child: SafeArea(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: AnimatedBuilder(
-                  animation: anim,
-                  builder: (_, child) {
-                    if (reduceMotion) {
-                      return Opacity(opacity: anim.value, child: child);
-                    }
-                    final curved = const Cubic(0.34, 1.56, 0.64, 1)
-                        .transform(anim.value.clamp(0.0, 1.0));
-                    final fade = (anim.value / 0.6).clamp(0.0, 1.0);
-                    return Opacity(
-                      opacity: fade,
-                      child: Transform.translate(
-                        offset: Offset(0, (1 - curved) * -14),
-                        child: Transform.scale(
-                          scale: 0.965 + 0.035 * curved,
-                          child: child,
+            // Shrink the centring box by the keyboard height so the panel
+            // re-centres in the visible area above it instead of being clipped.
+            child: Padding(
+              padding: EdgeInsets.only(bottom: keyboard),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: AnimatedBuilder(
+                    animation: anim,
+                    builder: (_, child) {
+                      if (reduceMotion) {
+                        return Opacity(opacity: anim.value, child: child);
+                      }
+                      final curved = const Cubic(
+                        0.34,
+                        1.56,
+                        0.64,
+                        1,
+                      ).transform(anim.value.clamp(0.0, 1.0));
+                      final fade = (anim.value / 0.6).clamp(0.0, 1.0);
+                      return Opacity(
+                        opacity: fade,
+                        child: Transform.translate(
+                          offset: Offset(0, (1 - curved) * -14),
+                          child: Transform.scale(
+                            scale: 0.965 + 0.035 * curved,
+                            child: child,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  // Absorb taps so they don't fall through to the scrim.
-                  child: GestureDetector(
-                    onTap: () {},
-                    behavior: HitTestBehavior.opaque,
-                    child: panel,
+                      );
+                    },
+                    // Absorb taps so they don't fall through to the scrim.
+                    child: GestureDetector(
+                      onTap: () {},
+                      behavior: HitTestBehavior.opaque,
+                      child: panel,
+                    ),
                   ),
                 ),
               ),

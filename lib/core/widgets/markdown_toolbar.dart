@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../i18n/i18n.dart';
 import '../theme/app_colors.dart';
 
 /// Reusable Markdown editing primitives bound to a [TextEditingController] +
@@ -106,29 +107,29 @@ class MarkdownCommand {
 /// Exposed so callers can trim/extend, but the defaults suit every surface.
 List<List<MarkdownCommand>> defaultMarkdownGroups({bool mention = true}) => [
   const [
-    MarkdownCommand(LucideIcons.heading1, 'Heading 1', _h1),
-    MarkdownCommand(LucideIcons.heading2, 'Heading 2', _h2),
-    MarkdownCommand(LucideIcons.heading3, 'Heading 3', _h3),
+    MarkdownCommand(LucideIcons.heading1, 'md.heading1', _h1),
+    MarkdownCommand(LucideIcons.heading2, 'md.heading2', _h2),
+    MarkdownCommand(LucideIcons.heading3, 'md.heading3', _h3),
   ],
   const [
-    MarkdownCommand(LucideIcons.bold, 'Bold', _bold),
-    MarkdownCommand(LucideIcons.italic, 'Italic', _italic),
-    MarkdownCommand(LucideIcons.strikethrough, 'Strikethrough', _strike),
-    MarkdownCommand(LucideIcons.code, 'Inline code', _inlineCode),
+    MarkdownCommand(LucideIcons.bold, 'md.bold', _bold),
+    MarkdownCommand(LucideIcons.italic, 'md.italic', _italic),
+    MarkdownCommand(LucideIcons.strikethrough, 'md.strikethrough', _strike),
+    MarkdownCommand(LucideIcons.code, 'md.inlineCode', _inlineCode),
   ],
   const [
-    MarkdownCommand(LucideIcons.list, 'Bullet list', _bullet),
-    MarkdownCommand(LucideIcons.listOrdered, 'Numbered list', _ordered),
-    MarkdownCommand(LucideIcons.listChecks, 'Task list', _task),
-    MarkdownCommand(LucideIcons.quote, 'Quote', _quote),
+    MarkdownCommand(LucideIcons.list, 'md.bulletList', _bullet),
+    MarkdownCommand(LucideIcons.listOrdered, 'md.numberedList', _ordered),
+    MarkdownCommand(LucideIcons.listChecks, 'md.taskList', _task),
+    MarkdownCommand(LucideIcons.quote, 'md.quote', _quote),
   ],
   [
-    const MarkdownCommand(LucideIcons.link, 'Link', _link),
-    const MarkdownCommand(LucideIcons.squareCode, 'Code block', _codeBlock),
-    const MarkdownCommand(LucideIcons.table, 'Table', _table),
-    const MarkdownCommand(LucideIcons.info, 'Info panel', _info),
+    const MarkdownCommand(LucideIcons.link, 'md.link', _link),
+    const MarkdownCommand(LucideIcons.squareCode, 'md.codeBlock', _codeBlock),
+    const MarkdownCommand(LucideIcons.table, 'md.table', _table),
+    const MarkdownCommand(LucideIcons.info, 'md.infoPanel', _info),
     if (mention)
-      const MarkdownCommand(LucideIcons.atSign, 'Mention / link (@)', _mention),
+      const MarkdownCommand(LucideIcons.atSign, 'md.mention', _mention),
   ],
 ];
 
@@ -196,7 +197,7 @@ class MarkdownToolbar extends StatelessWidget {
       for (final cmd in groups[g]) {
         children.add(
           Tooltip(
-            message: cmd.tooltip,
+            message: context.t(cmd.tooltip),
             child: InkWell(
               onTap: enabled ? () => cmd.run(actions) : null,
               borderRadius: BorderRadius.circular(7),

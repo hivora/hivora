@@ -1,8 +1,10 @@
 import 'package:flutter/gestures.dart' show TapGestureRecognizer;
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/glass_popup_menu.dart';
 import '../../core/widgets/markdown_toolbar.dart';
 import 'data/knowledge_models.dart';
 import 'data/knowledge_repository.dart';
@@ -134,35 +136,49 @@ class _KnowledgeEditorState extends State<KnowledgeEditor> {
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
                 filled: false,
-                hintText: 'Article title…',
+                hintText: context.t('knowledge.articleTitleHint'),
                 hintStyle: TextStyle(color: AppColors.inkFaint),
               ),
             ),
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(lucideIcon('hash'), size: 15, color: AppColors.inkFaint),
-              const SizedBox(width: 6),
-              DropdownButton<String>(
-                value: _spaceId,
-                underline: const SizedBox.shrink(),
-                isDense: true,
-                borderRadius: BorderRadius.circular(KbTokens.radiusControl),
-                style: TextStyle(fontSize: 12.5, color: AppColors.ink),
-                items: [
-                  for (final s in repo.spaces)
-                    DropdownMenuItem(value: s.id, child: Text(s.name)),
-                ],
-                onChanged: (v) => setState(() => _spaceId = v ?? _spaceId),
-              ),
+          GlassPopupMenu<String>(
+            value: _spaceId,
+            width: 220,
+            onSelected: (v) => setState(() => _spaceId = v),
+            items: [
+              for (final s in repo.spaces)
+                GlassMenuItem(
+                  value: s.id,
+                  label: s.name,
+                  leading:
+                      Icon(lucideIcon(s.icon), size: 16, color: KbTokens.accent),
+                ),
             ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(lucideIcon('hash'), size: 15, color: AppColors.inkFaint),
+                const SizedBox(width: 6),
+                Text(repo.spaceById(_spaceId)?.name ?? '',
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.ink)),
+                const SizedBox(width: 4),
+                Icon(lucideIcon('chevron-down'),
+                    size: 15, color: AppColors.inkFaint),
+              ],
+            ),
           ),
-          TextButton(onPressed: widget.onCancel, child: const Text('Cancel')),
+          TextButton(
+              onPressed: widget.onCancel,
+              child: Text(context.t('common.cancel'))),
           FilledButton.icon(
             onPressed: _save,
             icon: Icon(lucideIcon('check'), size: 16),
-            label: Text(widget.isNew ? 'Publish' : 'Save'),
+            label: Text(widget.isNew
+                ? context.t('knowledge.publish')
+                : context.t('common.save')),
           ),
         ],
       ),
@@ -206,9 +222,9 @@ class _KnowledgeEditorState extends State<KnowledgeEditor> {
         borderRadius: BorderRadius.circular(9),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        tab('write', 'Write'),
+        tab('write', context.t('issues.tabEditor')),
         const SizedBox(width: 3),
-        tab('preview', 'Preview'),
+        tab('preview', context.t('issues.tabPreview')),
       ]),
     );
   }
@@ -237,7 +253,7 @@ class _KnowledgeEditorState extends State<KnowledgeEditor> {
         focusNode: _bodyFocus,
         expands: true,
         monospace: true,
-        hintText: 'Write in markdown… type @ to link an issue, article or teammate.',
+        hintText: context.t('knowledge.writeHint'),
         onTabIndent: () {},
       ),
     );
@@ -267,7 +283,7 @@ class _KnowledgeEditorState extends State<KnowledgeEditor> {
                       letterSpacing: -0.6)),
             ),
           if (_body.text.trim().isEmpty)
-            Text('Nothing to preview yet.',
+            Text(context.t('knowledge.nothingToPreview'),
                 style: TextStyle(color: AppColors.inkFaint))
           else
             ...parsed.nodes,

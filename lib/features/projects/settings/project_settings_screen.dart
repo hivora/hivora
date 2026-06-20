@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
     show GlassContainer, GlassQuality, LiquidRoundedSuperellipse;
@@ -308,7 +310,10 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
     }
     final state = d.workflowStates.firstWhere((s) => s.id == id);
     if (d.resolvedStates.contains(state.name) && d.resolvedStates.length == 1) {
-      settingsToast(context, context.t('projectSettings.toastResolvedRequired'));
+      settingsToast(
+        context,
+        context.t('projectSettings.toastResolvedRequired'),
+      );
       return;
     }
 
@@ -459,86 +464,91 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                      _BackLink(onTap: () => Navigator.of(context).maybePop()),
-                      const SizedBox(height: 14),
-                      _Header(draft: draft),
-                      const SizedBox(height: 20),
-                      GeneralSection(
-                        nameController: _nameCtrl,
-                        keyController: _keyCtrl,
-                        descController: _descCtrl,
-                        nameError: nameErr,
-                        keyError: keyErr,
-                        selectedHue: hueForHex(draft.color),
-                        onHue: _onHue,
-                      ),
-                      const SizedBox(height: 16),
-                      MembersSection(
-                        memberIds: draft.memberIds,
-                        leadIds: draft.leadIds,
-                        users: _users,
-                        onToggleLead: _toggleLead,
-                        onRemove: _removeMember,
-                        onAdd: _addMembers,
-                      ),
-                      const SizedBox(height: 16),
-                      LabelsSection(
-                        key: ValueKey('labels_$_rev'),
-                        labels: draft.labels,
-                        onRename: _renameLabel,
-                        onRecolor: _recolorLabel,
-                        onRemove: _removeLabel,
-                        onAdd: _addLabel,
-                      ),
-                      const SizedBox(height: 16),
-                      WorkflowSection(
-                        key: ValueKey('workflow_$_rev'),
-                        states: draft.workflowStates,
-                        resolved: draft.resolvedStates,
-                        onRename: _renameState,
-                        onRecolor: _recolorState,
-                        onReorder: _reorderState,
-                        onToggleResolved: _toggleResolved,
-                        onDelete: _deleteState,
-                        onAdd: _addState,
-                      ),
-                      const SizedBox(height: 16),
-                      ArchiveSection(
-                        archived: draft.archived,
-                        onChanged: (v) =>
-                            _mutate((d) => d.copyWith(archived: v)),
-                      ),
-                      const SizedBox(height: 16),
-                      DangerSection(onDelete: _deleteProject),
-                    ],
-                  ),
+                    _BackLink(onTap: () => Navigator.of(context).maybePop()),
+                    const SizedBox(height: 14),
+                    _Header(draft: draft),
+                    const SizedBox(height: 20),
+                    GeneralSection(
+                      nameController: _nameCtrl,
+                      keyController: _keyCtrl,
+                      descController: _descCtrl,
+                      nameError: nameErr,
+                      keyError: keyErr,
+                      selectedHue: hueForHex(draft.color),
+                      onHue: _onHue,
+                    ),
+                    const SizedBox(height: 16),
+                    MembersSection(
+                      memberIds: draft.memberIds,
+                      leadIds: draft.leadIds,
+                      users: _users,
+                      onToggleLead: _toggleLead,
+                      onRemove: _removeMember,
+                      onAdd: _addMembers,
+                    ),
+                    const SizedBox(height: 16),
+                    LabelsSection(
+                      key: ValueKey('labels_$_rev'),
+                      labels: draft.labels,
+                      onRename: _renameLabel,
+                      onRecolor: _recolorLabel,
+                      onRemove: _removeLabel,
+                      onAdd: _addLabel,
+                    ),
+                    const SizedBox(height: 16),
+                    WorkflowSection(
+                      key: ValueKey('workflow_$_rev'),
+                      states: draft.workflowStates,
+                      resolved: draft.resolvedStates,
+                      onRename: _renameState,
+                      onRecolor: _recolorState,
+                      onReorder: _reorderState,
+                      onToggleResolved: _toggleResolved,
+                      onDelete: _deleteState,
+                      onAdd: _addState,
+                    ),
+                    const SizedBox(height: 16),
+                    ArchiveSection(
+                      archived: draft.archived,
+                      onChanged: (v) => _mutate((d) => d.copyWith(archived: v)),
+                    ),
+                    const SizedBox(height: 16),
+                    DangerSection(onDelete: _deleteProject),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
         Positioned(
           left: 0,
           right: 0,
           bottom: 0,
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                context.pageGutter,
-                0,
-                context.pageGutter,
-                12 + context.bottomGutter,
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 880),
-                  child: _SaveBar(
-                    visible: _dirty,
-                    valid: _valid,
-                    saving: _saving,
-                    onDiscard: _discard,
-                    onSave: _save,
+          // No SafeArea here: context.bottomGutter already carries the floating
+          // nav's footprint + device inset (injected by the shell), so wrapping
+          // in SafeArea would count that bottom inset twice and float the bar
+          // up into the middle of the screen. When the keyboard is open, ride
+          // above it instead of the nav.
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              context.pageGutter,
+              0,
+              context.pageGutter,
+              12 +
+                  math.max(
+                    context.bottomGutter,
+                    MediaQuery.viewInsetsOf(context).bottom,
                   ),
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 880),
+                child: _SaveBar(
+                  visible: _dirty,
+                  valid: _valid,
+                  saving: _saving,
+                  onDiscard: _discard,
+                  onSave: _save,
                 ),
               ),
             ),
@@ -736,8 +746,10 @@ class _SaveBar extends StatelessWidget {
         quality: GlassQuality.premium,
         clipBehavior: Clip.antiAlias,
         shape: const LiquidRoundedSuperellipse(borderRadius: 30),
-        settings:
-            liquidGlassPanelSettings(glassFill: tokens.glassFill, dark: dark),
+        settings: liquidGlassPanelSettings(
+          glassFill: tokens.glassFill,
+          dark: dark,
+        ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(18, 10, 12, 10),
           child: Row(

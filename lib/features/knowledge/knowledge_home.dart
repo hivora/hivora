@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/hue_colors.dart';
@@ -57,7 +58,7 @@ class _KnowledgeHomeState extends State<KnowledgeHome> {
         else ...[
           _spacesGrid(repo),
           const SizedBox(height: 26),
-          _sectionHeader('Recently updated'),
+          _sectionHeader(context.t('knowledge.recentlyUpdated')),
           const SizedBox(height: 12),
           ..._recent(repo).map((a) => Padding(
                 padding: const EdgeInsets.only(bottom: 7),
@@ -101,7 +102,7 @@ class _KnowledgeHomeState extends State<KnowledgeHome> {
                 focusedBorder: InputBorder.none,
                 filled: false,
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                hintText: 'Search articles, spaces and labels…',
+                hintText: context.t('knowledge.searchHint'),
                 hintStyle: TextStyle(color: AppColors.inkFaint),
               ),
             ),
@@ -129,8 +130,8 @@ class _KnowledgeHomeState extends State<KnowledgeHome> {
   Widget _results(List<KbArticle> matches) {
     if (matches.isEmpty) {
       return HiveEmptyState(
-        title: 'No articles found',
-        message: 'Try another term or create a new article.',
+        title: context.t('knowledge.noResultsTitle'),
+        message: context.t('knowledge.noResultsMessage'),
       );
     }
     return Column(
@@ -244,7 +245,9 @@ class _SpaceCard extends StatelessWidget {
                             height: 1.45,
                             color: AppColors.inkSoft)),
                     const SizedBox(height: 8),
-                    Text('$count article${count != 1 ? 's' : ''}',
+                    Text(
+                        context.t('knowledge.articleCount',
+                            variables: {'count': '$count'}),
                         style: TextStyle(
                             fontFamily: AppTheme.fontMono,
                             fontSize: 11,
@@ -308,7 +311,7 @@ class _KbHit extends StatelessWidget {
                             fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: -0.1)),
                     const SizedBox(height: 2),
                     Text(
-                      '${sp?.name ?? ''} · updated ${article.updated} ago · ${author?.name ?? ''}',
+                      '${sp?.name ?? ''} · ${context.t('knowledge.updatedAgo', variables: {'when': article.updated})} · ${author?.name ?? ''}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),

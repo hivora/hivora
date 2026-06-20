@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart' show TapGestureRecognizer;
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_avatar.dart';
@@ -208,7 +209,9 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    TextSpan(text: ' · updated ${a.updated} ago'),
+                    TextSpan(
+                        text:
+                            ' · ${context.t('knowledge.updatedAgo', variables: {'when': a.updated})}'),
                   ],
                 ),
                 maxLines: 1,
@@ -230,7 +233,7 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
             OutlinedButton.icon(
               onPressed: widget.onEdit,
               icon: Icon(lucideIcon('pencil'), size: 15),
-              label: const Text('Edit'),
+              label: Text(context.t('knowledge.editShort')),
               style: OutlinedButton.styleFrom(
                 visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.symmetric(
@@ -274,9 +277,10 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
             children: [
               Icon(lucideIcon('link-2'), size: 16, color: KbTokens.accent),
               const SizedBox(width: 8),
-              const Text(
-                'Linked issues',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+              Text(
+                context.t('knowledge.linkedIssues'),
+                style: const TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w700),
               ),
               const SizedBox(width: 8),
               Container(
@@ -354,7 +358,7 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (toc.length > 1) ...[
-          _asideHeader('On this page'),
+          _asideHeader(context.t('knowledge.onThisPage')),
           const SizedBox(height: 4),
           Container(
             decoration: BoxDecoration(
@@ -369,7 +373,7 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
           ),
           const SizedBox(height: 22),
         ],
-        _asideHeader('Contributors'),
+        _asideHeader(context.t('knowledge.contributors')),
         const SizedBox(height: 8),
         for (final id in contributors)
           Padding(
@@ -391,7 +395,7 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
           ),
         if (related.isNotEmpty) ...[
           const SizedBox(height: 22),
-          _asideHeader('Related articles'),
+          _asideHeader(context.t('knowledge.relatedArticles')),
           const SizedBox(height: 6),
           for (final d in related)
             InkWell(
@@ -419,11 +423,12 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
             ),
         ],
         const SizedBox(height: 22),
-        _asideHeader('Details'),
+        _asideHeader(context.t('knowledge.details')),
         const SizedBox(height: 6),
-        _detail('Created', a.created),
-        _detail('Space', sp?.name ?? '—'),
-        _detail('Status', a.status[0].toUpperCase() + a.status.substring(1)),
+        _detail(context.t('knowledge.created'), a.created),
+        _detail(context.t('knowledge.space'), sp?.name ?? '—'),
+        _detail(context.t('knowledge.status'),
+            a.status[0].toUpperCase() + a.status.substring(1)),
       ],
     );
   }

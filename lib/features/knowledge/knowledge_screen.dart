@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/hinata_repository.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/models/work_models.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
@@ -189,14 +190,15 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
           _mode = _Mode.home;
         }
       });
-      _toast('Article deleted');
+      _toast(context.t('knowledge.deleted'));
     } on ApiFailure catch (failure) {
       if (mounted) _toast(failure.message);
     }
   }
 
   Future<void> _save(EditorResult r) async {
-    final title = r.title.trim().isEmpty ? 'Untitled' : r.title.trim();
+    final title =
+        r.title.trim().isEmpty ? context.t('knowledge.untitled') : r.title.trim();
     try {
       if (_mode == _Mode.newDoc) {
         final parentId = _pendingParentId;
@@ -213,7 +215,7 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
           _spaceId = a.spaceId;
           _mode = _Mode.article;
         });
-        _toast('Article published');
+        _toast(context.t('knowledge.published'));
       } else if (_current != null) {
         await _repo.saveEdit(
           _current!.id,
@@ -223,7 +225,7 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
         );
         if (!mounted) return;
         setState(() => _mode = _Mode.article);
-        _toast('Changes saved');
+        _toast(context.t('knowledge.saved'));
       }
     } on ApiFailure catch (failure) {
       if (mounted) _toast(failure.message);
@@ -305,18 +307,20 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
 
   Widget _head() {
     return PageHead(
-      title: 'Knowledge base',
-      subtitle:
-          '${_repo.articles.length} articles · ${_repo.spaces.length} spaces',
+      title: context.t('knowledge.title'),
+      subtitle: context.t('knowledge.subtitle', variables: {
+        'articles': '${_repo.articles.length}',
+        'spaces': '${_repo.spaces.length}',
+      }),
       actions: [
         if (_mode != _Mode.home)
           GhostButton(
-            label: 'All spaces',
+            label: context.t('knowledge.allSpaces'),
             icon: lucideIcon('layout-grid'),
             onPressed: _home,
           ),
         PrimaryButton(
-          label: 'New article',
+          label: context.t('knowledge.newArticle'),
           icon: lucideIcon('plus'),
           onPressed: () => setState(() {
             _pendingParentId = null;
@@ -469,7 +473,8 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
           icon: _treeCollapsed
               ? LucideIcons.panelLeftOpen
               : LucideIcons.panelLeftClose,
-          tooltip: _treeCollapsed ? 'Show pages' : 'Hide pages',
+          tooltip: context.t(
+              _treeCollapsed ? 'knowledge.showPages' : 'knowledge.hidePages'),
           onTap: () => setState(() => _treeCollapsed = !_treeCollapsed),
         ),
         // Right edge: only the wide layout has a side aside to collapse.
@@ -478,7 +483,9 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
             icon: _asideCollapsed
                 ? LucideIcons.panelRightOpen
                 : LucideIcons.panelRightClose,
-            tooltip: _asideCollapsed ? 'Show details' : 'Hide details',
+            tooltip: context.t(_asideCollapsed
+                ? 'knowledge.showDetails'
+                : 'knowledge.hideDetails'),
             onTap: () => setState(() => _asideCollapsed = !_asideCollapsed),
           )
         else
@@ -530,7 +537,9 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                isNew ? 'New article' : 'Editing',
+                isNew
+                    ? context.t('knowledge.newArticle')
+                    : context.t('knowledge.editing'),
                 style: const TextStyle(
                   fontFamily: AppTheme.fontBrand,
                   fontSize: 17,

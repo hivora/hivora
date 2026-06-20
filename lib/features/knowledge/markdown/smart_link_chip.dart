@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/i18n.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_avatar.dart';
@@ -276,7 +277,7 @@ class _SmartLinkChipState extends State<SmartLinkChip> {
               if (it.tags.isNotEmpty) _tag(it.tags.first),
             ],
           ),
-          _footer('Open issue'),
+          _footer(context.t('knowledge.openIssue')),
         ],
       );
     }
@@ -358,7 +359,7 @@ class _SmartLinkChipState extends State<SmartLinkChip> {
               ),
           ],
         ),
-        _footer('Open article'),
+        _footer(context.t('knowledge.openArticle')),
       ],
     );
   }

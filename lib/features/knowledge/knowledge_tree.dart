@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/glass_popup_menu.dart';
 import 'data/knowledge_models.dart';
 import 'data/knowledge_repository.dart';
 import 'knowledge_tokens.dart';
@@ -50,31 +52,41 @@ class KnowledgeTree extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(KbTokens.radiusControl),
-              border: Border.all(color: AppColors.hairline),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: spaceId,
-                isExpanded: true,
-                isDense: true,
+          child: GlassPopupMenu<String>(
+            value: spaceId,
+            onSelected: onSpaceChange,
+            items: [
+              for (final s in repo.spaces)
+                GlassMenuItem(
+                  value: s.id,
+                  label: s.name,
+                  leading: Icon(lucideIcon(s.icon),
+                      size: 16, color: KbTokens.accent),
+                ),
+            ],
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(KbTokens.radiusControl),
-                style: TextStyle(
-                    fontFamily: 'Sora',
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.ink),
-                items: [
-                  for (final s in repo.spaces)
-                    DropdownMenuItem(value: s.id, child: Text(s.name)),
+                border: Border.all(color: AppColors.hairline),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      repo.spaceById(spaceId)?.name ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontFamily: 'Sora',
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Icon(lucideIcon('chevron-down'),
+                      size: 16, color: AppColors.inkFaint),
                 ],
-                onChanged: (v) {
-                  if (v != null) onSpaceChange(v);
-                },
               ),
             ),
           ),
@@ -146,7 +158,7 @@ class _RootDropZoneState extends State<_RootDropZone> {
         alignment: Alignment.center,
         child: _hover
             ? Text(
-                'Move to top level',
+                context.t('knowledge.moveToTopLevel'),
                 style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -187,6 +199,45 @@ class _TreeBranch extends StatefulWidget {
 
 class _TreeBranchState extends State<_TreeBranch> {
   bool _open = true;
+
+  /// Glass action menu for a tree row: move-to-root + delete.
+  Widget _rowMenu(BuildContext context, bool canDelete) {
+    return GlassPopupMenu<String>(
+      value: '',
+      width: 240,
+      onSelected: (v) {
+        if (v == 'root') {
+          widget.onMove(widget.article.id,
+              parentId: null, spaceId: widget.article.spaceId);
+        } else if (v == 'delete' && canDelete) {
+          widget.onDelete(widget.article.id);
+        }
+      },
+      items: [
+        if (widget.article.parentId != null)
+          GlassMenuItem(
+            value: 'root',
+            label: context.t('knowledge.moveToTopLevel'),
+            leading: Icon(lucideIcon('panel-left'),
+                size: 16, color: AppColors.inkSoft),
+          ),
+        GlassMenuItem(
+          value: 'delete',
+          label: canDelete
+              ? context.t('knowledge.delete')
+              : context.t('knowledge.deleteHasChildren'),
+          enabled: canDelete,
+          color: AppColors.danger,
+          dividerAbove: widget.article.parentId != null,
+          leading: Icon(lucideIcon('trash-2'), size: 16, color: AppColors.danger),
+        ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Icon(lucideIcon('ellipsis'), size: 15, color: AppColors.inkFaint),
+      ),
+    );
+  }
   bool _hover = false;
   bool _dropHover = false;
 
@@ -251,17 +302,10 @@ class _TreeBranchState extends State<_TreeBranch> {
                 if (_hover) ...[
                   _RowAction(
                     icon: 'plus',
-                    tooltip: 'Add sub-page',
+                    tooltip: context.t('knowledge.addSubPage'),
                     onTap: () => widget.onNewChild(widget.article.id),
                   ),
-                  _RowMenu(
-                    canMoveToRoot: widget.article.parentId != null,
-                    onMoveToRoot: () => widget.onMove(widget.article.id,
-                        parentId: null, spaceId: widget.article.spaceId),
-                    onDelete: kids.isEmpty
-                        ? () => widget.onDelete(widget.article.id)
-                        : null,
-                  ),
+                  _rowMenu(context, kids.isEmpty),
                 ],
               ],
             ),
@@ -339,45 +383,6 @@ class _RowAction extends StatelessWidget {
           child: Icon(lucideIcon(icon), size: 15, color: AppColors.inkFaint),
         ),
       ),
-    );
-  }
-}
-
-class _RowMenu extends StatelessWidget {
-  const _RowMenu({
-    required this.canMoveToRoot,
-    required this.onMoveToRoot,
-    required this.onDelete,
-  });
-
-  final bool canMoveToRoot;
-  final VoidCallback onMoveToRoot;
-  final VoidCallback? onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      tooltip: 'More',
-      padding: EdgeInsets.zero,
-      iconSize: 15,
-      icon: Icon(lucideIcon('ellipsis'), size: 15, color: AppColors.inkFaint),
-      onSelected: (v) {
-        if (v == 'root') onMoveToRoot();
-        if (v == 'delete') onDelete?.call();
-      },
-      itemBuilder: (context) => [
-        if (canMoveToRoot)
-          const PopupMenuItem(value: 'root', child: Text('Move to top level')),
-        PopupMenuItem(
-          value: 'delete',
-          enabled: onDelete != null,
-          child: Text(
-            onDelete != null ? 'Delete' : 'Delete (move sub-pages first)',
-            style: TextStyle(
-                color: onDelete != null ? AppColors.danger : AppColors.inkFaint),
-          ),
-        ),
-      ],
     );
   }
 }
