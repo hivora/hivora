@@ -107,11 +107,6 @@ class MarkdownCommand {
 /// Exposed so callers can trim/extend, but the defaults suit every surface.
 List<List<MarkdownCommand>> defaultMarkdownGroups({bool mention = true}) => [
   const [
-    MarkdownCommand(LucideIcons.heading1, 'md.heading1', _h1),
-    MarkdownCommand(LucideIcons.heading2, 'md.heading2', _h2),
-    MarkdownCommand(LucideIcons.heading3, 'md.heading3', _h3),
-  ],
-  const [
     MarkdownCommand(LucideIcons.bold, 'md.bold', _bold),
     MarkdownCommand(LucideIcons.italic, 'md.italic', _italic),
     MarkdownCommand(LucideIcons.strikethrough, 'md.strikethrough', _strike),
@@ -134,9 +129,6 @@ List<List<MarkdownCommand>> defaultMarkdownGroups({bool mention = true}) => [
 ];
 
 // Top-level command callbacks (so the groups can stay `const`).
-void _h1(MarkdownEditingActions a) => a.heading(1);
-void _h2(MarkdownEditingActions a) => a.heading(2);
-void _h3(MarkdownEditingActions a) => a.heading(3);
 void _bold(MarkdownEditingActions a) => a.bold();
 void _italic(MarkdownEditingActions a) => a.italic();
 void _strike(MarkdownEditingActions a) => a.strikethrough();
@@ -225,10 +217,18 @@ class MarkdownToolbar extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Single row of commands that scrolls horizontally so every option
+          // stays reachable on narrow screens instead of wrapping to a second
+          // line. The optional [trailing] stays pinned (non-scrolling) on the
+          // right.
           Expanded(
-            child: Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: children,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: children,
+              ),
             ),
           ),
           ?trailing,

@@ -32,7 +32,6 @@ import 'attachments/attachments_section.dart';
 import 'issue_description_editor.dart';
 import 'issue_labels.dart';
 import 'issue_link_resolver.dart';
-import 'issue_markdown.dart';
 import 'work_log_sheet.dart';
 
 /// The project's configured colour for a workflow-state name, or null to fall
@@ -83,6 +82,7 @@ Future<void> showIssueDetailSheet(
     // bottom-nav instead of rendering behind it (the shell nav is a Positioned
     // sibling inside the ShellRoute's nested navigator).
     useRootNavigator: true,
+    useSafeArea: false,
     barrierDismissible: true,
     modalTypeBuilder: (ctx) => MediaQuery.sizeOf(ctx).width >= 760
         ? const _WideDialogType()
@@ -608,14 +608,17 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
               ),
             ),
           const SizedBox(height: 18),
-          _sectionLabel(context.t('issues.description')),
-          const SizedBox(height: 8),
-          // Description — double-tap to edit as Markdown.
+          // Description — double-tap to edit as Markdown. While editing, the
+          // section label rides on the editor's header row alongside the
+          // Editor/Preview switcher, so it is rendered here only in view mode.
           if (_editingDesc)
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                IssueDescriptionEditor(controller: _descCtrl),
+                IssueDescriptionEditor(
+                  controller: _descCtrl,
+                  label: _sectionLabel(context.t('issues.description')),
+                ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
@@ -638,7 +641,9 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                 ),
               ],
             )
-          else
+          else ...[
+            _sectionLabel(context.t('issues.description')),
+            const SizedBox(height: 8),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onDoubleTap: _beginDescEdit,
@@ -659,6 +664,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                       ),
                     ),
             ),
+          ],
         ],
       ),
     );
@@ -1599,6 +1605,11 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
   List<Project> _projects = const [];
   List<DirectoryUser> _users = const [];
   List<Sprint> _sprints = const [];
+  // Project issues (keyed by readable id) feed the description editor's
+  // `@`-menu and resolve `{{issue:…}}` chips in the preview; KB articles come
+  // from the shared seed. Reloaded whenever the selected project changes.
+  Map<String, Issue> _projectIssues = const {};
+  KnowledgeRepository get _knowledge => context.read<KnowledgeRepository>();
 
   String? _projectId;
   String? _state;
@@ -1667,16 +1678,31 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     }
   }
 
-  /// Loads sprints + a default status for the selected project.
+  /// Loads sprints, project issues (for the `@`-menu / smart-links) + a default
+  /// status for the selected project.
   Future<void> _loadProjectScoped() async {
     _state ??= _project?.stateNames.firstOrNull;
     _sprints = const [];
+    _projectIssues = const {};
     final pid = _projectId;
     if (pid == null) return;
     try {
       _sprints = await _repo.sprintsForProject(pid);
     } catch (_) {
       _sprints = const [];
+    }
+    // Project issues power the description `@`-menu + `{{issue:…}}` chips; the
+    // shared KB seed backs `{{doc:…}}`. Both best-effort.
+    try {
+      final res = await _repo.issues(projectId: pid, size: 200);
+      _projectIssues = {for (final i in res.issues) i.readableId: i};
+    } catch (_) {
+      _projectIssues = const {};
+    }
+    try {
+      await _knowledge.init();
+    } catch (_) {
+      /* smart-link doc resolution falls back to "not found" */
     }
   }
 
@@ -1741,7 +1767,9 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
         child: Center(child: HiveLoader()),
       );
     }
-    return Form(
+    return SmartLinkScope(
+      resolver: _buildResolver(),
+      child: Form(
       key: _formKey,
       autovalidateMode: _autovalidate
           ? AutovalidateMode.onUserInteraction
@@ -1796,8 +1824,46 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
           ],
         ),
       ),
+      ),
     );
   }
+
+  // ── smart-link wiring (mirrors IssueDetailBody) ──────────────────────────
+
+  /// Resolver for the description editor's `@`-menu + preview chips: issues +
+  /// people from the backend (project issues + directory users), articles from
+  /// the shared KB seed. Rebuilt per frame (cheap) so it tracks the freshly
+  /// loaded project issues / users.
+  IssueLinkResolver _buildResolver() => IssueLinkResolver(
+    issuesByReadable: _projectIssues,
+    users: _users,
+    knowledgeRepo: _knowledge,
+    stateColorFor: (s) =>
+        _projStateColor(_project, s) ?? AppColors.stateColor(s),
+    onOpenIssue: _openLinkedIssue,
+    onOpenDoc: _openArticle,
+  );
+
+  /// Opens the real issue for a readable id (e.g. `HIN-12`): tries the loaded
+  /// project issues first, then a backend search; silently ignores no match.
+  Future<void> _openLinkedIssue(String readableId) async {
+    var match = _projectIssues[readableId];
+    if (match == null) {
+      try {
+        final res = await _repo.issues(query: readableId, size: 20);
+        match = res.issues.where((i) => i.readableId == readableId).firstOrNull;
+      } on ApiFailure {
+        return;
+      }
+    }
+    if (!mounted || match == null) return;
+    await showIssueDetailSheet(context, issueId: match.id);
+  }
+
+  /// Opens a KB article (doc smart-link) on the `/knowledge/:id` route. The
+  /// create modal stays mounted underneath so the draft isn't lost.
+  void _openArticle(String articleId) =>
+      GoRouter.of(context).push('/knowledge/$articleId');
 
   Widget _sectionLabel(String text) => Text(
     text.toUpperCase(),
@@ -1835,11 +1901,11 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
               : null,
         ),
         const SizedBox(height: 18),
-        _sectionLabel(context.t('issues.description')),
-        const SizedBox(height: 8),
-        MarkdownEditorField(
+        // Same authoring power as the issue detail + KB: shared MarkdownToolbar,
+        // `@`-smart-links (issues · articles · people), Editor/Preview tabs.
+        IssueDescriptionEditor(
           controller: _descCtrl,
-          hintText: context.t('issues.description'),
+          label: _sectionLabel(context.t('issues.description')),
         ),
       ],
     );

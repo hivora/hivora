@@ -79,5 +79,11 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Hinata needs access to your photo library so you can attach photos and videos to issues.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>Hinata needs access to your camera so you can take a photo or record a video to attach to issues.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Hinata needs access to your microphone so videos you record for issue attachments include sound.</string>
 	</dict>
 </plist>

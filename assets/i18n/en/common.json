@@ -281,7 +281,17 @@
       "tooLarge": "{{name}} exceeds the {{size}} MB limit.",
       "batchTooLarge": "The selection exceeds the {{size}} MB total limit.",
       "blocked": "{{name}} can't be uploaded — file type not allowed.",
-      "removeConfirm": "Remove this file? This can't be undone."
+      "removeConfirm": "Remove this file? This can't be undone.",
+      "pickFailed": "Couldn't open the picker. Please try again.",
+      "source": {
+        "title": "Add attachment",
+        "gallery": "Photo Library",
+        "galleryHint": "Pick photos or videos",
+        "photo": "Take Photo",
+        "video": "Record Video",
+        "files": "Choose File",
+        "filesHint": "PDF, documents, archives…"
+      }
     },
     "storyPoints": "Story points",
     "timeline": "Timeline"

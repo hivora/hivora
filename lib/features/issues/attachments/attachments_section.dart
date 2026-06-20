@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -21,6 +22,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import 'attachment_kind.dart';
 import 'attachment_lightbox.dart';
+import 'upload_source_sheet.dart';
 
 /// A picked/dropped source file, abstracting file_picker's `PlatformFile` and
 /// desktop_drop's `DropItem` into the bits the upload needs.
@@ -166,12 +168,51 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
   }
 
   // ── Pick / drop / validate ────────────────────────────────────────────────
-  Future<void> _pick() async {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: true,
-      withData: kIsWeb, // web has no file path; we need the bytes
-    );
-    if (result == null) return;
+
+  /// Whether to offer the native gallery/camera source chooser. Only touch
+  /// platforms have a photo library + camera distinct from the file browser;
+  /// desktop and web go straight to the document picker.
+  bool get _offersMediaSources =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.android);
+
+  /// Entry point for every "add" affordance (header button + empty dropzone).
+  /// On mobile it asks the user where to source from; elsewhere it opens the
+  /// document picker directly.
+  Future<void> _add() async {
+    if (!_offersMediaSources) {
+      await _pickFiles();
+      return;
+    }
+    final source = await showUploadSourceSheet(context);
+    if (source == null || _disposed) return;
+    switch (source) {
+      case UploadSource.gallery:
+        await _pickFromGallery();
+      case UploadSource.photo:
+        await _capture(ImageSource.camera, video: false);
+      case UploadSource.video:
+        await _capture(ImageSource.camera, video: true);
+      case UploadSource.files:
+        await _pickFiles();
+    }
+  }
+
+  /// System document picker (PDF, Office docs, archives, …). Allows any type and
+  /// multiple selection; the kind/size/blocked-extension gate runs in [_enqueue].
+  Future<void> _pickFiles() async {
+    final FilePickerResult? result;
+    try {
+      result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        withData: kIsWeb, // web has no file path; we need the bytes
+      );
+    } catch (_) {
+      if (mounted) _toast(context.t('issues.attachments.pickFailed'));
+      return;
+    }
+    if (result == null || _disposed) return;
     // On web `PlatformFile.path` throws — only the bytes are available there.
     _enqueue([
       for (final f in result.files)
@@ -182,6 +223,49 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
           bytes: f.bytes,
         ),
     ]);
+  }
+
+  /// Photo library: images *and* videos, multi-select.
+  Future<void> _pickFromGallery() async {
+    final List<XFile> picked;
+    try {
+      picked = await ImagePicker().pickMultipleMedia();
+    } on Exception {
+      if (mounted) _toast(context.t('issues.attachments.pickFailed'));
+      return;
+    }
+    if (picked.isEmpty || _disposed) return;
+    final srcs = await Future.wait(picked.map(_srcFromXFile));
+    if (!_disposed) _enqueue(srcs);
+  }
+
+  /// Camera capture — a single new photo or video.
+  Future<void> _capture(ImageSource source, {required bool video}) async {
+    final XFile? file;
+    try {
+      file = video
+          ? await ImagePicker().pickVideo(source: source)
+          : await ImagePicker().pickImage(source: source);
+    } on Exception {
+      if (mounted) _toast(context.t('issues.attachments.pickFailed'));
+      return;
+    }
+    if (file == null || _disposed) return;
+    _enqueue([await _srcFromXFile(file)]);
+  }
+
+  /// Adapts an [XFile] (from image_picker) into the upload's [_Src]. On web
+  /// there is no usable path, so the bytes are read eagerly; on native the path
+  /// is streamed straight from disk by [_multipart].
+  Future<_Src> _srcFromXFile(XFile f) async {
+    final bytes = kIsWeb ? await f.readAsBytes() : null;
+    final size = bytes?.length ?? await f.length();
+    return _Src(
+      name: f.name,
+      size: size,
+      path: kIsWeb ? null : f.path,
+      bytes: bytes,
+    );
   }
 
   Future<void> _onDrop(DropDoneDetails detail) async {
@@ -464,6 +548,14 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
             ),
           ),
         ],
+        const Spacer(),
+        // Always-available add affordance (the empty dropzone only shows when
+        // there are no attachments yet).
+        if (count > 0)
+          _AddButton(
+            onTap: _add,
+            label: context.t('issues.attachments.add'),
+          ),
       ],
     );
   }
@@ -471,7 +563,7 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
   Widget _empty() {
     return InkWell(
       borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-      onTap: _pick,
+      onTap: _add,
       child: DottedBorderBox(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),

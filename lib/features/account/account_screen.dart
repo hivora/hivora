@@ -135,11 +135,11 @@ class _AccountScreenState extends State<AccountScreen> {
     final file = picked.files.first;
     final multipart = kIsWeb
         ? (file.bytes == null
-            ? null
-            : MultipartFile.fromBytes(file.bytes!, filename: file.name))
+              ? null
+              : MultipartFile.fromBytes(file.bytes!, filename: file.name))
         : (file.path == null
-            ? null
-            : await MultipartFile.fromFile(file.path!, filename: file.name));
+              ? null
+              : await MultipartFile.fromFile(file.path!, filename: file.name));
     if (multipart == null) return;
 
     setState(() => _avatarBusy = true);
@@ -238,9 +238,13 @@ class _AccountScreenState extends State<AccountScreen> {
       context,
       icon: LucideIcons.logOut,
       title: context.t('account.sessions.revokeTitle'),
-      message: context.t('account.sessions.revokeMessage', variables: {
-        'device': s.client ?? s.os ?? context.t('account.sessions.thisDevice'),
-      }),
+      message: context.t(
+        'account.sessions.revokeMessage',
+        variables: {
+          'device':
+              s.client ?? s.os ?? context.t('account.sessions.thisDevice'),
+        },
+      ),
       confirmLabel: context.t('account.sessions.signOut'),
       danger: true,
       onConfirm: () => _repo.revokeSession(s.id),
@@ -316,10 +320,15 @@ class _AccountScreenState extends State<AccountScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(context.t('account.retryError'),
-                  style: TextStyle(color: AppColors.inkSoft)),
+              Text(
+                context.t('account.retryError'),
+                style: TextStyle(color: AppColors.inkSoft),
+              ),
               const SizedBox(height: 12),
-              FilledButton(onPressed: _load, child: Text(context.t('common.retry'))),
+              FilledButton(
+                onPressed: _load,
+                child: Text(context.t('common.retry')),
+              ),
             ],
           ),
         ),
@@ -349,12 +358,14 @@ class _AccountScreenState extends State<AccountScreen> {
       child: ListView(
         padding: context.pagePadding,
         children: [
-          Text(context.t('account.title'),
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontFamily: AppTheme.fontBrand,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.ink,
-                  )),
+          Text(
+            context.t('account.title'),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontFamily: AppTheme.fontBrand,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
+            ),
+          ),
           const SizedBox(height: 14),
           _profileHero(),
           const SizedBox(height: 16),
@@ -388,7 +399,11 @@ class _AccountScreenState extends State<AccountScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [AppColors.rail, AppColors.navy, AppColors.accentStrong],
+                  colors: [
+                    AppColors.rail,
+                    AppColors.navy,
+                    AppColors.accentStrong,
+                  ],
                   stops: [0, 0.55, 1.4],
                 ),
               ),
@@ -405,32 +420,33 @@ class _AccountScreenState extends State<AccountScreen> {
               child: HexMark(size: 120, color: Colors.white),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: ResponsiveBuilder(
-              builder: (context, size) {
-                final column = size == LayoutSize.compact;
-                final identity = _heroIdentity(me, onDark: true);
-                final actions = _heroActions();
-                return Flex(
+          ResponsiveBuilder(
+            builder: (context, size) {
+              final column = size == LayoutSize.compact;
+              final identity = _heroIdentity(me, onDark: true, compact: column);
+              final actions = _heroActions(compact: column);
+              return Padding(
+                padding: EdgeInsets.all(column ? 16 : 20),
+                child: Flex(
                   direction: column ? Axis.vertical : Axis.horizontal,
-                  crossAxisAlignment:
-                      column ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+                  crossAxisAlignment: column
+                      ? CrossAxisAlignment.stretch
+                      : CrossAxisAlignment.center,
                   children: [
                     Expanded(flex: column ? 0 : 1, child: identity),
-                    SizedBox(width: column ? 0 : 16, height: column ? 16 : 0),
+                    SizedBox(width: column ? 0 : 16, height: column ? 14 : 0),
                     actions,
                   ],
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _heroIdentity(Me me, {required bool onDark}) {
+  Widget _heroIdentity(Me me, {required bool onDark, bool compact = false}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -439,8 +455,9 @@ class _AccountScreenState extends State<AccountScreen> {
           imageUrl: me.avatarUrl,
           busy: _avatarBusy,
           onTap: _editAvatar,
+          radius: compact ? 24 : 28,
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: compact ? 12 : 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,9 +467,9 @@ class _AccountScreenState extends State<AccountScreen> {
                 me.displayName,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: AppTheme.fontBrand,
-                  fontSize: 20,
+                  fontSize: compact ? 18 : 20,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                 ),
@@ -467,7 +484,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   color: Colors.white.withValues(alpha: 0.78),
                 ),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: compact ? 8 : 10),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
@@ -480,8 +497,10 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                   if (me.createdAt != null)
                     AccountPill(
-                      label: context.t('account.memberSince',
-                          variables: {'date': _monthYear(me.createdAt!)}),
+                      label: context.t(
+                        'account.memberSince',
+                        variables: {'date': _monthYear(me.createdAt!)},
+                      ),
                       icon: LucideIcons.calendar,
                       color: Colors.white,
                       background: Colors.white.withValues(alpha: 0.12),
@@ -495,35 +514,48 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
-  Widget _heroActions() {
+  Widget _heroActions({bool compact = false}) {
+    final editProfile = FilledButton.icon(
+      onPressed: _editProfile,
+      style: FilledButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.navy,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        ),
+      ),
+      icon: const Icon(LucideIcons.pencil, size: 15),
+      label: Text(context.t('account.editProfile')),
+    );
+    final signOut = TextButton.icon(
+      onPressed: () => context.read<AuthBloc>().add(const LogoutRequested()),
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.white.withValues(alpha: 0.85),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 12 : 8,
+          vertical: 11,
+        ),
+      ),
+      icon: const Icon(LucideIcons.logOut, size: 15),
+      label: Text(context.t('account.signOut')),
+    );
+
+    // Mobile: lay the two actions side by side (Edit primary, Sign out
+    // secondary) instead of stacking them — saves a full button's height.
+    if (compact) {
+      return Row(
+        children: [
+          Expanded(child: editProfile),
+          const SizedBox(width: 10),
+          signOut,
+        ],
+      );
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        FilledButton.icon(
-          onPressed: _editProfile,
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: AppColors.navy,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.radiusControl),
-            ),
-          ),
-          icon: const Icon(LucideIcons.pencil, size: 15),
-          label: Text(context.t('account.editProfile')),
-        ),
-        const SizedBox(height: 8),
-        TextButton.icon(
-          onPressed: () =>
-              context.read<AuthBloc>().add(const LogoutRequested()),
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.white.withValues(alpha: 0.85),
-          ),
-          icon: const Icon(LucideIcons.logOut, size: 15),
-          label: Text(context.t('account.signOut')),
-        ),
-      ],
+      children: [editProfile, const SizedBox(height: 8), signOut],
     );
   }
 
@@ -548,7 +580,9 @@ class _AccountScreenState extends State<AccountScreen> {
                 label: me.emailVerified
                     ? context.t('account.security.verified')
                     : context.t('account.security.unverified'),
-                icon: me.emailVerified ? LucideIcons.circleCheck : LucideIcons.info,
+                icon: me.emailVerified
+                    ? LucideIcons.circleCheck
+                    : LucideIcons.info,
                 color: me.emailVerified ? AppColors.success : AppColors.warning,
               ),
               if (!sso) ...[
@@ -565,15 +599,19 @@ class _AccountScreenState extends State<AccountScreen> {
         if (me.pendingEmail != null) ...[
           const SizedBox(height: 4),
           AccountNote(
-            text: context.t('account.security.pendingEmail',
-                variables: {'email': me.pendingEmail!}),
+            text: context.t(
+              'account.security.pendingEmail',
+              variables: {'email': me.pendingEmail!},
+            ),
           ),
           const SizedBox(height: 4),
         ],
         if (sso)
           AccountNote(
-            text: context.t('account.security.ssoManaged',
-                variables: {'provider': me.origin.label}),
+            text: context.t(
+              'account.security.ssoManaged',
+              variables: {'provider': me.origin.label},
+            ),
             icon: LucideIcons.lock,
             tone: AccountNoteTone.info,
           ),
@@ -582,8 +620,10 @@ class _AccountScreenState extends State<AccountScreen> {
           SettingRow(
             label: context.t('account.security.password'),
             description: me.passwordChangedAt != null
-                ? context.t('account.security.passwordChanged',
-                    variables: {'date': _monthYear(me.passwordChangedAt!)})
+                ? context.t(
+                    'account.security.passwordChanged',
+                    variables: {'date': _monthYear(me.passwordChangedAt!)},
+                  )
                 : context.t('account.security.passwordResetHint'),
             stack: context.isCompact,
             trailing: AccountActionButton(
@@ -597,8 +637,10 @@ class _AccountScreenState extends State<AccountScreen> {
         SettingRow(
           label: context.t('account.security.twoFactor'),
           description: me.twoFactor.enabled
-              ? context.t('account.security.twoFactorOn',
-                  count: me.twoFactor.recoveryRemaining)
+              ? context.t(
+                  'account.security.twoFactorOn',
+                  count: me.twoFactor.recoveryRemaining,
+                )
               : context.t('account.security.twoFactorOff'),
           stack: context.isCompact,
           trailing: me.twoFactor.enabled
@@ -608,7 +650,8 @@ class _AccountScreenState extends State<AccountScreen> {
                     AccountActionButton(
                       label: context.t('account.security.codes'),
                       icon: LucideIcons.keyRound,
-                      onPressed: () => show2faManage(context, _repo).then((_) => _load()),
+                      onPressed: () =>
+                          show2faManage(context, _repo).then((_) => _load()),
                     ),
                     const SizedBox(width: 8),
                     AccountActionButton(
@@ -623,9 +666,14 @@ class _AccountScreenState extends State<AccountScreen> {
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.navy,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 9,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.radiusControl,
+                      ),
                     ),
                   ),
                   icon: const Icon(LucideIcons.shieldCheck, size: 15),
@@ -709,7 +757,9 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                     if (s.current) ...[
                       const SizedBox(width: 8),
-                      AccountPill(label: context.t('account.sessions.thisDevice')),
+                      AccountPill(
+                        label: context.t('account.sessions.thisDevice'),
+                      ),
                     ],
                   ],
                 ),
@@ -772,7 +822,11 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Widget _channelMaster(
-      String label, IconData icon, bool value, ValueChanged<bool> onChanged) {
+    String label,
+    IconData icon,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
     return SettingRow(
       label: label,
       description: value
@@ -803,18 +857,18 @@ class _AccountScreenState extends State<AccountScreen> {
       context.t('account.notifications.event.$id.desc');
 
   Widget _colLabel(String label) => SizedBox(
-        width: 40,
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.3,
-            color: AppColors.inkFaint,
-          ),
-        ),
-      );
+    width: 40,
+    child: Text(
+      label,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        fontSize: 10.5,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.3,
+        color: AppColors.inkFaint,
+      ),
+    ),
+  );
 
   ChannelPair _channelOf(String id) =>
       _prefs!.events[id] ?? const ChannelPair(email: false, push: false);
@@ -837,12 +891,19 @@ class _AccountScreenState extends State<AccountScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_eventLabel(e.id),
-                    style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink)),
-                Text(_eventDesc(e.id),
-                    style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
-                    softWrap: true),
+                Text(
+                  _eventLabel(e.id),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
+                Text(
+                  _eventDesc(e.id),
+                  style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+                  softWrap: true,
+                ),
               ],
             ),
           ),
@@ -877,7 +938,11 @@ class _AccountScreenState extends State<AccountScreen> {
         child: locked
             ? Tooltip(
                 message: context.t('account.notifications.alwaysOn'),
-                child: Icon(LucideIcons.lock, size: 15, color: AppColors.inkFaint),
+                child: Icon(
+                  LucideIcons.lock,
+                  size: 15,
+                  color: AppColors.inkFaint,
+                ),
               )
             : HiveSwitch(
                 value: enabled && value,
@@ -891,14 +956,21 @@ class _AccountScreenState extends State<AccountScreen> {
   /// Phone layout: one card per event with stacked Email / Push rows.
   Widget _notifCard(({String id, IconData icon, bool locked}) e) {
     final pair = _channelOf(e.id);
-    Widget channel(String label, bool value, bool enabled, ValueChanged<bool>? onChanged) {
+    Widget channel(
+      String label,
+      bool value,
+      bool enabled,
+      ValueChanged<bool>? onChanged,
+    ) {
       return Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Row(
           children: [
             Expanded(
-              child: Text(label,
-                  style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft)),
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
+              ),
             ),
             if (e.locked)
               AccountPill(label: context.t('account.notifications.alwaysOn'))
@@ -929,19 +1001,35 @@ class _AccountScreenState extends State<AccountScreen> {
               Icon(e.icon, size: 16, color: AppColors.inkSoft),
               const SizedBox(width: 9),
               Expanded(
-                child: Text(_eventLabel(e.id),
-                    style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink)),
+                child: Text(
+                  _eventLabel(e.id),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 2),
-          Text(_eventDesc(e.id),
-              style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft), softWrap: true),
-          channel(context.t('account.notifications.colEmail'), pair.email,
-              _prefs!.emailEnabled, (v) => _setChannel(e.id, email: v)),
-          channel(context.t('account.notifications.colPush'), pair.push,
-              _prefs!.pushEnabled, (v) => _setChannel(e.id, push: v)),
+          Text(
+            _eventDesc(e.id),
+            style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+            softWrap: true,
+          ),
+          channel(
+            context.t('account.notifications.colEmail'),
+            pair.email,
+            _prefs!.emailEnabled,
+            (v) => _setChannel(e.id, email: v),
+          ),
+          channel(
+            context.t('account.notifications.colPush'),
+            pair.push,
+            _prefs!.pushEnabled,
+            (v) => _setChannel(e.id, push: v),
+          ),
         ],
       ),
     );
@@ -969,9 +1057,17 @@ class _AccountScreenState extends State<AccountScreen> {
               if (i > 0) Divider(height: 1, color: AppColors.hairline2),
               _accessRow(
                 glyph: _teams[i].key,
-                color: HSLColor.fromAHSL(1, _teams[i].hue.toDouble(), 0.5, 0.55).toColor(),
+                color: HSLColor.fromAHSL(
+                  1,
+                  _teams[i].hue.toDouble(),
+                  0.5,
+                  0.55,
+                ).toColor(),
                 name: _teams[i].name,
-                meta: context.t('account.access.members', count: _teams[i].members),
+                meta: context.t(
+                  'account.access.members',
+                  count: _teams[i].members,
+                ),
                 role: _roleLabel(_teams[i].role),
                 onTap: () => context.go('/teams/${_teams[i].id}'),
               ),
@@ -1027,7 +1123,9 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
               alignment: Alignment.center,
               child: Text(
-                glyph.isEmpty ? '?' : glyph.substring(0, glyph.length >= 3 ? 3 : glyph.length),
+                glyph.isEmpty
+                    ? '?'
+                    : glyph.substring(0, glyph.length >= 3 ? 3 : glyph.length),
                 style: TextStyle(
                   fontFamily: AppTheme.fontMono,
                   fontSize: 10.5,
@@ -1041,12 +1139,20 @@ class _AccountScreenState extends State<AccountScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.ink)),
-                  Text(meta, style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft)),
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                  Text(
+                    meta,
+                    style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+                  ),
                 ],
               ),
             ),
@@ -1084,8 +1190,9 @@ class _AccountScreenState extends State<AccountScreen> {
               for (final entry in I18n.localeNames.entries)
                 DropdownMenuItem(value: entry.key, child: Text(entry.value)),
             ],
-            onChanged: (code) =>
-                code == null ? null : context.read<LocaleCubit>().setLocale(code),
+            onChanged: (code) => code == null
+                ? null
+                : context.read<LocaleCubit>().setLocale(code),
           ),
         ),
         Divider(height: 1, color: AppColors.hairline2),
@@ -1105,8 +1212,10 @@ class _AccountScreenState extends State<AccountScreen> {
             icon: LucideIcons.shieldAlert,
             trailing: IconButton(
               icon: const Icon(LucideIcons.externalLink, size: 17),
-              onPressed: () => launchUrl(Uri.parse(config.meta!.privacyPolicyUrl),
-                  mode: LaunchMode.externalApplication),
+              onPressed: () => launchUrl(
+                Uri.parse(config.meta!.privacyPolicyUrl),
+                mode: LaunchMode.externalApplication,
+              ),
             ),
           ),
         ],
@@ -1127,8 +1236,14 @@ class _AccountScreenState extends State<AccountScreen> {
           child: Column(
             children: [
               _aboutRow(context.t('settings.appVersion'), config.appVersion),
-              _aboutRow(context.t('settings.serverVersion'), config.meta?.serverVersion ?? '–'),
-              _aboutRow(context.t('settings.organization'), config.meta?.organizationName ?? '–'),
+              _aboutRow(
+                context.t('settings.serverVersion'),
+                config.meta?.serverVersion ?? '–',
+              ),
+              _aboutRow(
+                context.t('settings.organization'),
+                config.meta?.organizationName ?? '–',
+              ),
             ],
           ),
         ),
@@ -1137,15 +1252,22 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Widget _aboutRow(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Expanded(child: Text(label, style: TextStyle(color: AppColors.inkSoft, fontSize: 13))),
-            Text(value,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
+          ),
         ),
-      );
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        ),
+      ],
+    ),
+  );
 
   // --- data & privacy -------------------------------------------------------
 
@@ -1194,10 +1316,12 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Widget _emptyRow(String message) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Text(message,
-            style: TextStyle(fontSize: 12.5, color: AppColors.inkFaint)),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 14),
+    child: Text(
+      message,
+      style: TextStyle(fontSize: 12.5, color: AppColors.inkFaint),
+    ),
+  );
 
   // --- helpers --------------------------------------------------------------
 
@@ -1222,7 +1346,10 @@ class _AccountScreenState extends State<AccountScreen> {
 
   Color _parseHex(String hex) {
     final clean = hex.replaceAll('#', '');
-    final value = int.tryParse(clean.length == 6 ? 'FF$clean' : clean, radix: 16);
+    final value = int.tryParse(
+      clean.length == 6 ? 'FF$clean' : clean,
+      radix: 16,
+    );
     return value == null ? AppColors.stTodo : Color(value);
   }
 }
@@ -1234,12 +1361,14 @@ class _EditableAvatar extends StatelessWidget {
     required this.imageUrl,
     required this.busy,
     required this.onTap,
+    this.radius = 28,
   });
 
   final String name;
   final String? imageUrl;
   final bool busy;
   final VoidCallback onTap;
+  final double radius;
 
   @override
   Widget build(BuildContext context) {
@@ -1255,10 +1384,12 @@ class _EditableAvatar extends StatelessWidget {
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border:
-                    Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.4),
+                  width: 2,
+                ),
               ),
-              child: AppAvatar(name: name, imageUrl: imageUrl, radius: 28),
+              child: AppAvatar(name: name, imageUrl: imageUrl, radius: radius),
             ),
             if (busy)
               Positioned.fill(
@@ -1273,7 +1404,9 @@ class _EditableAvatar extends StatelessWidget {
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -1289,8 +1422,11 @@ class _EditableAvatar extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.rail, width: 2),
                 ),
-                child: const Icon(LucideIcons.camera,
-                    size: 12, color: Color(0xFF2A2410)),
+                child: const Icon(
+                  LucideIcons.camera,
+                  size: 12,
+                  color: Color(0xFF2A2410),
+                ),
               ),
             ),
           ],
@@ -1314,7 +1450,8 @@ class _AccessToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget seg(String label, bool active, VoidCallback onTap) => GestureDetector(
+    Widget seg(String label, bool active, VoidCallback onTap) =>
+        GestureDetector(
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 140),
@@ -1323,15 +1460,23 @@ class _AccessToggle extends StatelessWidget {
               color: active ? AppColors.surface : Colors.transparent,
               borderRadius: BorderRadius.circular(7),
               boxShadow: active
-                  ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 3, offset: const Offset(0, 1))]
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
+                      ),
+                    ]
                   : null,
             ),
-            child: Text(label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: active ? AppColors.ink : AppColors.inkSoft,
-                )),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: active ? AppColors.ink : AppColors.inkSoft,
+              ),
+            ),
           ),
         );
     return Container(
@@ -1382,14 +1527,23 @@ class _ThemeSelector extends StatelessWidget {
                 onTap: () => onChanged(m),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 160),
-                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 7,
+                  ),
                   decoration: BoxDecoration(
-                    color: m == mode ? AppColors.accentSoft : Colors.transparent,
+                    color: m == mode
+                        ? AppColors.accentSoft
+                        : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon,
-                      size: 17,
-                      color: m == mode ? AppColors.accentStrong : AppColors.inkSoft),
+                  child: Icon(
+                    icon,
+                    size: 17,
+                    color: m == mode
+                        ? AppColors.accentStrong
+                        : AppColors.inkSoft,
+                  ),
                 ),
               ),
             ),

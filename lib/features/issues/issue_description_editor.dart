@@ -16,9 +16,17 @@ import '../knowledge/markdown/mention_field.dart';
 ///
 /// Operates on [controller] in place; the host owns Save / Cancel.
 class IssueDescriptionEditor extends StatefulWidget {
-  const IssueDescriptionEditor({super.key, required this.controller});
+  const IssueDescriptionEditor({
+    super.key,
+    required this.controller,
+    this.label,
+  });
 
   final TextEditingController controller;
+
+  /// Optional section label (e.g. “DESCRIPTION”) rendered on the same row as
+  /// the Editor/Preview switcher, floating above the bordered editor box.
+  final Widget? label;
 
   @override
   State<IssueDescriptionEditor> createState() => _IssueDescriptionEditorState();
@@ -46,25 +54,43 @@ class _IssueDescriptionEditorState extends State<IssueDescriptionEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(KbTokens.radiusControl),
-        border: Border.all(color: AppColors.hairline),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          MarkdownToolbar(
-            actions: _actions,
-            enabled: !_preview,
-            dense: true,
-            trailing: _tabs(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Header: section label (left) + Editor/Preview switcher floated
+        // right, sitting above the bordered editor box so the toolbar below
+        // is free to use the full width for a single scrollable command row.
+        Row(
+          children: [
+            if (widget.label != null) Expanded(child: widget.label!) else const Spacer(),
+            _tabs(),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(KbTokens.radiusControl),
+            border: Border.all(color: AppColors.hairline),
           ),
-          SizedBox(height: 220, child: _preview ? _previewPane() : _editPane()),
-        ],
-      ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              MarkdownToolbar(
+                actions: _actions,
+                enabled: !_preview,
+                dense: true,
+              ),
+              SizedBox(
+                height: 220,
+                child: _preview ? _previewPane() : _editPane(),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

@@ -708,6 +708,11 @@ Future<void> showUserDrawer(
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      // Push onto the root navigator so the sheet floats *above* the shell's
+      // liquid-glass bottom nav. On the nested go_router navigator it would
+      // render inside the content layer, beneath the floating nav — which then
+      // paints over the sheet's lower actions (the Danger-zone delete button).
+      useRootNavigator: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
@@ -720,6 +725,7 @@ Future<void> showUserDrawer(
   }
   return showGeneralDialog<void>(
     context: context,
+    useRootNavigator: true,
     barrierDismissible: true,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     barrierColor: Colors.black.withValues(alpha: 0.32),
@@ -746,6 +752,7 @@ Future<void> showUserDrawer(
                   color: AppColors.surface,
                   elevation: 16,
                   child: SafeArea(
+                    left: false,
                     child: UserDrawerBody(user: user, actions: actions),
                   ),
                 ),
@@ -768,6 +775,10 @@ class UserDrawerBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final u = user;
     final lastAdmin = actions.isLastActiveAdmin(u);
+    // Clearance so the last action (delete) scrolls clear of the device's home
+    // indicator on the phone bottom sheet. On the desktop drawer this is 0 — its
+    // SafeArea wrapper has already consumed the inset.
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -835,7 +846,7 @@ class UserDrawerBody extends StatelessWidget {
         // Body
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+            padding: EdgeInsets.fromLTRB(20, 18, 20, 28 + bottomInset),
             children: [
               _factsGrid(context, u),
               if (u.inviteExpired) ...[

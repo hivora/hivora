@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../models/account_models.dart';
 import '../models/admin_user_models.dart';
+import '../models/audit_models.dart';
 import '../models/content_models.dart';
 import '../models/core_models.dart';
 import '../models/deletion_models.dart';
@@ -848,6 +849,43 @@ class HinataRepository {
 
   Future<void> adminDeleteUsers(List<String> ids) =>
       _api.post('/api/v1/admin/users/delete', body: {'ids': ids});
+
+  // --- Admin · Audit log ----------------------------------------------------
+
+  /// One filtered, paginated page of the security audit log. Blank/null filters
+  /// widen the query; results are newest-first.
+  Future<AuditPage> auditLog({
+    String query = '',
+    AuditCategory? category,
+    AuditSeverity? severity,
+    String? action,
+    String? outcome,
+    String? actorId,
+    int page = 1,
+    int perPage = 30,
+  }) async =>
+      AuditPage.fromJson(
+        await _api.get('/api/v1/admin/audit', query: {
+          'query': ?(query.trim().isEmpty ? null : query.trim()),
+          'category': ?(category == null || category == AuditCategory.unknown
+              ? null
+              : category.wire),
+          'severity': ?(severity == null || severity == AuditSeverity.unknown
+              ? null
+              : severity.wire),
+          'action': ?action,
+          'outcome': ?outcome,
+          'actorId': ?actorId,
+          'page': '$page',
+          'perPage': '$perPage',
+        }) as Map<String, dynamic>,
+      );
+
+  /// The catalogue of audit event types — used to render the per-event toggles.
+  Future<List<AuditEventType>> auditEventTypes() async =>
+      ((await _api.get('/api/v1/admin/audit/event-types')) as List<dynamic>)
+          .map((e) => AuditEventType.fromJson(e as Map<String, dynamic>))
+          .toList();
 
   // --- Teams ----------------------------------------------------------------
 

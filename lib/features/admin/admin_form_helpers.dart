@@ -191,19 +191,39 @@ class AdminToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        title: Text(label,
-            style: const TextStyle(
-                fontWeight: FontWeight.w600, fontSize: 14)),
-        subtitle: subtitle != null
-            ? Text(subtitle!,
-                style: TextStyle(
-                    fontSize: 12, color: AppColors.inkSoft))
-            : null,
-        value: value,
-        onChanged: onChanged,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => onChanged(!value),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(label,
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: AppColors.ink)),
+                    if (subtitle != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(subtitle!,
+                            style: TextStyle(
+                                fontSize: 12, color: AppColors.inkSoft)),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              HiveSwitch(value: value, onChanged: onChanged),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -254,7 +274,7 @@ class _ProviderTileState extends State<ProviderTile> {
               widget.initiallyExpanded || enabled,
           tilePadding:
               const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 4, 14, 16),
           title: Row(
             children: [
               HiveSwitch(

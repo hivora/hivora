@@ -281,7 +281,17 @@
       "tooLarge": "{{name}} überschreitet das Limit von {{size}} MB.",
       "batchTooLarge": "Die Auswahl überschreitet das Gesamtlimit von {{size}} MB.",
       "blocked": "{{name}} kann nicht hochgeladen werden – Dateityp nicht erlaubt.",
-      "removeConfirm": "Diese Datei entfernen? Das kann nicht rückgängig gemacht werden."
+      "removeConfirm": "Diese Datei entfernen? Das kann nicht rückgängig gemacht werden.",
+      "pickFailed": "Auswahl konnte nicht geöffnet werden. Bitte versuche es erneut.",
+      "source": {
+        "title": "Anhang hinzufügen",
+        "gallery": "Fotomediathek",
+        "galleryHint": "Fotos oder Videos auswählen",
+        "photo": "Foto aufnehmen",
+        "video": "Video aufnehmen",
+        "files": "Datei auswählen",
+        "filesHint": "PDF, Dokumente, Archive…"
+      }
     },
     "storyPoints": "Story Points",
     "timeline": "Timeline"
