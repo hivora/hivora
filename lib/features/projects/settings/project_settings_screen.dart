@@ -534,11 +534,16 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
               context.pageGutter,
               0,
               context.pageGutter,
-              12 +
-                  math.max(
-                    context.bottomGutter,
-                    MediaQuery.viewInsetsOf(context).bottom,
-                  ),
+              context.isCompact
+                  ? math.max(
+                          context.bottomGutter,
+                          MediaQuery.viewInsetsOf(context).bottom,
+                        ) -
+                        20
+                  : 12 + math.max(
+                      context.bottomGutter,
+                      MediaQuery.viewInsetsOf(context).bottom,
+                    ),
             ),
             child: Center(
               child: ConstrainedBox(
