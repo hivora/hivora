@@ -1,9 +1,29 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/i18n/i18n.dart';
+import '../../core/models/core_models.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/soft_card.dart';
+
+/// Resolves the configured app-store listing for the current platform, so the
+/// update gate can send the user straight to the correct store. Returns null
+/// on the web or when no URL is configured for the running platform.
+String? storeUrlForPlatform(ServerMeta? meta) {
+  if (meta == null || kIsWeb) return null;
+  final url = Platform.isIOS
+      ? meta.iosStoreUrl
+      : Platform.isAndroid
+          ? meta.androidStoreUrl
+          : Platform.isMacOS
+              ? meta.macosStoreUrl
+              : '';
+  return url.trim().isEmpty ? null : url.trim();
+}
 
 /// Hard version gate: shown when the server requires a newer app version.
 class UpdateRequiredScreen extends StatelessWidget {
@@ -11,10 +31,14 @@ class UpdateRequiredScreen extends StatelessWidget {
     super.key,
     required this.appVersion,
     required this.minVersion,
+    this.storeUrl,
   });
 
   final String appVersion;
   final String minVersion;
+
+  /// Platform-specific app-store link to update the app, when configured.
+  final String? storeUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +74,20 @@ class UpdateRequiredScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: TextStyle(color: AppColors.textSecondary, height: 1.5),
                     ),
+                    if (storeUrl != null) ...[
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () => launchUrl(
+                            Uri.parse(storeUrl!),
+                            mode: LaunchMode.externalApplication,
+                          ),
+                          icon: const Icon(LucideIcons.externalLink, size: 18),
+                          label: Text(context.t('update.openStore')),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

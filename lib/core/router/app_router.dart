@@ -141,6 +141,7 @@ GoRouter buildRouter({
         builder: (context, _) => UpdateRequiredScreen(
           appVersion: appConfig.state.appVersion,
           minVersion: appConfig.state.meta?.minAppVersion ?? '',
+          storeUrl: storeUrlForPlatform(appConfig.state.meta),
         ),
       ),
       GoRoute(

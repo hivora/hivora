@@ -9,6 +9,9 @@ class ServerMeta extends Equatable {
     this.organizationName,
     this.logoUrl,
     this.privacyPolicyUrl = '',
+    this.iosStoreUrl = '',
+    this.androidStoreUrl = '',
+    this.macosStoreUrl = '',
     this.featureFlags = const {},
     this.uploadLimits = const UploadLimits(),
   });
@@ -19,6 +22,12 @@ class ServerMeta extends Equatable {
   final String? organizationName;
   final String? logoUrl;
   final String privacyPolicyUrl;
+
+  /// App-store listings the update gate links to, by platform. Configured in
+  /// the admin area; blank when not set.
+  final String iosStoreUrl;
+  final String androidStoreUrl;
+  final String macosStoreUrl;
   final Map<String, bool> featureFlags;
   final UploadLimits uploadLimits;
 
@@ -31,6 +40,9 @@ class ServerMeta extends Equatable {
             ? null
             : (json['logoUrl'] as String).trim(),
         privacyPolicyUrl: json['privacyPolicyUrl'] as String? ?? '',
+        iosStoreUrl: json['iosStoreUrl'] as String? ?? '',
+        androidStoreUrl: json['androidStoreUrl'] as String? ?? '',
+        macosStoreUrl: json['macosStoreUrl'] as String? ?? '',
         featureFlags: (json['featureFlags'] as Map<String, dynamic>? ?? {})
             .map((k, v) => MapEntry(k, v == true)),
         uploadLimits: json['uploadLimits'] is Map<String, dynamic>
@@ -42,7 +54,8 @@ class ServerMeta extends Equatable {
 
   @override
   List<Object?> get props =>
-      [serverVersion, minAppVersion, setupCompleted, organizationName, logoUrl];
+      [serverVersion, minAppVersion, setupCompleted, organizationName, logoUrl,
+        privacyPolicyUrl, iosStoreUrl, androidStoreUrl, macosStoreUrl];
 }
 
 /// Attachment upload constraints supplied by the server so the client can

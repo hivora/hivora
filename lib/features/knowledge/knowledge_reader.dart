@@ -46,10 +46,12 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
   void _jump(TocEntry entry) {
     final ctx = entry.key.currentContext;
     if (ctx != null) {
-      Scrollable.ensureVisible(ctx,
-          duration: const Duration(milliseconds: 320),
-          curve: Curves.easeOutCubic,
-          alignment: 0.02);
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+        alignment: 0.02,
+      );
       setState(() => _activeToc = entry.id);
     }
   }
@@ -76,8 +78,9 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
               child: Align(
                 alignment: Alignment.topLeft,
                 child: ConstrainedBox(
-                  constraints:
-                      const BoxConstraints(maxWidth: KbTokens.readerMaxWidth),
+                  constraints: const BoxConstraints(
+                    maxWidth: KbTokens.readerMaxWidth,
+                  ),
                   child: article,
                 ),
               ),
@@ -91,8 +94,9 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ConstrainedBox(
-              constraints:
-                  const BoxConstraints(maxWidth: KbTokens.readerMaxWidth),
+              constraints: const BoxConstraints(
+                maxWidth: KbTokens.readerMaxWidth,
+              ),
               child: article,
             ),
             const SizedBox(height: 30),
@@ -123,7 +127,10 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
           children: [
             if (sp != null)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: KbTokens.spaceChipBg(sp.hue),
                   borderRadius: BorderRadius.circular(AppTheme.radiusPill),
@@ -131,37 +138,51 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(lucideIcon(sp.icon),
-                        size: 13, color: KbTokens.spaceChipText(sp.hue)),
+                    Icon(
+                      lucideIcon(sp.icon),
+                      size: 13,
+                      color: KbTokens.spaceChipText(sp.hue),
+                    ),
                     const SizedBox(width: 6),
-                    Text(sp.name,
-                        style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: KbTokens.spaceChipText(sp.hue))),
+                    Text(
+                      sp.name,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: KbTokens.spaceChipText(sp.hue),
+                      ),
+                    ),
                   ],
                 ),
               ),
             if (parent != null) ...[
-              Icon(lucideIcon('chevron-right'),
-                  size: 14, color: AppColors.inkFaint),
+              Icon(
+                lucideIcon('chevron-right'),
+                size: 14,
+                color: AppColors.inkFaint,
+              ),
               GestureDetector(
                 onTap: () => KnowledgeScope.of(context).openArticle(parent.id),
-                child: Text(parent.title,
-                    style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft)),
+                child: Text(
+                  parent.title,
+                  style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
+                ),
               ),
             ],
           ],
         ),
         const SizedBox(height: 14),
         // title
-        Text(a.title,
-            style: const TextStyle(
-                fontFamily: AppTheme.fontBrand,
-                fontSize: 31,
-                fontWeight: FontWeight.w800,
-                height: 1.12,
-                letterSpacing: -0.7)),
+        Text(
+          a.title,
+          style: const TextStyle(
+            fontFamily: AppTheme.fontBrand,
+            fontSize: 31,
+            fontWeight: FontWeight.w800,
+            height: 1.12,
+            letterSpacing: -0.7,
+          ),
+        ),
         const SizedBox(height: 16),
         // byline
         Row(
@@ -180,9 +201,12 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
                   style: TextStyle(fontSize: 13, color: AppColors.inkSoft),
                   children: [
                     TextSpan(
-                        text: author?.name ?? '',
-                        style: TextStyle(
-                            color: AppColors.ink, fontWeight: FontWeight.w600)),
+                      text: author?.name ?? '',
+                      style: TextStyle(
+                        color: AppColors.ink,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     TextSpan(text: ' · updated ${a.updated} ago'),
                   ],
                 ),
@@ -193,11 +217,14 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
             const SizedBox(width: 10),
             Icon(lucideIcon('eye'), size: 14, color: AppColors.inkFaint),
             const SizedBox(width: 5),
-            Text('${a.reads}',
-                style: TextStyle(
-                    fontFamily: AppTheme.fontMono,
-                    fontSize: 12,
-                    color: AppColors.inkFaint)),
+            Text(
+              '${a.reads}',
+              style: TextStyle(
+                fontFamily: AppTheme.fontMono,
+                fontSize: 12,
+                color: AppColors.inkFaint,
+              ),
+            ),
             const SizedBox(width: 8),
             OutlinedButton.icon(
               onPressed: widget.onEdit,
@@ -205,7 +232,10 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
               label: const Text('Edit'),
               style: OutlinedButton.styleFrom(
                 visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
             ),
           ],
@@ -243,8 +273,10 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
             children: [
               Icon(lucideIcon('link-2'), size: 16, color: KbTokens.accent),
               const SizedBox(width: 8),
-              const Text('Linked issues',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+              const Text(
+                'Linked issues',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+              ),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
@@ -253,55 +285,69 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
                   borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   border: Border.all(color: AppColors.hairline),
                 ),
-                child: Text('${linked.length}',
-                    style: TextStyle(
-                        fontFamily: AppTheme.fontMono,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.inkFaint)),
+                child: Text(
+                  '${linked.length}',
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontMono,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.inkFaint,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          LayoutBuilder(builder: (context, c) {
-            final cols = c.maxWidth < KbTokens.bpPhone
-                ? 1
-                : (c.maxWidth / 290).floor().clamp(1, 3);
-            const gap = 10.0;
-            final tileW = (c.maxWidth - gap * (cols - 1)) / cols;
-            return Wrap(
-              spacing: gap,
-              runSpacing: gap,
-              children: [
-                for (final it in linked)
-                  SizedBox(
-                      width: tileW, child: _IssueCard(repo: repo, issue: it)),
-              ],
-            );
-          }),
+          LayoutBuilder(
+            builder: (context, c) {
+              final cols = c.maxWidth < KbTokens.bpPhone
+                  ? 1
+                  : (c.maxWidth / 290).floor().clamp(1, 3);
+              const gap = 10.0;
+              final tileW = (c.maxWidth - gap * (cols - 1)) / cols;
+              return Wrap(
+                spacing: gap,
+                runSpacing: gap,
+                children: [
+                  for (final it in linked)
+                    SizedBox(
+                      width: tileW,
+                      child: _IssueCard(repo: repo, issue: it),
+                    ),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
   Widget _tag(String label) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceMuted,
-          borderRadius: BorderRadius.circular(KbTokens.radiusChip),
-          border: Border.all(color: AppColors.hairline2),
-        ),
-        child: Text(label,
-            style: TextStyle(
-                fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.inkSoft)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceMuted,
+      borderRadius: BorderRadius.circular(KbTokens.radiusChip),
+      border: Border.all(color: AppColors.hairline2),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        color: AppColors.inkSoft,
+      ),
+    ),
+  );
 
   // ── aside ──
   Widget _aside(KnowledgeRepository repo, List<TocEntry> toc) {
     final a = widget.article;
     final sp = repo.spaceById(a.spaceId);
     final related = repo.relatedArticles(a.body);
-    final contributors = a.contributorIds.isEmpty ? [a.authorId] : a.contributorIds;
+    final contributors = a.contributorIds.isEmpty
+        ? [a.authorId]
+        : a.contributorIds;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,7 +357,9 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
           const SizedBox(height: 4),
           Container(
             decoration: BoxDecoration(
-              border: Border(left: BorderSide(color: AppColors.hairline, width: 2)),
+              border: Border(
+                left: BorderSide(color: AppColors.hairline, width: 2),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -330,10 +378,12 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
                 AppAvatar(name: repo.userById(id)?.name ?? '?', radius: 13),
                 const SizedBox(width: 9),
                 Expanded(
-                  child: Text(repo.userById(id)?.name ?? '?',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12.5)),
+                  child: Text(
+                    repo.userById(id)?.name ?? '?',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12.5),
+                  ),
                 ),
               ],
             ),
@@ -352,11 +402,15 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
                     Icon(lucideIcon(d.icon), size: 15, color: KbTokens.accent),
                     const SizedBox(width: 9),
                     Expanded(
-                      child: Text(d.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              TextStyle(fontSize: 12.5, color: AppColors.inkSoft)),
+                      child: Text(
+                        d.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.inkSoft,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -374,34 +428,44 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
   }
 
   Widget _asideHeader(String text) => Text(
-        text.toUpperCase(),
-        style: TextStyle(
-            fontSize: 10.5,
-            letterSpacing: 0.9,
-            fontWeight: FontWeight.w700,
-            color: AppColors.inkFaint),
-      );
+    text.toUpperCase(),
+    style: TextStyle(
+      fontSize: 10.5,
+      letterSpacing: 0.9,
+      fontWeight: FontWeight.w700,
+      color: AppColors.inkFaint,
+    ),
+  );
 
   Widget _tocRow(TocEntry t) {
     final on = _activeToc == t.id;
     return InkWell(
       onTap: () => _jump(t),
-      child: Container(
-        padding: EdgeInsets.fromLTRB(t.lvl == 1 ? 12.0 : (t.lvl == 2 ? 22.0 : 32.0), 5, 8, 5),
-        decoration: BoxDecoration(
-          border: Border(
-            left: BorderSide(
-                color: on ? AppColors.accent : Colors.transparent, width: 2),
+      child: Transform.translate(
+        offset: const Offset(-2, 0),
+        child: Container(
+          padding: EdgeInsets.fromLTRB(
+            t.lvl == 1 ? 12.0 : (t.lvl == 2 ? 22.0 : 32.0),
+            5,
+            8,
+            5,
           ),
-        ),
-        margin: const EdgeInsets.only(left: -2),
-        child: Text(
-          t.txt,
-          style: TextStyle(
-            fontSize: t.lvl == 3 ? 12 : 12.5,
-            height: 1.35,
-            fontWeight: on ? FontWeight.w600 : FontWeight.w400,
-            color: on ? KbTokens.accent : AppColors.inkSoft,
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                color: on ? AppColors.accent : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          child: Text(
+            t.txt,
+            style: TextStyle(
+              fontSize: t.lvl == 3 ? 12 : 12.5,
+              height: 1.35,
+              fontWeight: on ? FontWeight.w600 : FontWeight.w400,
+              color: on ? KbTokens.accent : AppColors.inkSoft,
+            ),
           ),
         ),
       ),
@@ -409,23 +473,23 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
   }
 
   Widget _detail(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label,
-                style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft)),
-            Flexible(
-              child: Text(value,
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 12.5, fontWeight: FontWeight.w600)),
-            ),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft)),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 /// One "Linked issues" card: type glyph · id · state · title · assignee.
@@ -439,7 +503,9 @@ class _IssueCard extends StatelessWidget {
     final tm = typeMeta(issue.type);
     final sm = stateMeta(issue.state);
     final color = KbTokens.issueChipColor(tm.hue);
-    final assignee = issue.assigneeId == null ? null : repo.userById(issue.assigneeId!);
+    final assignee = issue.assigneeId == null
+        ? null
+        : repo.userById(issue.assigneeId!);
     return Material(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(KbTokens.radiusCard),
@@ -471,37 +537,46 @@ class _IssueCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(repo.issuePubId(issue),
-                            style: TextStyle(
-                                fontFamily: AppTheme.fontMono,
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.inkSoft)),
+                        Text(
+                          repo.issuePubId(issue),
+                          style: TextStyle(
+                            fontFamily: AppTheme.fontMono,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.inkSoft,
+                          ),
+                        ),
                         const SizedBox(width: 9),
                         Container(
                           width: 6,
                           height: 6,
                           decoration: BoxDecoration(
-                              color: KbTokens.stateDot(sm.hue),
-                              shape: BoxShape.circle),
+                            color: KbTokens.stateDot(sm.hue),
+                            shape: BoxShape.circle,
+                          ),
                         ),
                         const SizedBox(width: 4),
                         Flexible(
-                          child: Text(sm.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: KbTokens.stateInk(sm.hue))),
+                          child: Text(
+                            sm.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: KbTokens.stateInk(sm.hue),
+                            ),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 3),
-                    Text(issue.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13, height: 1.3)),
+                    Text(
+                      issue.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13, height: 1.3),
+                    ),
                   ],
                 ),
               ),

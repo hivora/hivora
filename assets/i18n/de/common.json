@@ -146,7 +146,8 @@
   },
   "update": {
     "title": "Update erforderlich",
-    "body": "Deine App-Version {{current}} ist älter als die vom Server geforderte Mindestversion {{required}}. Bitte aktualisiere die App, um fortzufahren."
+    "body": "Deine App-Version {{current}} ist älter als die vom Server geforderte Mindestversion {{required}}. Bitte aktualisiere die App, um fortzufahren.",
+    "openStore": "Jetzt aktualisieren"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -722,7 +723,10 @@
       "toastSessionsRevoked": "Sitzungen beendet",
       "toastDeleted": "Benutzer gelöscht",
       "toastProfileUpdated": "Profil aktualisiert"
-    }
+    },
+    "iosStoreUrl": "iOS App-Store-URL",
+    "androidStoreUrl": "Android Play-Store-URL",
+    "macosStoreUrl": "macOS App-Store-URL"
   },
   "sprint": {
     "tab": {

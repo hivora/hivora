@@ -146,7 +146,8 @@
   },
   "update": {
     "title": "Update required",
-    "body": "Your app version {{current}} is older than the minimum version {{required}} required by this server. Please update the app to continue."
+    "body": "Your app version {{current}} is older than the minimum version {{required}} required by this server. Please update the app to continue.",
+    "openStore": "Update now"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -722,7 +723,10 @@
       "toastSessionsRevoked": "Sessions revoked",
       "toastDeleted": "User(s) deleted",
       "toastProfileUpdated": "Profile updated"
-    }
+    },
+    "iosStoreUrl": "iOS App Store URL",
+    "androidStoreUrl": "Android Play Store URL",
+    "macosStoreUrl": "macOS App Store URL"
   },
   "sprint": {
     "tab": {
