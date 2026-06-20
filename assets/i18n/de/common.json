@@ -998,5 +998,210 @@
     "migrateTarget": "Aufgaben verschieben nach",
     "migrateManualHint": "Du kannst die Aufgaben auch manuell verschieben, bevor du den Status löschst.",
     "migrateConfirm": "Migrieren & entfernen"
+  },
+  "account": {
+    "title": "Mein Konto",
+    "retryError": "Dein Konto konnte nicht geladen werden.",
+    "profileUpdated": "Profil aktualisiert",
+    "editProfile": "Profil bearbeiten",
+    "signOut": "Abmelden",
+    "memberSince": "Mitglied seit {{date}}",
+    "roles": {
+      "admin": "Admin",
+      "member": "Mitglied",
+      "maintainer": "Maintainer",
+      "owner": "Eigentümer",
+      "lead": "Leitung",
+      "viewer": "Betrachter",
+      "contributor": "Mitwirkender"
+    },
+    "avatar": {
+      "title": "Profilbild",
+      "subtitle": "Lade ein neues Foto hoch oder entferne das aktuelle.",
+      "change": "Foto hochladen",
+      "remove": "Foto entfernen",
+      "updated": "Profilbild aktualisiert",
+      "removed": "Profilbild entfernt",
+      "failed": "Profilbild konnte nicht aktualisiert werden"
+    },
+    "security": {
+      "title": "E-Mail & Sicherheit",
+      "subtitle": "Anmeldeadresse, Passwort und Zwei-Faktor-Authentifizierung.",
+      "email": "E-Mail",
+      "verified": "Verifiziert",
+      "unverified": "Nicht verifiziert",
+      "change": "Ändern",
+      "pendingEmail": "Bestätigung ausstehend für {{email}}. Deine aktuelle E-Mail bleibt aktiv, bis du den Link bestätigst.",
+      "ssoManaged": "E-Mail und Passwort werden von deinem Identitätsanbieter verwaltet ({{provider}}).",
+      "password": "Passwort",
+      "passwordChanged": "Zuletzt geändert {{date}}",
+      "passwordResetHint": "Zurücksetzen per einmaligem E-Mail-Link",
+      "reset": "Zurücksetzen",
+      "twoFactor": "Zwei-Faktor-Authentifizierung",
+      "twoFactorOn_one": "Aktiv · {{count}} Wiederherstellungscode übrig",
+      "twoFactorOn_other": "Aktiv · {{count}} Wiederherstellungscodes übrig",
+      "twoFactorOff": "Füge eine Authenticator-App für einen zweiten Anmeldeschritt hinzu",
+      "codes": "Codes",
+      "disable": "Deaktivieren",
+      "enable": "Aktivieren"
+    },
+    "sessions": {
+      "title": "Aktive Sitzungen",
+      "devices_one": "{{count}} angemeldetes Gerät.",
+      "devices_other": "{{count}} angemeldete Geräte.",
+      "signOutOthers": "Andere abmelden",
+      "thisDevice": "Dieses Gerät",
+      "signOut": "Abmelden",
+      "revokeTitle": "Gerät abmelden",
+      "revokeMessage": "{{device}} abmelden? Es muss sich erneut anmelden.",
+      "revokedToast": "Gerät abgemeldet",
+      "revokeOthersTitle": "Alle anderen Geräte abmelden",
+      "revokeOthersMessage": "Alle Geräte außer diesem werden sofort abgemeldet.",
+      "revokeOthersConfirm": "Alle anderen abmelden",
+      "revokeOthersToast": "Von allen anderen Geräten abgemeldet"
+    },
+    "time": {
+      "now": "gerade eben",
+      "minutesAgo": "vor {{count}} Min.",
+      "hoursAgo": "vor {{count}} Std.",
+      "daysAgo": "vor {{count}} T.",
+      "weeksAgo": "vor {{count}} Wo."
+    },
+    "notifications": {
+      "title": "Benachrichtigungen",
+      "subtitle": "Wähle, was dich erreicht – und über welchen Kanal.",
+      "emailChannel": "E-Mail-Benachrichtigungen",
+      "pushChannel": "Push-Benachrichtigungen",
+      "channelOn": "Aktiv für alle aktivierten Ereignisse",
+      "channelOff": "Stummgeschaltet – nichts wird zugestellt",
+      "colEmail": "E-Mail",
+      "colPush": "Push",
+      "alwaysOn": "Immer aktiv",
+      "saveFailed": "Benachrichtigungseinstellungen konnten nicht gespeichert werden",
+      "event": {
+        "mentions": {
+          "label": "Erwähnungen & Antworten",
+          "desc": "Jemand erwähnt dich mit @ oder antwortet auf deinen Kommentar"
+        },
+        "assigned": {
+          "label": "Vorgang dir zugewiesen",
+          "desc": "Du wirst als Bearbeiter eines Vorgangs hinzugefügt"
+        },
+        "comments": {
+          "label": "Kommentare zu meinen Vorgängen",
+          "desc": "Neue Kommentare zu Vorgängen, die du erstellt hast oder beobachtest"
+        },
+        "status": {
+          "label": "Statusänderungen",
+          "desc": "Beobachtete Vorgänge wandern über das Board"
+        },
+        "sprint": {
+          "label": "Sprints & Fristen",
+          "desc": "Sprint-Start/-Ende und nahende Fälligkeiten"
+        },
+        "invites": {
+          "label": "Team- & Projekteinladungen",
+          "desc": "Du wirst zu einem Team oder Projekt eingeladen"
+        },
+        "digest": {
+          "label": "Wöchentliche Zusammenfassung",
+          "desc": "Eine montägliche Übersicht deiner Workspace-Aktivität"
+        },
+        "security": {
+          "label": "Sicherheitshinweise",
+          "desc": "Neue Anmeldungen, Passwort- & E-Mail-Änderungen"
+        }
+      }
+    },
+    "access": {
+      "title": "Zugriff",
+      "subtitle": "Teams und Projekte, zu denen du gehörst – mit deiner jeweiligen Rolle.",
+      "teams": "Teams",
+      "projects": "Projekte",
+      "noTeams": "Du bist noch in keinem Team",
+      "noProjects": "Noch keine Projekte, auf die du zugreifen kannst",
+      "members_one": "{{count}} Mitglied",
+      "members_other": "{{count}} Mitglieder"
+    },
+    "appearance": {
+      "title": "Darstellung & App",
+      "subtitle": "Sprache, Design und Workspace-Infos."
+    },
+    "data": {
+      "title": "Daten & Datenschutz",
+      "subtitle": "Exportiere eine Kopie deiner Daten (DSGVO Art. 15).",
+      "request": "Meine Daten anfordern",
+      "requestDesc": "Ein maschinenlesbarer Export, innerhalb von 24 Stunden per E-Mail.",
+      "requestButton": "Anfordern",
+      "requestModalMessage": "Wir stellen einen Export deiner Daten zusammen und senden dir innerhalb von 24 Stunden einen sicheren Download-Link per E-Mail (DSGVO Art. 15).",
+      "requestModalConfirm": "Bericht anfordern",
+      "requestedToast": "Datenbericht angefordert – prüfe deine E-Mails"
+    },
+    "danger": {
+      "title": "Gefahrenzone",
+      "subtitle": "Unwiderrufliche Kontoaktionen.",
+      "delete": "Mein Konto löschen",
+      "deleteDesc": "Lösche dein Konto dauerhaft und anonymisiere deine erstellten Inhalte (DSGVO Art. 17).",
+      "deleteButton": "Konto löschen"
+    },
+    "editModal": {
+      "title": "Profil bearbeiten",
+      "subtitle": "Dein Benutzername ist dein dauerhafter Name und kann nicht geändert werden.",
+      "displayName": "Anzeigename",
+      "nameHint": "Dein Name",
+      "username": "Benutzername",
+      "jobTitle": "Position",
+      "jobTitleHint": "z. B. Maintainer",
+      "language": "Sprache",
+      "save": "Änderungen speichern"
+    },
+    "emailModal": {
+      "title": "E-Mail ändern",
+      "subtitle": "Wir senden einen Bestätigungslink an die neue Adresse. Deine Anmelde-E-Mail ändert sich erst nach der Bestätigung.",
+      "current": "Aktuelle E-Mail",
+      "new": "Neue E-Mail",
+      "invalid": "Gib eine gültige E-Mail-Adresse ein",
+      "send": "Bestätigung senden",
+      "sentToast": "Bestätigungslink an deine neue Adresse gesendet"
+    },
+    "passwordModal": {
+      "title": "Passwort zurücksetzen",
+      "message": "Wir senden dir einen einmaligen Link per E-Mail, um ein neues Passwort zu vergeben. Er läuft in 30 Minuten ab.",
+      "confirm": "Link per E-Mail senden",
+      "sentToast": "Link zum Zurücksetzen gesendet"
+    },
+    "deleteModal": {
+      "title": "Mein Konto löschen",
+      "subtitle": "Dies löscht dauerhaft dein Profil, deine Zugangsdaten und Sitzungen. Deine erstellten Vorgänge & Kommentare werden anonymisiert. Dies kann nicht rückgängig gemacht werden.",
+      "confirmLabel": "Gib DELETE ein, um zu bestätigen",
+      "button": "Konto löschen"
+    }
+  },
+  "twofa": {
+    "title": "Zwei-Faktor-Authentifizierung",
+    "step1": "Schritt 1 von 3 · QR-Code scannen",
+    "step2": "Schritt 2 von 3 · 6-stelligen Code eingeben",
+    "step3": "Schritt 3 von 3 · Wiederherstellungscodes speichern",
+    "scanHint": "Scanne dies mit einer Authenticator-App (Google Authenticator, 1Password, Authy …). Kannst du nicht scannen? Gib den Schlüssel manuell ein.",
+    "manualKey": "Schlüssel zur manuellen Eingabe",
+    "verifyHint": "Gib den 6-stelligen Code ein, den deine Authenticator-App für hinata anzeigt.",
+    "recoveryHint": "Bewahre diese Wiederherstellungscodes sicher auf. Jeder ist einmal verwendbar, falls du den Zugriff auf deine Authenticator-App verlierst. Sie werden nicht erneut angezeigt.",
+    "newCodesHint": "Deine neuen Wiederherstellungscodes – speichere sie jetzt, sie werden nicht erneut angezeigt.",
+    "copyAll": "Alle kopieren",
+    "saved": "Ich habe sie gespeichert",
+    "continueStep": "Weiter",
+    "verifyEnable": "Bestätigen & aktivieren",
+    "finish": "Fertig",
+    "close": "Schließen",
+    "codesCopied": "Wiederherstellungscodes kopiert",
+    "keyCopied": "Schlüssel kopiert",
+    "enabledToast": "Zwei-Faktor-Authentifizierung aktiviert",
+    "disabledToast": "Zwei-Faktor-Authentifizierung deaktiviert",
+    "manageTitle": "Wiederherstellungscodes",
+    "manageSubtitle": "Erzeuge einen neuen Satz von 10 Codes. Deine aktuellen Codes werden ungültig.",
+    "regenerate": "Neu generieren",
+    "disableTitle": "Zwei-Faktor deaktivieren",
+    "disableSubtitle": "Gib einen aktuellen 6-stelligen oder einen Wiederherstellungscode ein, um 2FA zu deaktivieren.",
+    "disableButton": "2FA deaktivieren"
   }
 }

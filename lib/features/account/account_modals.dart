@@ -68,10 +68,10 @@ class _EditProfileModalState extends State<_EditProfileModal> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const GlassModalHeader(
+        GlassModalHeader(
           icon: LucideIcons.userPen,
-          title: 'Edit profile',
-          subtitle: 'Your username is your permanent handle and can’t be changed.',
+          title: context.t('account.editModal.title'),
+          subtitle: context.t('account.editModal.subtitle'),
         ),
         Flexible(
           child: SingleChildScrollView(
@@ -80,15 +80,16 @@ class _EditProfileModalState extends State<_EditProfileModal> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 GlassField(
-                  label: 'Display name',
+                  label: context.t('account.editModal.displayName'),
                   child: TextField(
                     controller: _name,
-                    decoration: glassInputDecoration(hint: 'Your name'),
+                    decoration: glassInputDecoration(
+                        hint: context.t('account.editModal.nameHint')),
                   ),
                 ),
                 const SizedBox(height: 14),
                 GlassField(
-                  label: 'Username',
+                  label: context.t('account.editModal.username'),
                   child: TextField(
                     enabled: false,
                     controller: TextEditingController(text: widget.me.username),
@@ -100,15 +101,16 @@ class _EditProfileModalState extends State<_EditProfileModal> {
                 ),
                 const SizedBox(height: 14),
                 GlassField(
-                  label: 'Job title',
+                  label: context.t('account.editModal.jobTitle'),
                   child: TextField(
                     controller: _title,
-                    decoration: glassInputDecoration(hint: 'e.g. Maintainer'),
+                    decoration: glassInputDecoration(
+                        hint: context.t('account.editModal.jobTitleHint')),
                   ),
                 ),
                 const SizedBox(height: 14),
                 GlassField(
-                  label: 'Language',
+                  label: context.t('account.editModal.language'),
                   child: _LocaleDropdown(
                     value: _locale,
                     onChanged: (v) => setState(() => _locale = v),
@@ -127,7 +129,7 @@ class _EditProfileModalState extends State<_EditProfileModal> {
           ),
         ),
         _Footer(
-          label: 'Save changes',
+          label: context.t('account.editModal.save'),
           icon: LucideIcons.check,
           busy: _busy,
           onConfirm: _save,
@@ -208,7 +210,7 @@ class _ChangeEmailModalState extends State<_ChangeEmailModal> {
   Future<void> _send() async {
     final value = _email.text.trim();
     if (!value.contains('@') || value.length < 5) {
-      setState(() => _error = 'Enter a valid email address');
+      setState(() => _error = context.t('account.emailModal.invalid'));
       return;
     }
     setState(() {
@@ -230,11 +232,10 @@ class _ChangeEmailModalState extends State<_ChangeEmailModal> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const GlassModalHeader(
+        GlassModalHeader(
           icon: LucideIcons.mail,
-          title: 'Change email',
-          subtitle: 'We’ll send a confirmation link to the new address. Your '
-              'sign-in email only changes once you confirm it.',
+          title: context.t('account.emailModal.title'),
+          subtitle: context.t('account.emailModal.subtitle'),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(22, 4, 22, 8),
@@ -242,7 +243,7 @@ class _ChangeEmailModalState extends State<_ChangeEmailModal> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               GlassField(
-                label: 'Current email',
+                label: context.t('account.emailModal.current'),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
                   decoration: BoxDecoration(
@@ -256,7 +257,7 @@ class _ChangeEmailModalState extends State<_ChangeEmailModal> {
               ),
               const SizedBox(height: 14),
               GlassField(
-                label: 'New email',
+                label: context.t('account.emailModal.new'),
                 child: TextField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
@@ -276,7 +277,7 @@ class _ChangeEmailModalState extends State<_ChangeEmailModal> {
           ),
         ),
         _Footer(
-          label: 'Send verification',
+          label: context.t('account.emailModal.send'),
           icon: LucideIcons.sendHorizontal,
           busy: _busy,
           onConfirm: _send,
@@ -381,6 +382,99 @@ class _ConfirmModalState extends State<_ConfirmModal> {
   }
 }
 
+/// Result of the avatar action chooser.
+enum AvatarAction { change, remove }
+
+/// A small glass chooser for the avatar: change or remove the current photo.
+Future<AvatarAction?> showAvatarActions(BuildContext context) {
+  return showGlassModal<AvatarAction>(
+    context,
+    width: 380,
+    builder: (_) => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GlassModalHeader(
+          icon: LucideIcons.image,
+          title: context.t('account.avatar.title'),
+          subtitle: context.t('account.avatar.subtitle'),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 4, 22, 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _AvatarActionTile(
+                icon: LucideIcons.upload,
+                label: context.t('account.avatar.change'),
+                onTap: () => Navigator.of(context).pop(AvatarAction.change),
+              ),
+              const SizedBox(height: 8),
+              _AvatarActionTile(
+                icon: LucideIcons.trash2,
+                label: context.t('account.avatar.remove'),
+                danger: true,
+                onTap: () => Navigator.of(context).pop(AvatarAction.remove),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _AvatarActionTile extends StatelessWidget {
+  const _AvatarActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.danger = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = danger ? AppColors.danger : AppColors.ink;
+    return Material(
+      color: AppColors.surface.withValues(alpha: 0.6),
+      borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+            border: Border.all(
+              color: danger
+                  ? AppColors.danger.withValues(alpha: 0.35)
+                  : AppColors.hairline,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: fg),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: fg,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Type-DELETE-to-confirm account erasure (Art. 17). Returns true on success.
 Future<bool?> showDeleteAccount(BuildContext context, HinataRepository repo) {
   return showGlassModal<bool>(
@@ -438,11 +532,10 @@ class _DeleteAccountModalState extends State<_DeleteAccountModal> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const GlassModalHeader(
+        GlassModalHeader(
           icon: LucideIcons.trash2,
-          title: 'Delete my account',
-          subtitle: 'This permanently erases your profile, credentials and sessions. '
-              'Your authored issues & comments are anonymised. This cannot be undone.',
+          title: context.t('account.deleteModal.title'),
+          subtitle: context.t('account.deleteModal.subtitle'),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(22, 4, 22, 8),
@@ -450,7 +543,7 @@ class _DeleteAccountModalState extends State<_DeleteAccountModal> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               GlassField(
-                label: 'Type DELETE to confirm',
+                label: context.t('account.deleteModal.confirmLabel'),
                 child: TextField(
                   controller: _confirm,
                   autofocus: true,
@@ -473,7 +566,7 @@ class _DeleteAccountModalState extends State<_DeleteAccountModal> {
           ),
         ),
         _Footer(
-          label: 'Delete account',
+          label: context.t('account.deleteModal.button'),
           icon: LucideIcons.trash2,
           danger: true,
           busy: _busy,

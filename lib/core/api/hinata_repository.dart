@@ -116,6 +116,23 @@ class HinataRepository {
         as Map<String, dynamic>,
   );
 
+  /// Uploads a new profile picture; the server compresses + stores it and
+  /// returns the (relative) avatar URL. [onProgress] reports 0–1 upload progress.
+  Future<String> uploadAvatar(
+    MultipartFile file, {
+    void Function(double pct)? onProgress,
+  }) async =>
+      ((await _api.upload(
+        '/api/v1/me/avatar',
+        file,
+        onSendProgress: onProgress == null
+            ? null
+            : (sent, total) => onProgress(total > 0 ? sent / total : 0),
+      )) as Map<String, dynamic>)['avatarUrl'] as String;
+
+  /// Removes the current profile picture.
+  Future<void> deleteAvatar() => _api.delete('/api/v1/me/avatar');
+
   /// Starts a double-opt-in change of the sign-in email (mails the new address).
   Future<void> requestEmailChange(String newEmail) =>
       _api.post('/api/v1/me/email-change', body: {'newEmail': newEmail});

@@ -5,6 +5,7 @@ import 'package:qr/qr.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/hinata_repository.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/models/account_models.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
@@ -235,11 +236,11 @@ class _TwoFactorWizardState extends State<_TwoFactorWizard> {
         children: [
           GlassModalHeader(
             icon: LucideIcons.shieldCheck,
-            title: 'Two-factor authentication',
+            title: context.t('twofa.title'),
             subtitle: switch (_step) {
-              _Step.scan => 'Step 1 of 3 · Scan the QR code',
-              _Step.verify => 'Step 2 of 3 · Enter the 6-digit code',
-              _Step.recovery => 'Step 3 of 3 · Save your recovery codes',
+              _Step.scan => context.t('twofa.step1'),
+              _Step.verify => context.t('twofa.step2'),
+              _Step.recovery => context.t('twofa.step3'),
             },
           ),
           Flexible(
@@ -285,8 +286,7 @@ class _TwoFactorWizardState extends State<_TwoFactorWizard> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Scan this with an authenticator app (Google Authenticator, 1Password, Authy…). '
-          'Can’t scan? Enter the key manually.',
+          context.t('twofa.scanHint'),
           style: TextStyle(fontSize: 12.5, height: 1.45, color: AppColors.inkSoft),
         ),
         const SizedBox(height: 16),
@@ -315,7 +315,7 @@ class _TwoFactorWizardState extends State<_TwoFactorWizard> {
         ),
         const SizedBox(height: 16),
         Text(
-          'Manual entry key',
+          context.t('twofa.manualKey'),
           style: TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
@@ -335,7 +335,7 @@ class _TwoFactorWizardState extends State<_TwoFactorWizard> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Enter the 6-digit code your authenticator app shows for hinata.',
+          context.t('twofa.verifyHint'),
           style: TextStyle(fontSize: 12.5, height: 1.45, color: AppColors.inkSoft),
         ),
         const SizedBox(height: 18),
@@ -358,8 +358,7 @@ class _TwoFactorWizardState extends State<_TwoFactorWizard> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AccountNote(
-          text: 'Save these recovery codes somewhere safe. Each can be used once if '
-              'you lose access to your authenticator. They won’t be shown again.',
+          text: context.t('twofa.recoveryHint'),
           icon: LucideIcons.info,
         ),
         const SizedBox(height: 14),
@@ -390,13 +389,13 @@ class _TwoFactorWizardState extends State<_TwoFactorWizard> {
         Row(
           children: [
             AccountActionButton(
-              label: 'Copy all',
+              label: context.t('twofa.copyAll'),
               icon: LucideIcons.copy,
               onPressed: () {
                 Clipboard.setData(
                     ClipboardData(text: _recoveryCodes.join('\n')));
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Recovery codes copied')),
+                  SnackBar(content: Text(context.t('twofa.codesCopied'))),
                 );
               },
             ),
@@ -410,7 +409,7 @@ class _TwoFactorWizardState extends State<_TwoFactorWizard> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'I’ve saved them',
+                        context.t('twofa.saved'),
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
@@ -441,7 +440,8 @@ class _TwoFactorWizardState extends State<_TwoFactorWizard> {
           const Spacer(),
           TextButton(
             onPressed: _busy ? null : () => Navigator.of(context).maybePop(_saved),
-            child: Text(_step == _Step.recovery ? 'Close' : 'Cancel'),
+            child: Text(context.t(
+                _step == _Step.recovery ? 'twofa.close' : 'common.cancel')),
           ),
           const SizedBox(width: 8),
           if (_step != _Step.recovery)
@@ -463,14 +463,15 @@ class _TwoFactorWizardState extends State<_TwoFactorWizard> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(LucideIcons.arrowRight, size: 15),
-              label: Text(_step == _Step.scan ? 'Continue' : 'Verify & enable'),
+              label: Text(context.t(
+                  _step == _Step.scan ? 'twofa.continueStep' : 'twofa.verifyEnable')),
             )
           else
             FilledButton.icon(
               onPressed: _saved ? () => Navigator.of(context).maybePop(true) : null,
               style: _primaryStyle(),
               icon: const Icon(LucideIcons.check, size: 15),
-              label: const Text('Finish'),
+              label: Text(context.t('twofa.finish')),
             ),
         ],
       ),
@@ -496,9 +497,9 @@ Future<void> show2faManage(BuildContext context, HinataRepository repo) {
     builder: (_) => _CodeGatedAction(
       repo: repo,
       icon: LucideIcons.keyRound,
-      title: 'Recovery codes',
-      subtitle: 'Generate a fresh set of 10 codes. Your current codes will stop working.',
-      confirmLabel: 'Regenerate',
+      title: context.t('twofa.manageTitle'),
+      subtitle: context.t('twofa.manageSubtitle'),
+      confirmLabel: context.t('twofa.regenerate'),
       onConfirm: (code) => repo.regenerateRecoveryCodes(code),
       showCodes: true,
     ),
@@ -513,9 +514,9 @@ Future<bool?> show2faDisable(BuildContext context, HinataRepository repo) {
     builder: (_) => _CodeGatedAction(
       repo: repo,
       icon: LucideIcons.shieldOff,
-      title: 'Disable two-factor',
-      subtitle: 'Enter a current 6-digit or recovery code to turn 2FA off.',
-      confirmLabel: 'Disable 2FA',
+      title: context.t('twofa.disableTitle'),
+      subtitle: context.t('twofa.disableSubtitle'),
+      confirmLabel: context.t('twofa.disableButton'),
       danger: true,
       onConfirm: (code) async {
         await repo.disableTotp(code);
@@ -619,7 +620,7 @@ class _CodeGatedActionState extends State<_CodeGatedAction> {
               const Spacer(),
               TextButton(
                 onPressed: _busy ? null : () => Navigator.of(context).maybePop(),
-                child: Text(_result != null ? 'Close' : 'Cancel'),
+                child: Text(context.t(_result != null ? 'twofa.close' : 'common.cancel')),
               ),
               const SizedBox(width: 8),
               if (_result == null)
@@ -654,7 +655,7 @@ class _CodeGatedActionState extends State<_CodeGatedAction> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AccountNote(
-          text: 'Your new recovery codes — save them now, they won’t be shown again.',
+          text: context.t('twofa.newCodesHint'),
           icon: LucideIcons.info,
         ),
         const SizedBox(height: 12),
@@ -683,12 +684,12 @@ class _CodeGatedActionState extends State<_CodeGatedAction> {
         ),
         const SizedBox(height: 12),
         AccountActionButton(
-          label: 'Copy all',
+          label: context.t('twofa.copyAll'),
           icon: LucideIcons.copy,
           onPressed: () {
             Clipboard.setData(ClipboardData(text: codes.join('\n')));
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Recovery codes copied')),
+              SnackBar(content: Text(context.t('twofa.codesCopied'))),
             );
           },
         ),
@@ -730,7 +731,7 @@ class _CopyField extends StatelessWidget {
             onPressed: () {
               Clipboard.setData(ClipboardData(text: copyValue));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Key copied')),
+                SnackBar(content: Text(context.t('twofa.keyCopied'))),
               );
             },
           ),

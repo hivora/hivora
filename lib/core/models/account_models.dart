@@ -41,6 +41,7 @@ class Me extends Equatable {
     this.pendingEmail,
     this.title,
     this.locale = 'en',
+    this.avatarUrl,
     this.createdAt,
     this.passwordChangedAt,
   });
@@ -53,6 +54,7 @@ class Me extends Equatable {
   final String? pendingEmail;
   final String? title;
   final String locale;
+  final String? avatarUrl;
   final AuthOrigin origin;
   final List<String> roles;
   final bool active;
@@ -60,6 +62,26 @@ class Me extends Equatable {
   final DateTime? passwordChangedAt;
   final TwoFactor twoFactor;
   final NotifPrefs notificationPreferences;
+
+  Me copyWith({String? displayName, String? title, String? avatarUrl, bool clearAvatar = false}) =>
+      Me(
+        id: id,
+        displayName: displayName ?? this.displayName,
+        username: username,
+        email: email,
+        emailVerified: emailVerified,
+        pendingEmail: pendingEmail,
+        title: title ?? this.title,
+        locale: locale,
+        avatarUrl: clearAvatar ? null : (avatarUrl ?? this.avatarUrl),
+        origin: origin,
+        roles: roles,
+        active: active,
+        createdAt: createdAt,
+        passwordChangedAt: passwordChangedAt,
+        twoFactor: twoFactor,
+        notificationPreferences: notificationPreferences,
+      );
 
   String get initials {
     final parts = displayName.trim().split(RegExp(r'\s+'));
@@ -80,6 +102,7 @@ class Me extends Equatable {
         pendingEmail: json['pendingEmail'] as String?,
         title: json['title'] as String?,
         locale: json['locale'] as String? ?? 'en',
+        avatarUrl: json['avatarUrl'] as String?,
         origin: AuthOrigin.fromWire(json['origin'] as String?),
         roles: ((json['roles'] as List<dynamic>?) ?? const []).cast<String>(),
         active: json['active'] as bool? ?? true,

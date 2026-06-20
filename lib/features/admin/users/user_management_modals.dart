@@ -218,7 +218,10 @@ Future<bool> _confirm(
   final result = await showGlassModal<bool>(
     context,
     width: 480,
-    builder: (_) => _scaffold(
+    // Use the dialog's own context to pop — the screen context lives under
+    // go_router's nested navigator, so popping with it would dismiss the page
+    // instead of this dialog (which is on the root navigator).
+    builder: (dialogContext) => _scaffold(
       header: _Header(
         icon: icon,
         title: title,
@@ -233,7 +236,7 @@ Future<bool> _confirm(
         confirmLabel: confirmLabel,
         confirmIcon: confirmIcon,
         danger: danger,
-        onConfirm: () => Navigator.of(context).pop(true),
+        onConfirm: () => Navigator.of(dialogContext).pop(true),
       ),
     ),
   );
@@ -480,10 +483,28 @@ class _InviteModalState extends State<_InviteModal> {
       _commit(value);
       _controller.clear();
     }
+    // Rebuild so the footer's enabled-state tracks what's typed live (even
+    // before the address is committed to a chip).
+    setState(() {});
+  }
+
+  /// The committed chips plus any still-typed address in the field, so a valid
+  /// email that the user simply hasn't separated yet still counts.
+  List<String> get _effectiveEmails {
+    final pending = _controller.text.trim().toLowerCase();
+    if (pending.isEmpty || _emails.contains(pending)) return _emails;
+    return [..._emails, pending];
   }
 
   bool get _valid =>
-      _emails.isNotEmpty && _emails.every((e) => _re.hasMatch(e));
+      _effectiveEmails.isNotEmpty && _effectiveEmails.every((e) => _re.hasMatch(e));
+
+  /// Commits whatever is still in the field, then returns the final list.
+  List<String> _finalize() {
+    _commit(_controller.text);
+    _controller.clear();
+    return List<String>.from(_emails);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -528,7 +549,13 @@ class _InviteModalState extends State<_InviteModal> {
                           },
                           decoration: InputDecoration(
                             isDense: true,
+                            errorBorder: InputBorder.none,
+                            focusedErrorBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            disabledBorder: InputBorder.none,
+                            enabledBorder: InputBorder.none,
                             border: InputBorder.none,
+                            filled: false,
                             hintText: context.t('admin.um.inviteEmailsHint'),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 4,
@@ -575,7 +602,7 @@ class _InviteModalState extends State<_InviteModal> {
         confirmIcon: LucideIcons.send,
         onConfirm: _valid
             ? () => Navigator.of(context).pop((
-                emails: List<String>.from(_emails),
+                emails: _finalize(),
                 role: _role,
                 message: _message.text.trim().isEmpty
                     ? null

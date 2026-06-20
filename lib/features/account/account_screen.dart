@@ -1,11 +1,15 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart' show MultipartFile;
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/api/api_client.dart';
 import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/app_config_bloc.dart';
 import '../../core/blocs/auth_bloc.dart';
@@ -35,15 +39,16 @@ class AccountScreen extends StatefulWidget {
 }
 
 /// The stable notification taxonomy — ids mirror the server's NOTIF_EVENTS.
-const _notifEvents = <({String id, IconData icon, String label, String desc, bool locked})>[
-  (id: 'mentions', icon: LucideIcons.atSign, label: 'Mentions & replies', desc: 'Someone @mentions you or replies to your comment', locked: false),
-  (id: 'assigned', icon: LucideIcons.userCheck, label: 'Issue assigned to you', desc: 'You are added as the assignee of an issue', locked: false),
-  (id: 'comments', icon: LucideIcons.messageSquare, label: 'Comments on my issues', desc: 'New comments on issues you created or watch', locked: false),
-  (id: 'status', icon: LucideIcons.refreshCw, label: 'Status changes', desc: 'Watched issues move across the board', locked: false),
-  (id: 'sprint', icon: LucideIcons.goal, label: 'Sprints & deadlines', desc: 'Sprint start / end and approaching due dates', locked: false),
-  (id: 'invites', icon: LucideIcons.usersRound, label: 'Team & project invites', desc: 'You are invited to a team or project', locked: false),
-  (id: 'digest', icon: LucideIcons.newspaper, label: 'Weekly digest', desc: 'A Monday summary of your workspace activity', locked: false),
-  (id: 'security', icon: LucideIcons.shieldCheck, label: 'Security alerts', desc: 'New sign-ins, password & email changes', locked: true),
+/// Labels/descriptions are looked up from i18n (`account.notifications.event.*`).
+const _notifEvents = <({String id, IconData icon, bool locked})>[
+  (id: 'mentions', icon: LucideIcons.atSign, locked: false),
+  (id: 'assigned', icon: LucideIcons.userCheck, locked: false),
+  (id: 'comments', icon: LucideIcons.messageSquare, locked: false),
+  (id: 'status', icon: LucideIcons.refreshCw, locked: false),
+  (id: 'sprint', icon: LucideIcons.goal, locked: false),
+  (id: 'invites', icon: LucideIcons.usersRound, locked: false),
+  (id: 'digest', icon: LucideIcons.newspaper, locked: false),
+  (id: 'security', icon: LucideIcons.shieldCheck, locked: true),
 ];
 
 class _AccountScreenState extends State<AccountScreen> {
@@ -58,6 +63,7 @@ class _AccountScreenState extends State<AccountScreen> {
 
   Timer? _prefsDebounce;
   bool _accessTeams = true;
+  bool _avatarBusy = false;
 
   @override
   void initState() {
@@ -104,96 +110,177 @@ class _AccountScreenState extends State<AccountScreen> {
   // --- mutations ------------------------------------------------------------
 
   Future<void> _editProfile() async {
+    final authBloc = context.read<AuthBloc>();
+    final toast = context.t('account.profileUpdated');
     final saved = await showEditProfile(context, _repo, _me!);
     if (saved != null && mounted) {
       setState(() => _me = saved);
       // Keep the app shell (avatar / name) in sync with the edited profile.
-      context.read<AuthBloc>().add(const AuthChecked());
-      _toast('Profile updated');
+      authBloc.add(const AuthChecked());
+      _toast(toast);
+    }
+  }
+
+  Future<void> _changeAvatar() async {
+    // Capture context-derived values up front so nothing reads `context` across
+    // the upload's async gap.
+    final authBloc = context.read<AuthBloc>();
+    final apiBase = context.read<ApiClient>().baseUrl;
+    final updated = context.t('account.avatar.updated');
+    final failed = context.t('account.avatar.failed');
+
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: kIsWeb,
+    );
+    if (picked == null || picked.files.isEmpty) return;
+    final file = picked.files.first;
+    final multipart = kIsWeb
+        ? (file.bytes == null
+            ? null
+            : MultipartFile.fromBytes(file.bytes!, filename: file.name))
+        : (file.path == null
+            ? null
+            : await MultipartFile.fromFile(file.path!, filename: file.name));
+    if (multipart == null) return;
+
+    setState(() => _avatarBusy = true);
+    try {
+      final url = await _repo.uploadAvatar(multipart);
+      if (!mounted) return;
+      setState(() => _me = _me!.copyWith(avatarUrl: url));
+      // The shell avatar reads AuthUser — refresh it too, and bust the image
+      // cache so the new picture shows immediately.
+      NetworkImage(url.startsWith('http') ? url : '$apiBase$url').evict();
+      authBloc.add(const AuthChecked());
+      _toast(updated);
+    } catch (_) {
+      if (mounted) _toast(failed);
+    } finally {
+      if (mounted) setState(() => _avatarBusy = false);
+    }
+  }
+
+  Future<void> _removeAvatar() async {
+    final authBloc = context.read<AuthBloc>();
+    final removed = context.t('account.avatar.removed');
+    final failed = context.t('account.avatar.failed');
+    setState(() => _avatarBusy = true);
+    try {
+      await _repo.deleteAvatar();
+      if (!mounted) return;
+      setState(() => _me = _me!.copyWith(clearAvatar: true));
+      authBloc.add(const AuthChecked());
+      _toast(removed);
+    } catch (_) {
+      if (mounted) _toast(failed);
+    } finally {
+      if (mounted) setState(() => _avatarBusy = false);
+    }
+  }
+
+  Future<void> _editAvatar() async {
+    if (_avatarBusy) return;
+    final hasAvatar = (_me!.avatarUrl ?? '').isNotEmpty;
+    if (!hasAvatar) {
+      _changeAvatar();
+      return;
+    }
+    final action = await showAvatarActions(context);
+    if (action == AvatarAction.change) {
+      _changeAvatar();
+    } else if (action == AvatarAction.remove) {
+      _removeAvatar();
     }
   }
 
   Future<void> _changeEmail() async {
+    final toast = context.t('account.emailModal.sentToast');
     final sent = await showChangeEmail(context, _repo, _me!);
     if (sent == true && mounted) {
-      _toast('Verification link sent to your new address');
+      _toast(toast);
       _load();
     }
   }
 
   Future<void> _resetPassword() async {
+    final toast = context.t('account.passwordModal.sentToast');
     final ok = await showConfirm(
       context,
       icon: LucideIcons.keyRound,
-      title: 'Reset password',
-      message: 'We’ll email a one-time link to set a new password. '
-          'It expires in 30 minutes.',
-      confirmLabel: 'Email reset link',
+      title: context.t('account.passwordModal.title'),
+      message: context.t('account.passwordModal.message'),
+      confirmLabel: context.t('account.passwordModal.confirm'),
       onConfirm: () => _repo.sendPasswordReset(),
     );
-    if (ok == true) _toast('Password reset link sent');
+    if (ok == true) _toast(toast);
   }
 
   Future<void> _enable2fa() async {
+    final toast = context.t('twofa.enabledToast');
     final enabled = await show2faWizard(context, _repo);
     if (enabled == true) {
-      _toast('Two-factor authentication enabled');
+      _toast(toast);
       _load();
     }
   }
 
   Future<void> _disable2fa() async {
+    final toast = context.t('twofa.disabledToast');
     final disabled = await show2faDisable(context, _repo);
     if (disabled == true) {
-      _toast('Two-factor authentication disabled');
+      _toast(toast);
       _load();
     }
   }
 
   Future<void> _revokeSession(DeviceSession s) async {
+    final toast = context.t('account.sessions.revokedToast');
     final ok = await showConfirm(
       context,
       icon: LucideIcons.logOut,
-      title: 'Sign out device',
-      message: 'Sign out ${s.client ?? s.os ?? 'this device'}? It will need to '
-          'sign in again.',
-      confirmLabel: 'Sign out',
+      title: context.t('account.sessions.revokeTitle'),
+      message: context.t('account.sessions.revokeMessage', variables: {
+        'device': s.client ?? s.os ?? context.t('account.sessions.thisDevice'),
+      }),
+      confirmLabel: context.t('account.sessions.signOut'),
       danger: true,
       onConfirm: () => _repo.revokeSession(s.id),
     );
     if (ok == true) {
-      _toast('Device signed out');
+      _toast(toast);
       _load();
     }
   }
 
   Future<void> _revokeOthers() async {
+    final toast = context.t('account.sessions.revokeOthersToast');
     final ok = await showConfirm(
       context,
       icon: LucideIcons.logOut,
-      title: 'Sign out all other devices',
-      message: 'Every device except this one will be signed out immediately.',
-      confirmLabel: 'Sign out all others',
+      title: context.t('account.sessions.revokeOthersTitle'),
+      message: context.t('account.sessions.revokeOthersMessage'),
+      confirmLabel: context.t('account.sessions.revokeOthersConfirm'),
       danger: true,
       onConfirm: () => _repo.revokeOtherSessions(),
     );
     if (ok == true) {
-      _toast('Signed out of all other devices');
+      _toast(toast);
       _load();
     }
   }
 
   Future<void> _dataReport() async {
+    final toast = context.t('account.data.requestedToast');
     final ok = await showConfirm(
       context,
       icon: LucideIcons.download,
-      title: 'Request my data',
-      message: 'We’ll compile an export of your data and email you a secure '
-          'download link, generated within 24 hours (GDPR Art. 15).',
-      confirmLabel: 'Request report',
+      title: context.t('account.data.request'),
+      message: context.t('account.data.requestModalMessage'),
+      confirmLabel: context.t('account.data.requestModalConfirm'),
       onConfirm: () => _repo.requestDataReport(),
     );
-    if (ok == true) _toast('Data report requested — check your email');
+    if (ok == true) _toast(toast);
   }
 
   Future<void> _deleteAccount() async {
@@ -204,6 +291,7 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   void _onTogglePrefs(NotifPrefs next) {
+    final failed = context.t('account.notifications.saveFailed');
     setState(() => _prefs = next);
     _prefsDebounce?.cancel();
     _prefsDebounce = Timer(const Duration(milliseconds: 450), () async {
@@ -211,7 +299,7 @@ class _AccountScreenState extends State<AccountScreen> {
         final saved = await _repo.saveNotificationPrefs(next);
         if (mounted) setState(() => _prefs = saved);
       } catch (_) {
-        if (mounted) _toast('Could not save notification preferences');
+        if (mounted) _toast(failed);
       }
     });
   }
@@ -230,7 +318,7 @@ class _AccountScreenState extends State<AccountScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(context.t('errors.unexpected'),
+              Text(context.t('account.retryError'),
                   style: TextStyle(color: AppColors.inkSoft)),
               const SizedBox(height: 12),
               FilledButton(onPressed: _load, child: Text(context.t('common.retry'))),
@@ -263,7 +351,7 @@ class _AccountScreenState extends State<AccountScreen> {
       child: ListView(
         padding: context.pagePadding,
         children: [
-          Text('My account',
+          Text(context.t('account.title'),
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontFamily: AppTheme.fontBrand,
                     fontWeight: FontWeight.w800,
@@ -348,13 +436,11 @@ class _AccountScreenState extends State<AccountScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2),
-          ),
-          child: AppAvatar(name: me.displayName, radius: 28),
+        _EditableAvatar(
+          name: me.displayName,
+          imageUrl: me.avatarUrl,
+          busy: _avatarBusy,
+          onTap: _editAvatar,
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -390,13 +476,14 @@ class _AccountScreenState extends State<AccountScreen> {
                 children: [
                   for (final role in me.roles)
                     AccountPill(
-                      label: role[0] + role.substring(1).toLowerCase(),
+                      label: _roleLabel(role),
                       color: Colors.white,
                       background: Colors.white.withValues(alpha: 0.18),
                     ),
                   if (me.createdAt != null)
                     AccountPill(
-                      label: 'Member since ${_monthYear(me.createdAt!)}',
+                      label: context.t('account.memberSince',
+                          variables: {'date': _monthYear(me.createdAt!)}),
                       icon: LucideIcons.calendar,
                       color: Colors.white,
                       background: Colors.white.withValues(alpha: 0.12),
@@ -426,7 +513,7 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
           ),
           icon: const Icon(LucideIcons.pencil, size: 15),
-          label: const Text('Edit profile'),
+          label: Text(context.t('account.editProfile')),
         ),
         const SizedBox(height: 8),
         TextButton.icon(
@@ -436,7 +523,7 @@ class _AccountScreenState extends State<AccountScreen> {
             foregroundColor: Colors.white.withValues(alpha: 0.85),
           ),
           icon: const Icon(LucideIcons.logOut, size: 15),
-          label: const Text('Sign out'),
+          label: Text(context.t('account.signOut')),
         ),
       ],
     );
@@ -449,25 +536,27 @@ class _AccountScreenState extends State<AccountScreen> {
     final sso = me.origin.isSso;
     return AccountSection(
       icon: LucideIcons.shieldCheck,
-      title: 'Email & security',
-      subtitle: 'Sign-in address, password and two-factor authentication.',
+      title: context.t('account.security.title'),
+      subtitle: context.t('account.security.subtitle'),
       children: [
         SettingRow(
-          label: 'Email',
+          label: context.t('account.security.email'),
           description: me.email,
           stack: context.isCompact,
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               AccountPill(
-                label: me.emailVerified ? 'Verified' : 'Unverified',
+                label: me.emailVerified
+                    ? context.t('account.security.verified')
+                    : context.t('account.security.unverified'),
                 icon: me.emailVerified ? LucideIcons.circleCheck : LucideIcons.info,
                 color: me.emailVerified ? AppColors.success : AppColors.warning,
               ),
               if (!sso) ...[
                 const SizedBox(width: 8),
                 AccountActionButton(
-                  label: 'Change',
+                  label: context.t('account.security.change'),
                   icon: LucideIcons.pencil,
                   onPressed: _changeEmail,
                 ),
@@ -478,28 +567,29 @@ class _AccountScreenState extends State<AccountScreen> {
         if (me.pendingEmail != null) ...[
           const SizedBox(height: 4),
           AccountNote(
-            text: 'Pending confirmation for ${me.pendingEmail}. '
-                'Your current email stays active until you confirm the link.',
+            text: context.t('account.security.pendingEmail',
+                variables: {'email': me.pendingEmail!}),
           ),
           const SizedBox(height: 4),
         ],
         if (sso)
           AccountNote(
-            text: 'Email and password are managed by your identity provider '
-                '(${me.origin.label}).',
+            text: context.t('account.security.ssoManaged',
+                variables: {'provider': me.origin.label}),
             icon: LucideIcons.lock,
             tone: AccountNoteTone.info,
           ),
         if (!sso) ...[
           Divider(height: 1, color: AppColors.hairline2),
           SettingRow(
-            label: 'Password',
+            label: context.t('account.security.password'),
             description: me.passwordChangedAt != null
-                ? 'Last changed ${_monthYear(me.passwordChangedAt!)}'
-                : 'Reset via a one-time email link',
+                ? context.t('account.security.passwordChanged',
+                    variables: {'date': _monthYear(me.passwordChangedAt!)})
+                : context.t('account.security.passwordResetHint'),
             stack: context.isCompact,
             trailing: AccountActionButton(
-              label: 'Reset',
+              label: context.t('account.security.reset'),
               icon: LucideIcons.keyRound,
               onPressed: _resetPassword,
             ),
@@ -507,23 +597,24 @@ class _AccountScreenState extends State<AccountScreen> {
         ],
         Divider(height: 1, color: AppColors.hairline2),
         SettingRow(
-          label: 'Two-factor authentication',
+          label: context.t('account.security.twoFactor'),
           description: me.twoFactor.enabled
-              ? 'On · ${me.twoFactor.recoveryRemaining} recovery codes left'
-              : 'Add an authenticator app for a second sign-in step',
+              ? context.t('account.security.twoFactorOn',
+                  count: me.twoFactor.recoveryRemaining)
+              : context.t('account.security.twoFactorOff'),
           stack: context.isCompact,
           trailing: me.twoFactor.enabled
               ? Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     AccountActionButton(
-                      label: 'Codes',
+                      label: context.t('account.security.codes'),
                       icon: LucideIcons.keyRound,
                       onPressed: () => show2faManage(context, _repo).then((_) => _load()),
                     ),
                     const SizedBox(width: 8),
                     AccountActionButton(
-                      label: 'Disable',
+                      label: context.t('account.security.disable'),
                       danger: true,
                       onPressed: _disable2fa,
                     ),
@@ -540,7 +631,7 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                   ),
                   icon: const Icon(LucideIcons.shieldCheck, size: 15),
-                  label: const Text('Enable'),
+                  label: Text(context.t('account.security.enable')),
                 ),
         ),
       ],
@@ -553,12 +644,12 @@ class _AccountScreenState extends State<AccountScreen> {
     final others = _sessions.where((s) => !s.current).toList();
     return AccountSection(
       icon: LucideIcons.monitorSmartphone,
-      title: 'Active sessions',
-      subtitle: '${_sessions.length} signed-in ${_sessions.length == 1 ? 'device' : 'devices'}.',
+      title: context.t('account.sessions.title'),
+      subtitle: context.t('account.sessions.devices', count: _sessions.length),
       trailing: others.isEmpty
           ? null
           : AccountActionButton(
-              label: 'Sign out others',
+              label: context.t('account.sessions.signOutOthers'),
               icon: LucideIcons.logOut,
               danger: true,
               onPressed: _revokeOthers,
@@ -608,7 +699,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   children: [
                     Flexible(
                       child: Text(
-                        '${s.os ?? 'Unknown'} · ${s.client ?? s.app ?? ''}',
+                        '${s.os ?? '—'} · ${s.client ?? s.app ?? ''}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -620,7 +711,7 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                     if (s.current) ...[
                       const SizedBox(width: 8),
-                      const AccountPill(label: 'This device'),
+                      AccountPill(label: context.t('account.sessions.thisDevice')),
                     ],
                   ],
                 ),
@@ -638,7 +729,7 @@ class _AccountScreenState extends State<AccountScreen> {
           if (!s.current) ...[
             const SizedBox(width: 8),
             IconButton(
-              tooltip: 'Sign out',
+              tooltip: context.t('account.sessions.signOut'),
               visualDensity: VisualDensity.compact,
               icon: Icon(LucideIcons.logOut, size: 17, color: AppColors.danger),
               onPressed: () => _revokeSession(s),
@@ -655,14 +746,22 @@ class _AccountScreenState extends State<AccountScreen> {
     final prefs = _prefs!;
     return AccountSection(
       icon: LucideIcons.bell,
-      title: 'Notifications',
-      subtitle: 'Choose what reaches you, and on which channel.',
+      title: context.t('account.notifications.title'),
+      subtitle: context.t('account.notifications.subtitle'),
       children: [
-        _channelMaster('Email', prefs.emailEnabled,
-            (v) => _onTogglePrefs(prefs.copyWith(emailEnabled: v))),
+        _channelMaster(
+          context.t('account.notifications.emailChannel'),
+          LucideIcons.mail,
+          prefs.emailEnabled,
+          (v) => _onTogglePrefs(prefs.copyWith(emailEnabled: v)),
+        ),
         Divider(height: 1, color: AppColors.hairline2),
-        _channelMaster('Push', prefs.pushEnabled,
-            (v) => _onTogglePrefs(prefs.copyWith(pushEnabled: v))),
+        _channelMaster(
+          context.t('account.notifications.pushChannel'),
+          LucideIcons.smartphone,
+          prefs.pushEnabled,
+          (v) => _onTogglePrefs(prefs.copyWith(pushEnabled: v)),
+        ),
         const SizedBox(height: 8),
         if (context.isCompact)
           ..._notifEvents.map(_notifCard)
@@ -674,11 +773,14 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
-  Widget _channelMaster(String label, bool value, ValueChanged<bool> onChanged) {
+  Widget _channelMaster(
+      String label, IconData icon, bool value, ValueChanged<bool> onChanged) {
     return SettingRow(
-      label: '$label notifications',
-      description: value ? 'On for all enabled events' : 'Silenced — nothing is delivered',
-      icon: label == 'Email' ? LucideIcons.mail : LucideIcons.smartphone,
+      label: label,
+      description: value
+          ? context.t('account.notifications.channelOn')
+          : context.t('account.notifications.channelOff'),
+      icon: icon,
       trailing: HiveSwitch(value: value, onChanged: onChanged),
     );
   }
@@ -689,13 +791,18 @@ class _AccountScreenState extends State<AccountScreen> {
       child: Row(
         children: [
           const Spacer(),
-          _colLabel('Email'),
+          _colLabel(context.t('account.notifications.colEmail')),
           const SizedBox(width: 16),
-          _colLabel('Push'),
+          _colLabel(context.t('account.notifications.colPush')),
         ],
       ),
     );
   }
+
+  String _eventLabel(String id) =>
+      context.t('account.notifications.event.$id.label');
+  String _eventDesc(String id) =>
+      context.t('account.notifications.event.$id.desc');
 
   Widget _colLabel(String label) => SizedBox(
         width: 40,
@@ -720,7 +827,7 @@ class _AccountScreenState extends State<AccountScreen> {
     _onTogglePrefs(_prefs!.copyWith(events: events));
   }
 
-  Widget _matrixRow(({String id, IconData icon, String label, String desc, bool locked}) e) {
+  Widget _matrixRow(({String id, IconData icon, bool locked}) e) {
     final pair = _channelOf(e.id);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
@@ -732,10 +839,10 @@ class _AccountScreenState extends State<AccountScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(e.label,
+                Text(_eventLabel(e.id),
                     style: TextStyle(
                         fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink)),
-                Text(e.desc,
+                Text(_eventDesc(e.id),
                     style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
                     softWrap: true),
               ],
@@ -771,7 +878,7 @@ class _AccountScreenState extends State<AccountScreen> {
       child: Center(
         child: locked
             ? Tooltip(
-                message: 'Always on',
+                message: context.t('account.notifications.alwaysOn'),
                 child: Icon(LucideIcons.lock, size: 15, color: AppColors.inkFaint),
               )
             : HiveSwitch(
@@ -784,7 +891,7 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   /// Phone layout: one card per event with stacked Email / Push rows.
-  Widget _notifCard(({String id, IconData icon, String label, String desc, bool locked}) e) {
+  Widget _notifCard(({String id, IconData icon, bool locked}) e) {
     final pair = _channelOf(e.id);
     Widget channel(String label, bool value, bool enabled, ValueChanged<bool>? onChanged) {
       return Padding(
@@ -796,7 +903,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft)),
             ),
             if (e.locked)
-              const AccountPill(label: 'Always on')
+              AccountPill(label: context.t('account.notifications.alwaysOn'))
             else
               HiveSwitch(
                 value: enabled && value,
@@ -824,19 +931,19 @@ class _AccountScreenState extends State<AccountScreen> {
               Icon(e.icon, size: 16, color: AppColors.inkSoft),
               const SizedBox(width: 9),
               Expanded(
-                child: Text(e.label,
+                child: Text(_eventLabel(e.id),
                     style: TextStyle(
                         fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink)),
               ),
             ],
           ),
           const SizedBox(height: 2),
-          Text(e.desc,
+          Text(_eventDesc(e.id),
               style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft), softWrap: true),
-          channel('Email', pair.email, _prefs!.emailEnabled,
-              (v) => _setChannel(e.id, email: v)),
-          channel('Push', pair.push, _prefs!.pushEnabled,
-              (v) => _setChannel(e.id, push: v)),
+          channel(context.t('account.notifications.colEmail'), pair.email,
+              _prefs!.emailEnabled, (v) => _setChannel(e.id, email: v)),
+          channel(context.t('account.notifications.colPush'), pair.push,
+              _prefs!.pushEnabled, (v) => _setChannel(e.id, push: v)),
         ],
       ),
     );
@@ -847,16 +954,18 @@ class _AccountScreenState extends State<AccountScreen> {
   Widget _accessSection() {
     return AccountSection(
       icon: LucideIcons.layers,
-      title: 'Access',
-      subtitle: 'Teams and projects you belong to, with your role in each.',
+      title: context.t('account.access.title'),
+      subtitle: context.t('account.access.subtitle'),
       trailing: _AccessToggle(
         teams: _accessTeams,
+        teamsLabel: context.t('account.access.teams'),
+        projectsLabel: context.t('account.access.projects'),
         onChanged: (v) => setState(() => _accessTeams = v),
       ),
       children: [
         if (_accessTeams)
           if (_teams.isEmpty)
-            _emptyRow('You’re not in any teams yet')
+            _emptyRow(context.t('account.access.noTeams'))
           else
             for (var i = 0; i < _teams.length; i++) ...[
               if (i > 0) Divider(height: 1, color: AppColors.hairline2),
@@ -864,13 +973,13 @@ class _AccountScreenState extends State<AccountScreen> {
                 glyph: _teams[i].key,
                 color: HSLColor.fromAHSL(1, _teams[i].hue.toDouble(), 0.5, 0.55).toColor(),
                 name: _teams[i].name,
-                meta: '${_teams[i].members} members',
-                role: _teams[i].role,
+                meta: context.t('account.access.members', count: _teams[i].members),
+                role: _roleLabel(_teams[i].role),
                 onTap: () => context.go('/teams/${_teams[i].id}'),
               ),
             ]
         else if (_projects.isEmpty)
-          _emptyRow('No projects you can access yet')
+          _emptyRow(context.t('account.access.noProjects'))
         else
           for (var i = 0; i < _projects.length; i++) ...[
             if (i > 0) Divider(height: 1, color: AppColors.hairline2),
@@ -879,12 +988,20 @@ class _AccountScreenState extends State<AccountScreen> {
               color: _parseHex(_projects[i].color),
               name: _projects[i].name,
               meta: _projects[i].key,
-              role: _projects[i].role,
+              role: _roleLabel(_projects[i].role),
               onTap: () => context.go('/issues?projectId=${_projects[i].id}'),
             ),
           ],
       ],
     );
+  }
+
+  /// Localizes a server role label (e.g. "Member" → "Mitglied"); unknown roles
+  /// pass through unchanged.
+  String _roleLabel(String role) {
+    final key = 'account.roles.${role.toLowerCase()}';
+    final translated = context.t(key);
+    return translated == key ? role : translated;
   }
 
   Widget _accessRow({
@@ -954,8 +1071,8 @@ class _AccountScreenState extends State<AccountScreen> {
     final isAdmin = context.read<AuthBloc>().state.user?.isAdmin ?? false;
     return AccountSection(
       icon: LucideIcons.sunMoon,
-      title: 'Appearance & app',
-      subtitle: 'Interface language, theme and workspace info.',
+      title: context.t('account.appearance.title'),
+      subtitle: context.t('account.appearance.subtitle'),
       children: [
         SettingRow(
           label: context.t('settings.language'),
@@ -1037,15 +1154,15 @@ class _AccountScreenState extends State<AccountScreen> {
   Widget _dataSection() {
     return AccountSection(
       icon: LucideIcons.fileText,
-      title: 'Data & privacy',
-      subtitle: 'Export a copy of your data (GDPR Art. 15).',
+      title: context.t('account.data.title'),
+      subtitle: context.t('account.data.subtitle'),
       children: [
         SettingRow(
-          label: 'Request my data',
-          description: 'A machine-readable export emailed to you, within 24 hours.',
+          label: context.t('account.data.request'),
+          description: context.t('account.data.requestDesc'),
           stack: context.isCompact,
           trailing: AccountActionButton(
-            label: 'Request',
+            label: context.t('account.data.requestButton'),
             icon: LucideIcons.download,
             onPressed: _dataReport,
           ),
@@ -1059,17 +1176,16 @@ class _AccountScreenState extends State<AccountScreen> {
   Widget _dangerSection() {
     return AccountSection(
       icon: LucideIcons.triangleAlert,
-      title: 'Danger zone',
-      subtitle: 'Irreversible account actions.',
+      title: context.t('account.danger.title'),
+      subtitle: context.t('account.danger.subtitle'),
       danger: true,
       children: [
         SettingRow(
-          label: 'Delete my account',
-          description: 'Permanently erase your account and anonymise your '
-              'authored work (GDPR Art. 17).',
+          label: context.t('account.danger.delete'),
+          description: context.t('account.danger.deleteDesc'),
           stack: context.isCompact,
           trailing: AccountActionButton(
-            label: 'Delete account',
+            label: context.t('account.danger.deleteButton'),
             icon: LucideIcons.trash2,
             danger: true,
             onPressed: _deleteAccount,
@@ -1087,20 +1203,23 @@ class _AccountScreenState extends State<AccountScreen> {
 
   // --- helpers --------------------------------------------------------------
 
-  static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-
-  String _monthYear(DateTime d) => '${_months[d.month - 1]} ${d.year}';
+  /// Locale-aware "Month Year" via the active Material localizations.
+  String _monthYear(DateTime d) =>
+      MaterialLocalizations.of(context).formatMonthYear(d);
 
   String _relative(DateTime d) {
     final diff = DateTime.now().difference(d);
-    if (diff.inMinutes < 2) return 'now';
-    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-    if (diff.inDays < 1) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${(diff.inDays / 7).floor()}w ago';
+    if (diff.inMinutes < 2) return context.t('account.time.now');
+    if (diff.inHours < 1) {
+      return context.t('account.time.minutesAgo', count: diff.inMinutes);
+    }
+    if (diff.inDays < 1) {
+      return context.t('account.time.hoursAgo', count: diff.inHours);
+    }
+    if (diff.inDays < 7) {
+      return context.t('account.time.daysAgo', count: diff.inDays);
+    }
+    return context.t('account.time.weeksAgo', count: (diff.inDays / 7).floor());
   }
 
   Color _parseHex(String hex) {
@@ -1110,9 +1229,89 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 }
 
+/// The hero avatar with a camera badge + busy overlay; tap to change/remove.
+class _EditableAvatar extends StatelessWidget {
+  const _EditableAvatar({
+    required this.name,
+    required this.imageUrl,
+    required this.busy,
+    required this.onTap,
+  });
+
+  final String name;
+  final String? imageUrl;
+  final bool busy;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: context.t('account.avatar.title'),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border:
+                    Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2),
+              ),
+              child: AppAvatar(name: name, imageUrl: imageUrl, radius: 28),
+            ),
+            if (busy)
+              Positioned.fill(
+                child: Container(
+                  margin: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.rail, width: 2),
+                ),
+                child: const Icon(LucideIcons.camera,
+                    size: 12, color: Color(0xFF2A2410)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _AccessToggle extends StatelessWidget {
-  const _AccessToggle({required this.teams, required this.onChanged});
+  const _AccessToggle({
+    required this.teams,
+    required this.teamsLabel,
+    required this.projectsLabel,
+    required this.onChanged,
+  });
   final bool teams;
+  final String teamsLabel;
+  final String projectsLabel;
   final ValueChanged<bool> onChanged;
 
   @override
@@ -1147,8 +1346,8 @@ class _AccessToggle extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          seg('Teams', teams, () => onChanged(true)),
-          seg('Projects', !teams, () => onChanged(false)),
+          seg(teamsLabel, teams, () => onChanged(true)),
+          seg(projectsLabel, !teams, () => onChanged(false)),
         ],
       ),
     );

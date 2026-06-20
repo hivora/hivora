@@ -998,5 +998,210 @@
     "migrateTarget": "Move issues to",
     "migrateManualHint": "You can also move the issues manually before deleting the status.",
     "migrateConfirm": "Migrate & remove"
+  },
+  "account": {
+    "title": "My account",
+    "retryError": "Couldn't load your account.",
+    "profileUpdated": "Profile updated",
+    "editProfile": "Edit profile",
+    "signOut": "Sign out",
+    "memberSince": "Member since {{date}}",
+    "roles": {
+      "admin": "Admin",
+      "member": "Member",
+      "maintainer": "Maintainer",
+      "owner": "Owner",
+      "lead": "Lead",
+      "viewer": "Viewer",
+      "contributor": "Contributor"
+    },
+    "avatar": {
+      "title": "Profile picture",
+      "subtitle": "Upload a new photo or remove the current one.",
+      "change": "Upload a photo",
+      "remove": "Remove photo",
+      "updated": "Profile picture updated",
+      "removed": "Profile picture removed",
+      "failed": "Couldn't update the profile picture"
+    },
+    "security": {
+      "title": "Email & security",
+      "subtitle": "Sign-in address, password and two-factor authentication.",
+      "email": "Email",
+      "verified": "Verified",
+      "unverified": "Unverified",
+      "change": "Change",
+      "pendingEmail": "Pending confirmation for {{email}}. Your current email stays active until you confirm the link.",
+      "ssoManaged": "Email and password are managed by your identity provider ({{provider}}).",
+      "password": "Password",
+      "passwordChanged": "Last changed {{date}}",
+      "passwordResetHint": "Reset via a one-time email link",
+      "reset": "Reset",
+      "twoFactor": "Two-factor authentication",
+      "twoFactorOn_one": "On · {{count}} recovery code left",
+      "twoFactorOn_other": "On · {{count}} recovery codes left",
+      "twoFactorOff": "Add an authenticator app for a second sign-in step",
+      "codes": "Codes",
+      "disable": "Disable",
+      "enable": "Enable"
+    },
+    "sessions": {
+      "title": "Active sessions",
+      "devices_one": "{{count}} signed-in device.",
+      "devices_other": "{{count}} signed-in devices.",
+      "signOutOthers": "Sign out others",
+      "thisDevice": "This device",
+      "signOut": "Sign out",
+      "revokeTitle": "Sign out device",
+      "revokeMessage": "Sign out {{device}}? It will need to sign in again.",
+      "revokedToast": "Device signed out",
+      "revokeOthersTitle": "Sign out all other devices",
+      "revokeOthersMessage": "Every device except this one will be signed out immediately.",
+      "revokeOthersConfirm": "Sign out all others",
+      "revokeOthersToast": "Signed out of all other devices"
+    },
+    "time": {
+      "now": "now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago",
+      "weeksAgo": "{{count}}w ago"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "subtitle": "Choose what reaches you, and on which channel.",
+      "emailChannel": "Email notifications",
+      "pushChannel": "Push notifications",
+      "channelOn": "On for all enabled events",
+      "channelOff": "Silenced — nothing is delivered",
+      "colEmail": "Email",
+      "colPush": "Push",
+      "alwaysOn": "Always on",
+      "saveFailed": "Couldn't save notification preferences",
+      "event": {
+        "mentions": {
+          "label": "Mentions & replies",
+          "desc": "Someone @mentions you or replies to your comment"
+        },
+        "assigned": {
+          "label": "Issue assigned to you",
+          "desc": "You are added as the assignee of an issue"
+        },
+        "comments": {
+          "label": "Comments on my issues",
+          "desc": "New comments on issues you created or watch"
+        },
+        "status": {
+          "label": "Status changes",
+          "desc": "Watched issues move across the board"
+        },
+        "sprint": {
+          "label": "Sprints & deadlines",
+          "desc": "Sprint start / end and approaching due dates"
+        },
+        "invites": {
+          "label": "Team & project invites",
+          "desc": "You are invited to a team or project"
+        },
+        "digest": {
+          "label": "Weekly digest",
+          "desc": "A Monday summary of your workspace activity"
+        },
+        "security": {
+          "label": "Security alerts",
+          "desc": "New sign-ins, password & email changes"
+        }
+      }
+    },
+    "access": {
+      "title": "Access",
+      "subtitle": "Teams and projects you belong to, with your role in each.",
+      "teams": "Teams",
+      "projects": "Projects",
+      "noTeams": "You're not in any teams yet",
+      "noProjects": "No projects you can access yet",
+      "members_one": "{{count}} member",
+      "members_other": "{{count}} members"
+    },
+    "appearance": {
+      "title": "Appearance & app",
+      "subtitle": "Interface language, theme and workspace info."
+    },
+    "data": {
+      "title": "Data & privacy",
+      "subtitle": "Export a copy of your data (GDPR Art. 15).",
+      "request": "Request my data",
+      "requestDesc": "A machine-readable export emailed to you, within 24 hours.",
+      "requestButton": "Request",
+      "requestModalMessage": "We'll compile an export of your data and email you a secure download link, generated within 24 hours (GDPR Art. 15).",
+      "requestModalConfirm": "Request report",
+      "requestedToast": "Data report requested — check your email"
+    },
+    "danger": {
+      "title": "Danger zone",
+      "subtitle": "Irreversible account actions.",
+      "delete": "Delete my account",
+      "deleteDesc": "Permanently erase your account and anonymise your authored work (GDPR Art. 17).",
+      "deleteButton": "Delete account"
+    },
+    "editModal": {
+      "title": "Edit profile",
+      "subtitle": "Your username is your permanent handle and can't be changed.",
+      "displayName": "Display name",
+      "nameHint": "Your name",
+      "username": "Username",
+      "jobTitle": "Job title",
+      "jobTitleHint": "e.g. Maintainer",
+      "language": "Language",
+      "save": "Save changes"
+    },
+    "emailModal": {
+      "title": "Change email",
+      "subtitle": "We'll send a confirmation link to the new address. Your sign-in email only changes once you confirm it.",
+      "current": "Current email",
+      "new": "New email",
+      "invalid": "Enter a valid email address",
+      "send": "Send verification",
+      "sentToast": "Verification link sent to your new address"
+    },
+    "passwordModal": {
+      "title": "Reset password",
+      "message": "We'll email a one-time link to set a new password. It expires in 30 minutes.",
+      "confirm": "Email reset link",
+      "sentToast": "Password reset link sent"
+    },
+    "deleteModal": {
+      "title": "Delete my account",
+      "subtitle": "This permanently erases your profile, credentials and sessions. Your authored issues & comments are anonymised. This cannot be undone.",
+      "confirmLabel": "Type DELETE to confirm",
+      "button": "Delete account"
+    }
+  },
+  "twofa": {
+    "title": "Two-factor authentication",
+    "step1": "Step 1 of 3 · Scan the QR code",
+    "step2": "Step 2 of 3 · Enter the 6-digit code",
+    "step3": "Step 3 of 3 · Save your recovery codes",
+    "scanHint": "Scan this with an authenticator app (Google Authenticator, 1Password, Authy…). Can't scan? Enter the key manually.",
+    "manualKey": "Manual entry key",
+    "verifyHint": "Enter the 6-digit code your authenticator app shows for hinata.",
+    "recoveryHint": "Save these recovery codes somewhere safe. Each can be used once if you lose access to your authenticator. They won't be shown again.",
+    "newCodesHint": "Your new recovery codes — save them now, they won't be shown again.",
+    "copyAll": "Copy all",
+    "saved": "I've saved them",
+    "continueStep": "Continue",
+    "verifyEnable": "Verify & enable",
+    "finish": "Finish",
+    "close": "Close",
+    "codesCopied": "Recovery codes copied",
+    "keyCopied": "Key copied",
+    "enabledToast": "Two-factor authentication enabled",
+    "disabledToast": "Two-factor authentication disabled",
+    "manageTitle": "Recovery codes",
+    "manageSubtitle": "Generate a fresh set of 10 codes. Your current codes will stop working.",
+    "regenerate": "Regenerate",
+    "disableTitle": "Disable two-factor",
+    "disableSubtitle": "Enter a current 6-digit or recovery code to turn 2FA off.",
+    "disableButton": "Disable 2FA"
   }
 }

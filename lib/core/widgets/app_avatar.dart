@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../api/api_client.dart';
 import '../theme/app_colors.dart';
 
 /// Circular avatar with deterministic pastel background and initials fallback.
@@ -10,15 +12,33 @@ class AppAvatar extends StatelessWidget {
   final String? imageUrl;
   final double radius;
 
+  /// Resolves [imageUrl] to an absolute URL. Server-issued avatar URLs are
+  /// relative (e.g. `/api/v1/users/{id}/avatar`) so they stay valid regardless
+  /// of which host the app reached the server on; here we prefix the app's
+  /// configured API base. Absolute (http) URLs pass through unchanged.
+  String? _resolved(BuildContext context) {
+    final url = imageUrl;
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('http')) return url;
+    try {
+      final base = context.read<ApiClient>().baseUrl;
+      if (base.isEmpty) return null;
+      return url.startsWith('/') ? '$base$url' : '$base/$url';
+    } catch (_) {
+      // No ApiClient in scope (e.g. widget tests) — fall back to initials.
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final initials = _initials(name);
     final background = AppColors.pastelFor(name.hashCode.abs());
+    final resolved = _resolved(context);
     return CircleAvatar(
       radius: radius,
       backgroundColor: background,
-      foregroundImage:
-          imageUrl != null && imageUrl!.isNotEmpty ? NetworkImage(imageUrl!) : null,
+      foregroundImage: resolved != null ? NetworkImage(resolved) : null,
       child: Text(
         initials,
         style: TextStyle(
