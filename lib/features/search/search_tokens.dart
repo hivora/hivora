@@ -62,13 +62,18 @@ class SearchTokens {
   /// Light glass (`.gs-root`).
   static const light = SearchTokens(
     tint: Color.fromRGBO(252, 251, 248, 0.62),
-    glassFill: Color.fromRGBO(252, 251, 248, 0.22),
+    // Raised from 0.22 → 0.42 so the dark app behind the glass can't bleed
+    // through and wash out the (dark) text — the previous near-transparent
+    // fill left the placeholder and labels barely legible (a11y).
+    glassFill: Color.fromRGBO(252, 251, 248, 0.42),
     tintStrong: Color.fromRGBO(252, 251, 248, 0.80),
     edge: Color.fromRGBO(255, 255, 255, 0.85),
     edgeSoft: Color.fromRGBO(255, 255, 255, 0.35),
     ink: Color(0xFF23223F),
-    inkSoft: Color(0xFF6B6A85),
-    inkFaint: Color(0xFF9A99B0),
+    // Darkened secondary inks for WCAG-AA contrast on the glass. Previous
+    // values (#6B6A85 / #9A99B0) failed AA for body/hint text.
+    inkSoft: Color(0xFF4C4B64),
+    inkFaint: Color(0xFF6A6984),
     hairline: Color.fromRGBO(35, 34, 63, 0.09),
     rowHover: Color.fromRGBO(35, 34, 63, 0.05),
     selTint: Color.fromRGBO(255, 255, 255, 0.78),
@@ -97,13 +102,16 @@ class SearchTokens {
   /// Dark glass (`.gs-root[data-theme="dark"]`).
   static const dark = SearchTokens(
     tint: Color.fromRGBO(34, 32, 60, 0.58),
-    glassFill: Color.fromRGBO(30, 28, 52, 0.28),
+    // Raised from 0.28 → 0.48 so the bright app behind the glass can't bleed
+    // through and wash out the (light) text (a11y — see light counterpart).
+    glassFill: Color.fromRGBO(30, 28, 52, 0.48),
     tintStrong: Color.fromRGBO(38, 36, 66, 0.80),
     edge: Color.fromRGBO(255, 255, 255, 0.20),
     edgeSoft: Color.fromRGBO(255, 255, 255, 0.07),
     ink: Color(0xFFF2F1F8),
-    inkSoft: Color(0xFFB6B4D0),
-    inkFaint: Color(0xFF807EA0),
+    // Lightened secondary inks for WCAG-AA contrast on the dark glass.
+    inkSoft: Color(0xFFCAC8DE),
+    inkFaint: Color(0xFF9E9CBC),
     hairline: Color.fromRGBO(255, 255, 255, 0.09),
     rowHover: Color.fromRGBO(255, 255, 255, 0.06),
     selTint: Color.fromRGBO(255, 255, 255, 0.13),
