@@ -1,192 +1,369 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../core/api/hinata_repository.dart';
-import '../../core/blocs/fetch_cubit.dart';
-import '../../core/i18n/i18n.dart';
-import '../../core/models/content_models.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/hive_empty_state.dart';
+import '../../core/widgets/hive_loader.dart';
 import '../../core/widgets/hive_widgets.dart';
-import '../../core/widgets/soft_card.dart';
-import '../../core/widgets/status_widgets.dart';
-import 'article_editor.dart';
+import 'data/knowledge_models.dart';
+import 'data/knowledge_repository.dart';
+import 'knowledge_editor.dart';
+import 'knowledge_home.dart';
+import 'knowledge_issue_sheet.dart';
+import 'knowledge_reader.dart';
+import 'knowledge_scope.dart';
+import 'knowledge_tokens.dart';
+import 'knowledge_tree.dart';
 
-/// Knowledge base: hierarchical list of organization-wide articles.
+/// Confluence-style Knowledge Base shell: spaces home, nested article tree,
+/// reader with TOC/aside/linked-issues, and a full markdown editor with
+/// `@`-smart-links. Self-contained (seed data + local persistence); a 1:1 port
+/// of the design reference `view_knowledge.jsx`. Internal navigation between
+/// home/space/article/edit/new is managed here (not via the router).
 class KnowledgeScreen extends StatefulWidget {
-  const KnowledgeScreen({super.key});
+  const KnowledgeScreen({super.key, this.initialArticleId});
+
+  /// Deep link from `/knowledge/:id` — open straight into this article.
+  final String? initialArticleId;
 
   @override
   State<KnowledgeScreen> createState() => _KnowledgeScreenState();
 }
 
+enum _Mode { home, article, edit, newDoc }
+
 class _KnowledgeScreenState extends State<KnowledgeScreen> {
-  late final FetchCubit<List<Article>> _cubit;
+  final KnowledgeRepository _repo = KnowledgeRepository();
+  bool _ready = false;
+
+  _Mode _mode = _Mode.home;
+  String? _selectedId;
+  late String _spaceId = _repo.spaces.first.id;
+  final _scrollKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    _cubit = FetchCubit(() => context.read<HinataRepository>().articles())..load();
+    _repo.init().then((_) {
+      if (!mounted) return;
+      final initial = widget.initialArticleId;
+      if (initial != null && _repo.articleById(initial) != null) {
+        final a = _repo.articleById(initial)!;
+        _selectedId = initial;
+        _spaceId = a.spaceId;
+        _mode = _Mode.article;
+      }
+      setState(() => _ready = true);
+    });
   }
 
   @override
   void dispose() {
-    _cubit.close();
+    _repo.dispose();
     super.dispose();
+  }
+
+  KbArticle? get _current =>
+      _selectedId == null ? null : _repo.articleById(_selectedId!);
+
+  // ── navigation ──
+  void _openArticle(String id) {
+    final a = _repo.articleById(id);
+    if (a == null) return;
+    setState(() {
+      _selectedId = id;
+      _spaceId = a.spaceId;
+      _mode = _Mode.article;
+    });
+  }
+
+  void _openSpace(String id) {
+    final first = _repo.articlesInSpace(id).where((a) => a.parentId == null);
+    setState(() {
+      _spaceId = id;
+      if (first.isNotEmpty) {
+        _selectedId = first.first.id;
+        _mode = _Mode.article;
+      }
+    });
+  }
+
+  void _openIssue(KbIssue issue) {
+    showKnowledgeIssueSheet(context,
+        repo: _repo, issue: issue, onOpenArticle: _openArticle);
+  }
+
+  void _home() => setState(() {
+        _mode = _Mode.home;
+        _selectedId = null;
+      });
+
+  void _save(EditorResult r) {
+    final title = r.title.trim().isEmpty ? 'Untitled' : r.title.trim();
+    if (_mode == _Mode.newDoc) {
+      final a = _repo.createArticle(
+          title: title, body: r.body, spaceId: r.spaceId);
+      setState(() {
+        _selectedId = a.id;
+        _spaceId = a.spaceId;
+        _mode = _Mode.article;
+      });
+      _toast('Article published');
+    } else if (_current != null) {
+      _repo.saveEdit(_current!.id,
+          title: title, body: r.body, spaceId: r.spaceId);
+      setState(() => _mode = _Mode.article);
+      _toast('Changes saved');
+    }
+  }
+
+  void _toast(String msg) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(msg)));
+
+  void _openTreeDrawer() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => Container(
+        margin: EdgeInsets.only(top: MediaQuery.of(sheetCtx).padding.top + 40),
+        decoration: BoxDecoration(
+          color: AppColors.canvas,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: KnowledgeTree(
+              repo: _repo,
+              spaceId: _spaceId,
+              selectedId: _selectedId,
+              onSelect: (id) {
+                Navigator.of(sheetCtx).pop();
+                _openArticle(id);
+              },
+              onSpaceChange: (id) {
+                Navigator.of(sheetCtx).pop();
+                _openSpace(id);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
-      child: BlocBuilder<FetchCubit<List<Article>>, FetchState<List<Article>>>(
-        builder: (context, state) {
-          return RefreshIndicator(
-            onRefresh: _cubit.load,
-            edgeOffset: context.topGutter,
-            child: AsyncView(
-              isLoading: state.isLoading,
-              hasData: state.hasData,
-              errorKey: state.errorKey,
-              onRetry: _cubit.load,
-              builder: (context) {
-                final articles = state.data!;
-                final roots =
-                    articles.where((article) => article.parentId == null).toList();
-                return ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(
-                      context.pageGutter,
-                      24 + context.topGutter,
-                      context.pageGutter,
-                      context.pageGutter + context.bottomGutter),
-                  children: [
-                    PageHead(
-                      title: context.t('knowledge.title'),
-                      subtitle: context.t('knowledge.summary',
-                          variables: {'count': '${articles.length}'}),
-                      actions: [
-                        PrimaryButton(
-                          label: context.t('knowledge.new'),
-                          onPressed: () async {
-                            final saved = await showArticleEditor(context);
-                            if (saved != null) _cubit.load();
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    if (roots.isEmpty)
-                      HiveEmptyState(
-                        title: context.t('knowledge.title'),
-                        message: context.t('knowledge.empty'),
-                      ),
-                    for (final root in roots)
-                      _ArticleNode(article: root, all: articles, depth: 0),
-                  ],
-                );
-              },
-            ),
-          );
+    if (!_ready) {
+      return const Center(child: Padding(padding: EdgeInsets.all(40), child: HiveLoader()));
+    }
+    return KnowledgeScope(
+      repo: _repo,
+      openArticle: _openArticle,
+      openIssue: _openIssue,
+      openUser: (_) {},
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          final bp = w < KbTokens.bpMid
+              ? _Bp.narrow
+              : w < KbTokens.bpWide
+                  ? _Bp.mid
+                  : _Bp.wide;
+          if (_mode == _Mode.edit || _mode == _Mode.newDoc) {
+            return _editorView(constraints.maxHeight);
+          }
+          return _mainView(bp);
         },
       ),
     );
   }
-}
 
-class _ArticleNode extends StatelessWidget {
-  const _ArticleNode({
-    required this.article,
-    required this.all,
-    required this.depth,
-  });
+  Widget _head() {
+    return PageHead(
+      title: 'Knowledge base',
+      subtitle:
+          '${_repo.articles.length} articles · ${_repo.spaces.length} spaces',
+      actions: [
+        if (_mode != _Mode.home)
+          GhostButton(
+            label: 'All spaces',
+            icon: lucideIcon('layout-grid'),
+            onPressed: _home,
+          ),
+        PrimaryButton(
+          label: 'New article',
+          icon: lucideIcon('plus'),
+          onPressed: () => setState(() => _mode = _Mode.newDoc),
+        ),
+      ],
+    );
+  }
 
-  final Article article;
-  final List<Article> all;
-  final int depth;
-
-  @override
-  Widget build(BuildContext context) {
-    final children =
-        all.where((candidate) => candidate.parentId == article.id).toList();
-    final updated = article.updatedAt;
-    final meta = [
-      if (article.tags.isNotEmpty) article.tags.first,
-      if (updated != null) context.t('knowledge.updated', variables: {
-        'when': '${updated.year}-${updated.month.toString().padLeft(2, '0')}-${updated.day.toString().padLeft(2, '0')}'
-      }),
-    ].join(' · ');
-    return Padding(
-      padding: EdgeInsets.only(left: depth * 20.0, bottom: 8),
+  Widget _mainView(_Bp bp) {
+    final showTree = _mode == _Mode.article && bp != _Bp.narrow;
+    return SingleChildScrollView(
+      key: _scrollKey,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(
+        context.pageGutter,
+        24 + context.topGutter,
+        context.pageGutter,
+        context.pageGutter + context.bottomGutter,
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SoftCard(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
-            onTap: () => context.go('/knowledge/${article.id}'),
-            child: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentSoft,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(LucideIcons.fileText,
-                      color: AppColors.accentStrong, size: 18),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        article.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
-                      if (meta.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(meta,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 11.5, color: AppColors.inkSoft)),
+          _head(),
+          const SizedBox(height: 20),
+          if (_mode == _Mode.home)
+            KnowledgeHome(
+              repo: _repo,
+              onOpenArticle: _openArticle,
+              onOpenSpace: _openSpace,
+            )
+          else if (_current != null)
+            _articleLayout(bp, showTree),
+        ],
+      ),
+    );
+  }
+
+  Widget _articleLayout(_Bp bp, bool showTree) {
+    final reader = KnowledgeReader(
+      article: _current!,
+      asideMode: switch (bp) {
+        _Bp.wide => AsideMode.side,
+        _Bp.mid => AsideMode.below,
+        _Bp.narrow => AsideMode.none,
+      },
+      onEdit: () => setState(() => _mode = _Mode.edit),
+    );
+
+    if (!showTree) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // narrow bar with tree drawer trigger
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Material(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(KbTokens.radiusControl),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(KbTokens.radiusControl),
+                  onTap: _openTreeDrawer,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                    decoration: BoxDecoration(
+                      borderRadius:
+                          BorderRadius.circular(KbTokens.radiusControl),
+                      border: Border.all(color: AppColors.hairline),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(lucideIcon('panel-left'),
+                            size: 16, color: AppColors.inkSoft),
+                        const SizedBox(width: 8),
+                        Text(_repo.spaceById(_spaceId)?.name ?? '',
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600)),
                       ],
-                    ],
+                    ),
                   ),
                 ),
-                if (children.isNotEmpty) ...[
-                  const SizedBox(width: 10),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(LucideIcons.alignLeft,
-                          size: 13, color: AppColors.inkFaint),
-                      const SizedBox(width: 4),
-                      Text('${children.length}',
-                          style: TextStyle(
-                              fontFamily: AppTheme.fontMono,
-                              fontSize: 11.5,
-                              color: AppColors.inkFaint)),
-                    ],
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
-          for (final child in children)
-            _ArticleNode(article: child, all: all, depth: depth + 1),
+          reader,
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: KbTokens.treeWidth,
+          child: KnowledgeTree(
+            repo: _repo,
+            spaceId: _spaceId,
+            selectedId: _selectedId,
+            onSelect: _openArticle,
+            onSpaceChange: _openSpace,
+          ),
+        ),
+        const SizedBox(width: 28),
+        Expanded(child: reader),
+      ],
+    );
+  }
+
+  Widget _editorView(double maxHeight) {
+    final isNew = _mode == _Mode.newDoc;
+    final current = _current;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        context.pageGutter,
+        16 + context.topGutter,
+        context.pageGutter,
+        context.pageGutter + context.bottomGutter,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Material(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(KbTokens.radiusControl),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(KbTokens.radiusControl),
+                  onTap: () =>
+                      setState(() => _mode = isNew ? _Mode.home : _Mode.article),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      borderRadius:
+                          BorderRadius.circular(KbTokens.radiusControl),
+                      border: Border.all(color: AppColors.hairline),
+                    ),
+                    child: Icon(lucideIcon('arrow-left'),
+                        size: 18, color: AppColors.inkSoft),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(isNew ? 'New article' : 'Editing',
+                  style: const TextStyle(
+                      fontFamily: AppTheme.fontBrand,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: KnowledgeEditor(
+              isNew: isNew,
+              initialTitle: isNew ? '' : current?.title ?? '',
+              initialBody: isNew ? '' : current?.body ?? '',
+              spaceId: _spaceId,
+              onSave: _save,
+              onCancel: () =>
+                  setState(() => _mode = isNew ? _Mode.home : _Mode.article),
+            ),
+          ),
         ],
       ),
     );
   }
 }
+
+enum _Bp { narrow, mid, wide }

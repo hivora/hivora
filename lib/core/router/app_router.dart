@@ -19,7 +19,6 @@ import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/gantt/gantt_screen.dart';
 import '../../features/issues/issue_detail_screen.dart';
 import '../../features/issues/issues_screen.dart';
-import '../../features/knowledge/article_screen.dart';
 import '../../features/knowledge/knowledge_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
@@ -260,7 +259,7 @@ GoRouter buildRouter({
             path: '/knowledge/:id',
             pageBuilder: (_, state) => _transition(
               state,
-              ArticleScreen(articleId: state.pathParameters['id']!),
+              KnowledgeScreen(initialArticleId: state.pathParameters['id']),
             ),
           ),
           GoRoute(
