@@ -1203,5 +1203,25 @@
     "disableTitle": "Zwei-Faktor deaktivieren",
     "disableSubtitle": "Gib einen aktuellen 6-stelligen oder einen Wiederherstellungscode ein, um 2FA zu deaktivieren.",
     "disableButton": "2FA deaktivieren"
+  },
+  "invite": {
+    "title": "Konto einrichten",
+    "subtitle": "Du trittst als {{email}} bei. Wähle ein Passwort, um abzuschließen.",
+    "passwordLabel": "Passwort",
+    "passwordHint": "Mindestens 10 Zeichen",
+    "createAccount": "Konto erstellen",
+    "invalidTitle": "Einladung ungültig oder abgelaufen",
+    "invalidBody": "Bitte einen Administrator um eine neue Einladung bitten.",
+    "goToLogin": "Zur Anmeldung"
+  },
+  "reset": {
+    "title": "Neues Passwort wählen",
+    "subtitle": "Lege ein neues Passwort für dein Konto fest, um abzuschließen.",
+    "passwordLabel": "Neues Passwort",
+    "passwordHint": "Mindestens 10 Zeichen",
+    "updatePassword": "Passwort aktualisieren",
+    "invalidTitle": "Reset-Link ungültig",
+    "invalidBody": "Dieser Link zum Zurücksetzen des Passworts fehlt oder ist ungültig. Bitte fordere einen neuen an.",
+    "goToLogin": "Zur Anmeldung"
   }
 }

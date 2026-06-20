@@ -75,6 +75,54 @@ class HinataRepository {
     body: {'currentPassword': current, 'newPassword': next},
   );
 
+  /// Validates an invitation token, returning the invitee's email + name to show
+  /// on the accept screen.
+  Future<({String email, String displayName})> inviteInfo(String token) async {
+    final data =
+        await _api.get('/api/v1/auth/invite/info', query: {'token': token})
+            as Map<String, dynamic>;
+    return (
+      email: data['email'] as String? ?? '',
+      displayName: data['displayName'] as String? ?? '',
+    );
+  }
+
+  /// Accepts an invitation by setting the account password; the server signs the
+  /// user in and returns a token pair.
+  Future<({String access, String refresh})> acceptInvite(
+    String token,
+    String password,
+  ) async {
+    final data =
+        await _api.post(
+              '/api/v1/auth/invite/accept',
+              body: {'token': token, 'password': password},
+            )
+            as Map<String, dynamic>;
+    return (
+      access: data['accessToken'] as String,
+      refresh: data['refreshToken'] as String,
+    );
+  }
+
+  /// Sets a new password from a reset link; the server signs the user in and
+  /// returns a token pair.
+  Future<({String access, String refresh})> acceptPasswordReset(
+    String token,
+    String password,
+  ) async {
+    final data =
+        await _api.post(
+              '/api/v1/auth/reset/accept',
+              body: {'token': token, 'password': password},
+            )
+            as Map<String, dynamic>;
+    return (
+      access: data['accessToken'] as String,
+      refresh: data['refreshToken'] as String,
+    );
+  }
+
   /// Completes a 2FA login challenge. [mfaToken] comes from the login response;
   /// [code] is a current TOTP or a recovery code. Returns a real token pair.
   Future<({String access, String refresh, AuthUser user})> verifyTwoFactor(

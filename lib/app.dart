@@ -53,21 +53,51 @@ class _HinataAppState extends State<HinataApp> {
       auth: _auth,
       storage: widget.storage,
     );
-    _listenForSsoCallback();
+    _listenForDeepLinks();
   }
 
-  /// Receives hinata://auth-callback?access_token=...&refresh_token=... after
-  /// a successful OIDC/OAuth2/SAML login in the external browser.
-  void _listenForSsoCallback() {
-    _linkSubscription = AppLinks().uriLinkStream.listen((uri) {
-      if (uri.scheme == 'hinata' && uri.host == 'auth-callback') {
+  /// Handles the app's `hinata://` deep links:
+  ///  - `auth-callback?access_token=…&refresh_token=…` after an SSO login;
+  ///  - `invite?token=…&server=…` from an invitation email, which opens the
+  ///    in-app "set your password" screen (carrying the server URL so a freshly
+  ///    installed app knows which backend to talk to).
+  void _listenForDeepLinks() {
+    final appLinks = AppLinks();
+    // Cold start: the link that launched the app (e.g. tapping an email link).
+    appLinks.getInitialLink().then((uri) {
+      if (uri != null) _handleUri(uri);
+    });
+    _linkSubscription = appLinks.uriLinkStream.listen(_handleUri);
+  }
+
+  Future<void> _handleUri(Uri uri) async {
+    if (uri.scheme != 'hinata') return;
+    switch (uri.host) {
+      case 'auth-callback':
         final access = uri.queryParameters['access_token'];
         final refresh = uri.queryParameters['refresh_token'];
         if (access != null && refresh != null) {
           _auth.add(SsoTokensReceived(access, refresh));
         }
-      }
-    });
+      case 'invite':
+        await _openTokenFlow(uri, '/invite');
+      case 'reset-password':
+        await _openTokenFlow(uri, '/reset-password');
+    }
+  }
+
+  /// Shared handoff for the token-carrying email deep links (invite / reset):
+  /// persist the server URL from the link so a fresh app can reach the backend,
+  /// then route to the in-app screen.
+  Future<void> _openTokenFlow(Uri uri, String route) async {
+    final token = uri.queryParameters['token'];
+    if (token == null || token.isEmpty) return;
+    final server = uri.queryParameters['server'];
+    if (server != null && server.isNotEmpty) {
+      await widget.storage.setServerUrl(server);
+      _appConfig.add(ServerUrlSubmitted(server));
+    }
+    _router.go('$route?token=${Uri.encodeQueryComponent(token)}');
   }
 
   @override

@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/api/api_client.dart';
 import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/app_config_bloc.dart';
 import '../../core/blocs/auth_bloc.dart';
@@ -125,7 +124,6 @@ class _AccountScreenState extends State<AccountScreen> {
     // Capture context-derived values up front so nothing reads `context` across
     // the upload's async gap.
     final authBloc = context.read<AuthBloc>();
-    final apiBase = context.read<ApiClient>().baseUrl;
     final updated = context.t('account.avatar.updated');
     final failed = context.t('account.avatar.failed');
 
@@ -146,12 +144,12 @@ class _AccountScreenState extends State<AccountScreen> {
 
     setState(() => _avatarBusy = true);
     try {
+      // The returned URL carries a fresh `?v=` token, so AppAvatar fetches the
+      // new picture under a new cache key. Refresh AuthUser so the shell avatar
+      // (which reads AuthUser.avatarUrl) updates too.
       final url = await _repo.uploadAvatar(multipart);
       if (!mounted) return;
       setState(() => _me = _me!.copyWith(avatarUrl: url));
-      // The shell avatar reads AuthUser — refresh it too, and bust the image
-      // cache so the new picture shows immediately.
-      NetworkImage(url.startsWith('http') ? url : '$apiBase$url').evict();
       authBloc.add(const AuthChecked());
       _toast(updated);
     } catch (_) {

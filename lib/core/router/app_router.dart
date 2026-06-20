@@ -7,7 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../features/account/account_screen.dart';
 import '../../features/admin/admin_screen.dart';
 import '../../features/admin/users/user_management_screen.dart';
+import '../../features/auth/accept_invite_screen.dart';
 import '../../features/auth/login_screen.dart';
+import '../../features/auth/reset_password_screen.dart';
 import '../../features/auth/sso_callback_screen.dart';
 import '../../features/board/board_screen.dart';
 import '../../features/board/project_boards_screen.dart';
@@ -91,6 +93,12 @@ GoRouter buildRouter({
         return null;
       }
 
+      // The invite + password-reset deep links are self-contained public flows
+      // (validate token → set password → auto-sign-in). Let them render
+      // regardless of config/auth state; they set the server URL from the link
+      // and navigate on themselves.
+      if (location == '/invite' || location == '/reset-password') return null;
+
       switch (config) {
         case AppConfigStatus.initial:
         case AppConfigStatus.connecting:
@@ -146,6 +154,16 @@ GoRouter buildRouter({
         ),
       ),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(
+        path: '/invite',
+        builder: (_, state) =>
+            AcceptInviteScreen(token: state.uri.queryParameters['token'] ?? ''),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (_, state) =>
+            ResetPasswordScreen(token: state.uri.queryParameters['token'] ?? ''),
+      ),
       GoRoute(
         path: '/auth-callback',
         builder: (_, state) => SsoCallbackScreen(

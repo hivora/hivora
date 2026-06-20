@@ -1203,5 +1203,25 @@
     "disableTitle": "Disable two-factor",
     "disableSubtitle": "Enter a current 6-digit or recovery code to turn 2FA off.",
     "disableButton": "Disable 2FA"
+  },
+  "invite": {
+    "title": "Set up your account",
+    "subtitle": "You're joining as {{email}}. Choose a password to finish.",
+    "passwordLabel": "Password",
+    "passwordHint": "At least 10 characters",
+    "createAccount": "Create account",
+    "invalidTitle": "Invitation invalid or expired",
+    "invalidBody": "Please ask an administrator to send you a fresh invitation.",
+    "goToLogin": "Go to sign in"
+  },
+  "reset": {
+    "title": "Choose a new password",
+    "subtitle": "Set a new password for your account to finish.",
+    "passwordLabel": "New password",
+    "passwordHint": "At least 10 characters",
+    "updatePassword": "Update password",
+    "invalidTitle": "Reset link invalid",
+    "invalidBody": "This password-reset link is missing or invalid. Please request a new one.",
+    "goToLogin": "Go to sign in"
   }
 }
