@@ -765,7 +765,7 @@
       "showingRange": "Zeige {{from}}–{{to}} von {{total}}",
       "rowsPerPage": "Zeilen",
       "inviteSub": "Anmeldelinks an neue lokale Konten senden",
-      "inviteEmails": "E-Mail-Adressen",
+      "inviteEmails": "E-Mail-Adressen (Komma separiert)",
       "inviteEmailsHint": "name@firma.de",
       "inviteMessage": "Nachricht (optional)",
       "inviteMessageHint": "Füge der Einladung eine persönliche Notiz hinzu…",
@@ -801,6 +801,113 @@
     "iosStoreUrl": "iOS App-Store-URL",
     "androidStoreUrl": "Android Play-Store-URL",
     "macosStoreUrl": "macOS App-Store-URL"
+  },
+  "audit": {
+    "title": "Audit-Protokoll",
+    "subtitle": "Sicherheitsrelevante Ereignisse in deinem Workspace.",
+    "searchHint": "Akteur, Ziel oder IP suchen…",
+    "count": "{{count}} Ereignisse",
+    "today": "Heute",
+    "yesterday": "Gestern",
+    "filter": {
+      "category": "Kategorie",
+      "severity": "Schweregrad",
+      "outcome": "Ergebnis",
+      "all": "Alle",
+      "allCategories": "Alle Kategorien",
+      "allSeverities": "Alle Schweregrade",
+      "allOutcomes": "Alle Ergebnisse",
+      "reset": "Filter zurücksetzen"
+    },
+    "empty": {
+      "title": "Keine Audit-Ereignisse",
+      "message": "Sicherheitsrelevante Aktionen wie Anmeldungen, Rollenänderungen und Einstellungen erscheinen hier.",
+      "filtered": "Keine Ereignisse entsprechen deinen Filtern."
+    },
+    "error": "Audit-Protokoll konnte nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "endOfList": "Beginn des aufgezeichneten Verlaufs",
+    "loadingMore": "Mehr laden…",
+    "detail": {
+      "title": "Ereignisdetails",
+      "actor": "Akteur",
+      "target": "Ziel",
+      "when": "Zeitpunkt",
+      "ip": "IP-Adresse",
+      "device": "Gerät",
+      "outcome": "Ergebnis",
+      "category": "Kategorie",
+      "severity": "Schweregrad",
+      "metadata": "Details",
+      "eventId": "Ereignis-ID",
+      "copyId": "Ereignis-ID kopieren",
+      "copied": "Ereignis-ID kopiert"
+    },
+    "actor": {
+      "system": "System",
+      "anonymous": "Anonym"
+    },
+    "outcome": {
+      "success": "Erfolg",
+      "failure": "Fehlgeschlagen",
+      "unknown": "—"
+    },
+    "severity": {
+      "info": "Info",
+      "notice": "Hinweis",
+      "warning": "Warnung",
+      "unknown": "—"
+    },
+    "category": {
+      "authentication": "Authentifizierung",
+      "account": "Konto",
+      "administration": "Administration",
+      "configuration": "Konfiguration",
+      "data": "Daten & Datenschutz",
+      "unknown": "Sonstige"
+    },
+    "action": {
+      "LOGIN_SUCCESS": "Angemeldet",
+      "LOGIN_FAILURE": "Anmeldung fehlgeschlagen",
+      "LOGIN_BLOCKED": "Anmeldung blockiert",
+      "MFA_FAILURE": "Zwei-Faktor fehlgeschlagen",
+      "SSO_LOGIN": "Über SSO angemeldet",
+      "SESSION_REVOKED": "Sitzung widerrufen",
+      "PASSWORD_CHANGED": "Passwort geändert",
+      "PASSWORD_RESET_REQUESTED": "Passwort-Zurücksetzung angefordert",
+      "PASSWORD_RESET_COMPLETED": "Passwort zurückgesetzt",
+      "EMAIL_CHANGE_REQUESTED": "E-Mail-Änderung angefordert",
+      "EMAIL_CHANGED": "E-Mail geändert",
+      "TWO_FACTOR_ENABLED": "Zwei-Faktor aktiviert",
+      "TWO_FACTOR_DISABLED": "Zwei-Faktor deaktiviert",
+      "RECOVERY_CODES_REGENERATED": "Wiederherstellungscodes neu erstellt",
+      "ACCOUNT_DELETED": "Konto gelöscht",
+      "USER_INVITED": "Benutzer eingeladen",
+      "USER_CREATED": "Benutzer erstellt",
+      "USER_ROLE_CHANGED": "Rolle geändert",
+      "USER_ACTIVATED": "Benutzer aktiviert",
+      "USER_DEACTIVATED": "Benutzer deaktiviert",
+      "USER_DELETED": "Benutzer gelöscht",
+      "USER_PASSWORD_RESET_SENT": "Passwort-Zurücksetzung gesendet",
+      "USER_SESSIONS_REVOKED": "Sitzungen widerrufen",
+      "SETTINGS_CHANGED": "Einstellungen geändert",
+      "DATA_EXPORT_REQUESTED": "Datenexport angefordert",
+      "UNKNOWN": "Unbekanntes Ereignis"
+    },
+    "meta": {
+      "oldRole": "Vorherige Rolle",
+      "newRole": "Neue Rolle",
+      "role": "Rolle",
+      "lockoutMinutes": "Sperre (Minuten)",
+      "attempts": "Versuche",
+      "reason": "Grund",
+      "email": "E-Mail",
+      "oldEmail": "Vorherige E-Mail",
+      "newEmail": "Neue E-Mail",
+      "method": "Methode",
+      "setting": "Einstellung",
+      "provider": "Anbieter"
+    }
   },
   "sprint": {
     "tab": {

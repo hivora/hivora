@@ -335,25 +335,33 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     'admin.um.subtitle',
                     variables: {'n': '${counts.total}'},
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
                 ),
               ],
             ),
           ),
-          FilledButton.icon(
-            onPressed: _invite,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.navy,
-              foregroundColor: Colors.white,
-              textStyle: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-            icon: const Icon(LucideIcons.userPlus, size: 16),
-            label: Text(context.t('admin.um.inviteUsers')),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            child: context.isCompact
+                ? IconButton.filled(
+                    onPressed: _invite,
+                    icon: const Icon(LucideIcons.userPlus, size: 16),
+                  )
+                : FilledButton.icon(
+                    onPressed: _invite,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.navy,
+                      foregroundColor: Colors.white,
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    icon: const Icon(LucideIcons.userPlus, size: 16),
+                    label: Text(context.t('admin.um.inviteUsers')),
+                  ),
           ),
         ],
       ),

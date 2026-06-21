@@ -13,6 +13,7 @@ import '../../core/theme/app_theme.dart';
 import '../shell/page_chrome.dart';
 import 'admin_sso_section.dart';
 import 'sections/admin_app_section.dart';
+import 'sections/admin_audit_section.dart';
 import 'sections/admin_email_section.dart';
 import 'sections/admin_general_section.dart';
 import 'sections/admin_notifications_section.dart';
@@ -406,14 +407,18 @@ class _MobileDetailView extends StatelessWidget {
                     ),
                   ),
           ),
-        // ── Scrollable content ───────────────────────────────────
+        // ── Content ──────────────────────────────────────────────
+        // The audit log owns its own scroll + pagination, so it renders
+        // directly; every other section uses the shared scroll wrapper.
         Expanded(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-                16, _hasSave ? 16 : 16 + context.topGutter, 16,
-                16 + context.bottomGutter),
-            child: _sectionBody(section),
-          ),
+          child: section == _AdminSection.auditLog
+              ? const AdminAuditSection()
+              : SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                      16, _hasSave ? 16 : 16 + context.topGutter, 16,
+                      16 + context.bottomGutter),
+                  child: _sectionBody(section),
+                ),
         ),
       ],
     );
@@ -432,7 +437,8 @@ class _MobileDetailView extends StatelessWidget {
           AdminNotificationsSection(settings: settings),
         _AdminSection.security =>
           AdminSecuritySection(settings: settings),
-        _AdminSection.auditLog => const _AuditLogPlaceholder(),
+        // Rendered directly by the shell (self-scrolling); never reached here.
+        _AdminSection.auditLog => const SizedBox.shrink(),
         _AdminSection.users => const SizedBox.shrink(),
       };
 }
@@ -613,12 +619,15 @@ class _DesktopSectionContent extends StatelessWidget {
             ],
           ),
         ),
-        // Scrollable body
+        // Body — the audit log scrolls & paginates itself; the rest use the
+        // shared scroll wrapper.
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: _body(),
-          ),
+          child: section == _AdminSection.auditLog
+              ? const AdminAuditSection()
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: _body(),
+                ),
         ),
       ],
     );
@@ -637,7 +646,8 @@ class _DesktopSectionContent extends StatelessWidget {
           AdminNotificationsSection(settings: settings),
         _AdminSection.security =>
           AdminSecuritySection(settings: settings),
-        _AdminSection.auditLog => const _AuditLogPlaceholder(),
+        // Rendered directly by the shell (self-scrolling); never reached here.
+        _AdminSection.auditLog => const SizedBox.shrink(),
         _AdminSection.users => const SizedBox.shrink(),
       };
 }
@@ -729,53 +739,6 @@ class _NavItem extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────── Audit log placeholder ───────────────────────
-
-class _AuditLogPlaceholder extends StatelessWidget {
-  const _AuditLogPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 60),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: AppColors.canvas2,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(LucideIcons.history,
-                  size: 36, color: AppColors.inkSoft),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              context.t('admin.auditLogSoon'),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.ink,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              context.t('admin.auditLogHint'),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.inkSoft,
-                  height: 1.5),
-            ),
-          ],
         ),
       ),
     );

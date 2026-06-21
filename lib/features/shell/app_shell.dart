@@ -1755,7 +1755,6 @@ class _MoreSheet extends StatelessWidget {
     _Destination('/timesheet', 'nav.timesheet', LucideIcons.table),
     _Destination('/reports', 'nav.reports', LucideIcons.chartLine),
     _Destination('/knowledge', 'nav.knowledge', LucideIcons.bookOpen),
-    _Destination('/settings', 'nav.settings', LucideIcons.settings),
     // Notifications intentionally omitted — they live in the always-visible
     // top bar bell, so they need no entry in the overflow sheet.
   ];

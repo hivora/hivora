@@ -318,6 +318,7 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
             label: context.t('knowledge.allSpaces'),
             icon: lucideIcon('layout-grid'),
             onPressed: _home,
+            collapseToIcon: true,
           ),
         PrimaryButton(
           label: context.t('knowledge.newArticle'),
@@ -326,6 +327,7 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
             _pendingParentId = null;
             _mode = _Mode.newDoc;
           }),
+          collapseToIcon: true,
         ),
       ],
     );

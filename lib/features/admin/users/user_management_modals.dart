@@ -559,7 +559,6 @@ class _InviteModalState extends State<_InviteModal> {
                             hintText: context.t('admin.um.inviteEmailsHint'),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 4,
-                              vertical: 8,
                             ),
                           ),
                         ),

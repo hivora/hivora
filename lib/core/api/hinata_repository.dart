@@ -424,6 +424,13 @@ class HinataRepository {
   Future<void> deleteAttachment(String issueId, String attachmentId) =>
       _api.delete('/api/v1/issues/$issueId/attachments/$attachmentId');
 
+  /// Raw SSE byte stream of account-level events for the signed-in user (parse
+  /// with [parseSse]). Currently carries the `logout` frame the server pushes
+  /// when this device's session is revoked, for real-time sign-out. Cancel via
+  /// [cancelToken] on logout / app teardown.
+  Future<Stream<List<int>>> meEventStream({CancelToken? cancelToken}) =>
+      _api.openEventStream('/api/v1/me/stream', cancelToken: cancelToken);
+
   /// Raw SSE byte stream of attachment changes for an issue (parse with
   /// [parseSse]). Cancel via [cancelToken] when the view is disposed.
   Future<Stream<List<int>>> attachmentEventStream(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../i18n/i18n.dart';
+import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/hue_colors.dart';
@@ -62,19 +63,13 @@ class _PriMeta {
 
 const _priMeta = <String, _PriMeta>{
   // Backend Issue.Priority: SHOWSTOPPER, CRITICAL, MAJOR, NORMAL, MINOR.
-  'SHOWSTOPPER': _PriMeta(
-    LucideIcons.chevronsUp,
-    AppColors.priUrgent,
-  ),
+  'SHOWSTOPPER': _PriMeta(LucideIcons.chevronsUp, AppColors.priUrgent),
   'CRITICAL': _PriMeta(LucideIcons.chevronUp, AppColors.priUrgent),
   'MAJOR': _PriMeta(LucideIcons.chevronUp, AppColors.priHigh),
   'NORMAL': _PriMeta(LucideIcons.gripHorizontal, AppColors.priNormal),
   'MINOR': _PriMeta(LucideIcons.chevronDown, AppColors.priLow),
   // Legacy aliases kept so older data / the design palette still resolve.
-  'URGENT': _PriMeta(
-    LucideIcons.chevronsUp,
-    AppColors.priUrgent,
-  ),
+  'URGENT': _PriMeta(LucideIcons.chevronsUp, AppColors.priUrgent),
   'HIGH': _PriMeta(LucideIcons.chevronUp, AppColors.priHigh),
   'LOW': _PriMeta(LucideIcons.chevronDown, AppColors.priLow),
 };
@@ -257,7 +252,8 @@ class LabelTag extends StatelessWidget {
         color: h == null ? AppColors.surfaceMuted : hueSoft(h),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-            color: h == null ? AppColors.hairline2 : hueBorder(h)),
+          color: h == null ? AppColors.hairline2 : hueBorder(h),
+        ),
       ),
       child: Text(
         label,
@@ -487,17 +483,19 @@ class PageHead extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: AppTheme.fontBrand,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.5,
-                  color: AppColors.ink,
-                  height: 1.1,
+              FittedBox(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontBrand,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                    color: AppColors.ink,
+                    height: 1.1,
+                  ),
                 ),
               ),
               if (subtitle != null) ...[
@@ -521,20 +519,45 @@ class PageHead extends StatelessWidget {
 // ───────────────────────────── buttons ──────────────────────────────────
 
 /// Navy primary action button.
+///
+/// When [collapseToIcon] is set, the button drops its label and renders as a
+/// square icon-only control on compact (phone) layouts — the label is moved to
+/// a tooltip — so action-heavy headers don't crowd out the page title.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
     required this.label,
     required this.onPressed,
     this.icon,
+    this.collapseToIcon = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
+  final bool collapseToIcon;
 
   @override
   Widget build(BuildContext context) {
+    final glyph = icon ?? LucideIcons.plus;
+    if (collapseToIcon && context.isCompact) {
+      return Tooltip(
+        message: label,
+        child: FilledButton(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.accent,
+            foregroundColor: const Color(0xFF2A2410),
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(46, 46),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+            ),
+          ),
+          child: Icon(glyph, size: 18),
+        ),
+      );
+    }
     return FilledButton.icon(
       onPressed: onPressed,
       style: FilledButton.styleFrom(
@@ -546,27 +569,51 @@ class PrimaryButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.radiusControl),
         ),
       ),
-      icon: Icon(icon ?? LucideIcons.plus, size: 16),
+      icon: Icon(glyph, size: 16),
       label: Text(label),
     );
   }
 }
 
 /// White hairline-bordered secondary button.
+///
+/// See [PrimaryButton.collapseToIcon] — same compact icon-only behaviour.
 class GhostButton extends StatelessWidget {
   const GhostButton({
     super.key,
     required this.label,
     required this.onPressed,
     this.icon,
+    this.collapseToIcon = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
+  final bool collapseToIcon;
 
   @override
   Widget build(BuildContext context) {
+    final glyph = icon ?? LucideIcons.slidersHorizontal;
+    if (collapseToIcon && context.isCompact) {
+      return Tooltip(
+        message: label,
+        child: OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            backgroundColor: AppColors.surface,
+            foregroundColor: AppColors.ink,
+            side: BorderSide(color: AppColors.hairline),
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(46, 46),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+            ),
+          ),
+          child: Icon(glyph, size: 18),
+        ),
+      );
+    }
     return OutlinedButton.icon(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
@@ -579,7 +626,7 @@ class GhostButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.radiusControl),
         ),
       ),
-      icon: Icon(icon ?? LucideIcons.slidersHorizontal, size: 16),
+      icon: Icon(glyph, size: 16),
       label: Text(label),
     );
   }

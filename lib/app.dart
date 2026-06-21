@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/api/account_event_stream.dart';
 import 'core/api/api_client.dart';
 import 'core/api/hinata_repository.dart';
 import 'core/blocs/app_config_bloc.dart';
@@ -38,6 +39,8 @@ class _HinataAppState extends State<HinataApp> {
   late final AppConfigBloc _appConfig;
   late final AuthBloc _auth;
   late final GoRouter _router;
+  late final AccountEventStream _accountEvents;
+  StreamSubscription<AuthState>? _authSub;
   // Shared backend-backed Knowledge Base store: the KB screen and the real
   // issue detail both resolve smart-links / "Documented in" against this single
   // instance. Loaded lazily on first use (post-auth), not at startup.
@@ -57,12 +60,31 @@ class _HinataAppState extends State<HinataApp> {
       ..add(const AuthChecked());
     widget.apiClient.onSessionExpired = () =>
         _auth.add(const LogoutRequested());
+    // Real-time sign-out: hold the account event stream open while signed in so
+    // the server can push a `logout` (revoked session) and end this device's
+    // session at once, rather than waiting for the next request to 401.
+    _accountEvents = AccountEventStream(
+      repository: widget.repository,
+      onLogout: () => _auth.add(const LogoutRequested()),
+    );
+    _syncAccountStream(_auth.state);
+    _authSub = _auth.stream.listen(_syncAccountStream);
     _router = buildRouter(
       appConfig: _appConfig,
       auth: _auth,
       storage: widget.storage,
     );
     _listenForDeepLinks();
+  }
+
+  /// Opens the account event stream once authenticated and closes it otherwise,
+  /// so the real-time sign-out channel is only live for a signed-in user.
+  void _syncAccountStream(AuthState state) {
+    if (state.status == AuthStatus.authenticated) {
+      _accountEvents.start();
+    } else {
+      _accountEvents.stop();
+    }
   }
 
   /// Handles the app's `hinata://` deep links:
@@ -112,6 +134,8 @@ class _HinataAppState extends State<HinataApp> {
   @override
   void dispose() {
     _linkSubscription?.cancel();
+    _authSub?.cancel();
+    _accountEvents.stop();
     _router.dispose();
     _appConfig.close();
     _auth.close();

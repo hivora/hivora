@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart' show TapGestureRecognizer;
 import 'package:flutter/material.dart';
 
 import '../../core/i18n/i18n.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_avatar.dart';
@@ -186,63 +187,85 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
           ),
         ),
         const SizedBox(height: 16),
-        // byline
-        Row(
-          children: [
-            AvatarStack(
-              names: a.contributorIds
-                  .map((id) => repo.userById(id)?.name ?? '?')
-                  .toList(),
-              radius: 12,
-              max: 4,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  style: TextStyle(fontSize: 13, color: AppColors.inkSoft),
-                  children: [
+        // byline — on a phone the read-count is dropped and the edit button
+        // collapses to an icon so the author line keeps room and doesn't crowd.
+        Builder(
+          builder: (context) {
+            final compact = context.isCompact;
+            return Row(
+              children: [
+                AvatarStack(
+                  names: a.contributorIds
+                      .map((id) => repo.userById(id)?.name ?? '?')
+                      .toList(),
+                  radius: 12,
+                  max: 4,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text.rich(
                     TextSpan(
-                      text: author?.name ?? '',
-                      style: TextStyle(
-                        color: AppColors.ink,
-                        fontWeight: FontWeight.w600,
+                      style: TextStyle(fontSize: 13, color: AppColors.inkSoft),
+                      children: [
+                        TextSpan(
+                          text: author?.name ?? '',
+                          style: TextStyle(
+                            color: AppColors.ink,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        TextSpan(
+                            text:
+                                ' · ${context.t('knowledge.updatedAgo', variables: {'when': a.updated})}'),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (!compact) ...[
+                  const SizedBox(width: 10),
+                  Icon(lucideIcon('eye'), size: 14, color: AppColors.inkFaint),
+                  const SizedBox(width: 5),
+                  Text(
+                    '${a.reads}',
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontMono,
+                      fontSize: 12,
+                      color: AppColors.inkFaint,
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 8),
+                if (compact)
+                  Tooltip(
+                    message: context.t('knowledge.editShort'),
+                    child: OutlinedButton(
+                      onPressed: widget.onEdit,
+                      style: OutlinedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(38, 38),
+                      ),
+                      child: Icon(lucideIcon('pencil'), size: 16),
+                    ),
+                  )
+                else
+                  OutlinedButton.icon(
+                    onPressed: widget.onEdit,
+                    icon: Icon(lucideIcon('pencil'), size: 15),
+                    label: Text(context.t('knowledge.editShort')),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
                     ),
-                    TextSpan(
-                        text:
-                            ' · ${context.t('knowledge.updatedAgo', variables: {'when': a.updated})}'),
-                  ],
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Icon(lucideIcon('eye'), size: 14, color: AppColors.inkFaint),
-            const SizedBox(width: 5),
-            Text(
-              '${a.reads}',
-              style: TextStyle(
-                fontFamily: AppTheme.fontMono,
-                fontSize: 12,
-                color: AppColors.inkFaint,
-              ),
-            ),
-            const SizedBox(width: 8),
-            OutlinedButton.icon(
-              onPressed: widget.onEdit,
-              icon: Icon(lucideIcon('pencil'), size: 15),
-              label: Text(context.t('knowledge.editShort')),
-              style: OutlinedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-              ),
-            ),
-          ],
+                  ),
+              ],
+            );
+          },
         ),
         if (a.labels.isNotEmpty) ...[
           const SizedBox(height: 14),

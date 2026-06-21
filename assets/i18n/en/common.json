@@ -765,7 +765,7 @@
       "showingRange": "Showing {{from}}–{{to}} of {{total}}",
       "rowsPerPage": "Rows",
       "inviteSub": "Send sign-up links to new local accounts",
-      "inviteEmails": "Email addresses",
+      "inviteEmails": "Email addresses (comma-separated)",
       "inviteEmailsHint": "name@company.com",
       "inviteMessage": "Message (optional)",
       "inviteMessageHint": "Add a personal note to the invitation…",
@@ -801,6 +801,113 @@
     "iosStoreUrl": "iOS App Store URL",
     "androidStoreUrl": "Android Play Store URL",
     "macosStoreUrl": "macOS App Store URL"
+  },
+  "audit": {
+    "title": "Audit log",
+    "subtitle": "Security-relevant events across your workspace.",
+    "searchHint": "Search actor, target or IP…",
+    "count": "{{count}} events",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "filter": {
+      "category": "Category",
+      "severity": "Severity",
+      "outcome": "Outcome",
+      "all": "All",
+      "allCategories": "All categories",
+      "allSeverities": "All severities",
+      "allOutcomes": "All outcomes",
+      "reset": "Clear filters"
+    },
+    "empty": {
+      "title": "No audit events",
+      "message": "Security-relevant actions like sign-ins, role changes and settings updates will appear here.",
+      "filtered": "No events match your filters."
+    },
+    "error": "Couldn't load the audit log.",
+    "retry": "Try again",
+    "endOfList": "Beginning of recorded history",
+    "loadingMore": "Loading more…",
+    "detail": {
+      "title": "Event details",
+      "actor": "Actor",
+      "target": "Target",
+      "when": "When",
+      "ip": "IP address",
+      "device": "Device",
+      "outcome": "Outcome",
+      "category": "Category",
+      "severity": "Severity",
+      "metadata": "Details",
+      "eventId": "Event ID",
+      "copyId": "Copy event ID",
+      "copied": "Event ID copied"
+    },
+    "actor": {
+      "system": "System",
+      "anonymous": "Anonymous"
+    },
+    "outcome": {
+      "success": "Success",
+      "failure": "Failed",
+      "unknown": "—"
+    },
+    "severity": {
+      "info": "Info",
+      "notice": "Notice",
+      "warning": "Warning",
+      "unknown": "—"
+    },
+    "category": {
+      "authentication": "Authentication",
+      "account": "Account",
+      "administration": "Administration",
+      "configuration": "Configuration",
+      "data": "Data & privacy",
+      "unknown": "Other"
+    },
+    "action": {
+      "LOGIN_SUCCESS": "Signed in",
+      "LOGIN_FAILURE": "Failed sign-in",
+      "LOGIN_BLOCKED": "Sign-in blocked",
+      "MFA_FAILURE": "Two-factor failed",
+      "SSO_LOGIN": "Signed in via SSO",
+      "SESSION_REVOKED": "Session revoked",
+      "PASSWORD_CHANGED": "Password changed",
+      "PASSWORD_RESET_REQUESTED": "Password reset requested",
+      "PASSWORD_RESET_COMPLETED": "Password reset completed",
+      "EMAIL_CHANGE_REQUESTED": "Email change requested",
+      "EMAIL_CHANGED": "Email changed",
+      "TWO_FACTOR_ENABLED": "Two-factor enabled",
+      "TWO_FACTOR_DISABLED": "Two-factor disabled",
+      "RECOVERY_CODES_REGENERATED": "Recovery codes regenerated",
+      "ACCOUNT_DELETED": "Account deleted",
+      "USER_INVITED": "User invited",
+      "USER_CREATED": "User created",
+      "USER_ROLE_CHANGED": "Role changed",
+      "USER_ACTIVATED": "User activated",
+      "USER_DEACTIVATED": "User deactivated",
+      "USER_DELETED": "User deleted",
+      "USER_PASSWORD_RESET_SENT": "Password reset sent",
+      "USER_SESSIONS_REVOKED": "Sessions revoked",
+      "SETTINGS_CHANGED": "Settings changed",
+      "DATA_EXPORT_REQUESTED": "Data export requested",
+      "UNKNOWN": "Unknown event"
+    },
+    "meta": {
+      "oldRole": "Previous role",
+      "newRole": "New role",
+      "role": "Role",
+      "lockoutMinutes": "Lockout (minutes)",
+      "attempts": "Attempts",
+      "reason": "Reason",
+      "email": "Email",
+      "oldEmail": "Previous email",
+      "newEmail": "New email",
+      "method": "Method",
+      "setting": "Setting",
+      "provider": "Provider"
+    }
   },
   "sprint": {
     "tab": {
