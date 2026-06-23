@@ -32,10 +32,6 @@ final class HinataSplashView: UIView {
     private var markColor: UIColor {
         UIColor(red: 0.851, green: 0.627, blue: 0.196, alpha: 1) // #D9A032 honey-amber
     }
-    private var inkColor: UIColor {
-        isDark ? UIColor(red: 0.925, green: 0.922, blue: 0.953, alpha: 1) // #ECEBF3
-               : UIColor(red: 0.137, green: 0.133, blue: 0.247, alpha: 1) // #23223F
-    }
     private var bgColor: UIColor {
         isDark ? UIColor(red: 0.075, green: 0.067, blue: 0.098, alpha: 1) // #131119
                : UIColor(red: 0.957, green: 0.953, blue: 0.937, alpha: 1) // #F4F3EF
@@ -59,7 +55,7 @@ final class HinataSplashView: UIView {
             string: "hinata",
             attributes: [.kern: -0.03 * 34]
         )
-        wordmark.textColor = inkColor
+        wordmark.textColor = markColor
         wordmark.alpha = 0
         addSubview(wordmark)
     }
@@ -122,41 +118,42 @@ final class HinataSplashView: UIView {
     // MARK: - Animation
 
     private func start() {
-        let now = CACurrentMediaTime()
+        // Pfade/Frames werden in layoutSubviews() gesetzt – Layout erzwingen, BEVOR
+        // animiert wird, sonst ist markContainer.frame == .zero und path == nil und
+        // es wird nichts gezeichnet (nur der Hintergrund erscheint).
+        setNeedsLayout()
+        layoutIfNeeded()
+
+        // Startzustände als Modellwerte
+        hexLayer.strokeEnd = 0
+        barLayer.strokeEnd = 0
         markContainer.setValue(0.94, forKeyPath: "transform.scale")
-
-        let hexDraw = CABasicAnimation(keyPath: "strokeEnd")
-        hexDraw.fromValue = 0
-        hexDraw.toValue = 1
-        hexDraw.duration = 0.62
-        hexDraw.beginTime = now + 0.10
-        hexDraw.timingFunction = CAMediaTimingFunction(controlPoints: 0.66, 0, 0.18, 1)
-        hexDraw.fillMode = .both
-        hexLayer.strokeEnd = 1
-        hexLayer.add(hexDraw, forKey: "draw")
-
-        let barDraw = CABasicAnimation(keyPath: "strokeEnd")
-        barDraw.fromValue = 0
-        barDraw.toValue = 1
-        barDraw.duration = 0.38
-        barDraw.beginTime = now + 0.50
-        barDraw.timingFunction = CAMediaTimingFunction(controlPoints: 0.4, 0, 0.18, 1)
-        barDraw.fillMode = .both
-        barLayer.strokeEnd = 1
-        barLayer.add(barDraw, forKey: "draw")
-
-        let pop = CASpringAnimation(keyPath: "transform.scale")
-        pop.fromValue = 0.94
-        pop.toValue = 1.0
-        pop.damping = 12
-        pop.stiffness = 220
-        pop.beginTime = now + 0.62
-        pop.duration = pop.settlingDuration
-        pop.fillMode = .both
-        markContainer.setValue(1.0, forKeyPath: "transform.scale")
-        markContainer.add(pop, forKey: "pop")
-
+        wordmark.alpha = 0
         wordmark.transform = CGAffineTransform(translationX: 0, y: 12)
+
+        // Choreografie über echte Wanduhr-Delays. Jede Stufe startet sofort (kein
+        // absoluter beginTime), wenn die Layer sicher im Render-Tree committet sind –
+        // das behebt das Überspringen der Animationen beim Cold-Launch.
+        runStaged(0.10) {
+            self.drawStroke(self.hexLayer, duration: 0.62,
+                            timing: CAMediaTimingFunction(controlPoints: 0.66, 0, 0.18, 1))
+        }
+        runStaged(0.50) {
+            self.drawStroke(self.barLayer, duration: 0.38,
+                            timing: CAMediaTimingFunction(controlPoints: 0.4, 0, 0.18, 1))
+        }
+        runStaged(0.62) {
+            let pop = CASpringAnimation(keyPath: "transform.scale")
+            pop.fromValue = 0.94
+            pop.toValue = 1.0
+            pop.damping = 12
+            pop.stiffness = 220
+            pop.duration = pop.settlingDuration
+            self.markContainer.setValue(1.0, forKeyPath: "transform.scale")
+            self.markContainer.add(pop, forKey: "pop")
+        }
+
+        // Wortmarke steigt auf (UIView-Animation mit Delay ist hier zuverlässig)
         UIView.animate(withDuration: 0.55, delay: 0.88,
                        usingSpringWithDamping: 0.9, initialSpringVelocity: 0) {
             self.wordmark.alpha = 1
@@ -164,11 +161,26 @@ final class HinataSplashView: UIView {
         }
 
         // Ausblenden, sobald die Choreografie durch ist (Flutter rendert darunter weiter)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) { [weak self] in
-            UIView.animate(withDuration: 0.35, animations: { self?.alpha = 0 }) { _ in
-                self?.removeFromSuperview()
+        runStaged(1.9) {
+            UIView.animate(withDuration: 0.35, animations: { self.alpha = 0 }) { _ in
+                self.removeFromSuperview()
             }
         }
+    }
+
+    private func runStaged(_ delay: TimeInterval, _ block: @escaping () -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: block)
+    }
+
+    private func drawStroke(_ layer: CAShapeLayer, duration: CFTimeInterval,
+                            timing: CAMediaTimingFunction) {
+        let draw = CABasicAnimation(keyPath: "strokeEnd")
+        draw.fromValue = 0
+        draw.toValue = 1
+        draw.duration = duration
+        draw.timingFunction = timing
+        layer.strokeEnd = 1
+        layer.add(draw, forKey: "draw")
     }
 
     // MARK: - Sora Variable Font (wght 600), Fallback: System Semibold

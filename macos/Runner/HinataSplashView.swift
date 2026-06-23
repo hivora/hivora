@@ -27,10 +27,6 @@ final class HinataSplashView: NSView {
     private var markColor: NSColor {
         NSColor(red: 0.851, green: 0.627, blue: 0.196, alpha: 1) // #D9A032 honey-amber
     }
-    private var inkColor: NSColor {
-        isDark ? NSColor(red: 0.925, green: 0.922, blue: 0.953, alpha: 1) // #ECEBF3
-               : NSColor(red: 0.137, green: 0.133, blue: 0.247, alpha: 1) // #23223F
-    }
     private var bgColor: NSColor {
         isDark ? NSColor(red: 0.075, green: 0.067, blue: 0.098, alpha: 1) // #131119
                : NSColor(red: 0.957, green: 0.953, blue: 0.937, alpha: 1) // #F4F3EF
@@ -52,7 +48,8 @@ final class HinataSplashView: NSView {
         // macOS-Layer sind nicht geflippt — Pfade unten werden dafür gespiegelt angelegt
         layer?.addSublayer(markContainer)
 
-        wordmark.textColor = inkColor
+        wordmark.textColor = markColor // Wortmarke „hinata“ in Honey-Amber (#D9A032) in beiden Themes
+        wordmark.wantsLayer = true     // layer-backed, damit die Opacity-„rise“-Animation greift
         wordmark.alphaValue = 0
         addSubview(wordmark)
     }
@@ -71,7 +68,7 @@ final class HinataSplashView: NSView {
         wordmark.font = Self.soraFont(size: fontSize)
         wordmark.attributedStringValue = NSAttributedString(
             string: "hinata",
-            attributes: [.kern: -0.03 * fontSize, .foregroundColor: inkColor]
+            attributes: [.kern: -0.03 * fontSize, .foregroundColor: markColor]
         )
         wordmark.sizeToFit()
 
@@ -119,54 +116,51 @@ final class HinataSplashView: NSView {
     // MARK: - Animation
 
     private func start() {
+        // Pfade/Frames in layout() setzen, BEVOR animiert wird.
         layoutSubtreeIfNeeded()
-        let now = CACurrentMediaTime()
 
-        let hexDraw = CABasicAnimation(keyPath: "strokeEnd")
-        hexDraw.fromValue = 0
-        hexDraw.toValue = 1
-        hexDraw.duration = 0.62
-        hexDraw.beginTime = now + 0.10
-        hexDraw.timingFunction = CAMediaTimingFunction(controlPoints: 0.66, 0, 0.18, 1)
-        hexDraw.fillMode = .both
-        hexLayer.strokeEnd = 1
-        hexLayer.add(hexDraw, forKey: "draw")
+        // Startzustände als Modellwerte
+        hexLayer.strokeEnd = 0
+        barLayer.strokeEnd = 0
+        markContainer.setValue(0.94, forKeyPath: "transform.scale")
+        wordmark.alphaValue = 0
 
-        let barDraw = CABasicAnimation(keyPath: "strokeEnd")
-        barDraw.fromValue = 0
-        barDraw.toValue = 1
-        barDraw.duration = 0.38
-        barDraw.beginTime = now + 0.50
-        barDraw.timingFunction = CAMediaTimingFunction(controlPoints: 0.4, 0, 0.18, 1)
-        barDraw.fillMode = .both
-        barLayer.strokeEnd = 1
-        barLayer.add(barDraw, forKey: "draw")
+        // Choreografie über echte Wanduhr-Delays. Jede Stufe startet sofort (kein
+        // absoluter beginTime), wenn die Layer sicher im Render-Tree committet sind –
+        // das behebt das „statische Logo“ (übersprungene Animationen).
+        runStaged(0.10) {
+            self.drawStroke(self.hexLayer, duration: 0.62,
+                            timing: CAMediaTimingFunction(controlPoints: 0.66, 0, 0.18, 1))
+        }
+        runStaged(0.50) {
+            self.drawStroke(self.barLayer, duration: 0.38,
+                            timing: CAMediaTimingFunction(controlPoints: 0.4, 0, 0.18, 1))
+        }
+        runStaged(0.62) {
+            let pop = CASpringAnimation(keyPath: "transform.scale")
+            pop.fromValue = 0.94
+            pop.toValue = 1.0
+            pop.damping = 12
+            pop.stiffness = 220
+            pop.duration = pop.settlingDuration
+            self.markContainer.setValue(1.0, forKeyPath: "transform.scale")
+            self.markContainer.add(pop, forKey: "pop")
+        }
 
-        let pop = CASpringAnimation(keyPath: "transform.scale")
-        pop.fromValue = 0.94
-        pop.toValue = 1.0
-        pop.damping = 12
-        pop.stiffness = 220
-        pop.beginTime = now + 0.62
-        pop.duration = pop.settlingDuration
-        pop.fillMode = .both
-        markContainer.add(pop, forKey: "pop")
-
-        let rise = CABasicAnimation(keyPath: "opacity")
-        rise.fromValue = 0
-        rise.toValue = 1
-        rise.duration = 0.55
-        rise.beginTime = now + 0.88
-        rise.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 1, 0.36, 1)
-        rise.fillMode = .both
-        wordmark.layer?.add(rise, forKey: "rise")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.88) { [weak self] in
-            self?.wordmark.alphaValue = 1
+        // Wortmarke steigt auf – EIN Mechanismus (Modellwert + Opacity-Animation),
+        // kein Mix aus asyncAfter-alphaValue und CA-Animation → kein Blinken mehr.
+        runStaged(0.88) {
+            self.wordmark.alphaValue = 1
+            let rise = CABasicAnimation(keyPath: "opacity")
+            rise.fromValue = 0
+            rise.toValue = 1
+            rise.duration = 0.55
+            rise.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 1, 0.36, 1)
+            self.wordmark.layer?.add(rise, forKey: "rise")
         }
 
         // Ausblenden, sobald die Choreografie durch ist
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) { [weak self] in
-            guard let self else { return }
+        runStaged(1.9) {
             NSAnimationContext.runAnimationGroup({ context in
                 context.duration = 0.35
                 self.animator().alphaValue = 0
@@ -174,6 +168,21 @@ final class HinataSplashView: NSView {
                 self.removeFromSuperview()
             })
         }
+    }
+
+    private func runStaged(_ delay: TimeInterval, _ block: @escaping () -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: block)
+    }
+
+    private func drawStroke(_ layer: CAShapeLayer, duration: CFTimeInterval,
+                            timing: CAMediaTimingFunction) {
+        let draw = CABasicAnimation(keyPath: "strokeEnd")
+        draw.fromValue = 0
+        draw.toValue = 1
+        draw.duration = duration
+        draw.timingFunction = timing
+        layer.strokeEnd = 1
+        layer.add(draw, forKey: "draw")
     }
 
     // MARK: - Sora Variable Font (wght 600), Fallback: System Semibold

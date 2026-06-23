@@ -9,27 +9,37 @@
             android:height="288dp"
             android:viewportWidth="120"
             android:viewportHeight="120">
+            <!-- Safe-zone: Android 12+ maskiert das Icon auf den inneren 2/3
+                 (192dp-Kreis im 288dp-Canvas). Ohne diese Verkleinerung würde
+                 das randfüllende Hexagon weggeschnitten -> leerer Splash. -->
             <group
-                android:name="mark"
+                android:name="safe"
                 android:pivotX="60"
                 android:pivotY="60"
-                android:scaleX="0.94"
-                android:scaleY="0.94">
-                <path
-                    android:name="hex"
-                    android:pathData="M60,14 L99.8,37 L99.8,83 L60,106 L20.2,83 L20.2,37 Z"
-                    android:strokeColor="#D9A032"
-                    android:strokeWidth="11"
-                    android:strokeLineCap="round"
-                    android:strokeLineJoin="round"
-                    android:trimPathEnd="0" />
-                <path
-                    android:name="bar"
-                    android:pathData="M20.2,60 L99.8,60"
-                    android:strokeColor="#D9A032"
-                    android:strokeWidth="11"
-                    android:strokeLineCap="round"
-                    android:trimPathEnd="0" />
+                android:scaleX="0.62"
+                android:scaleY="0.62">
+                <group
+                    android:name="mark"
+                    android:pivotX="60"
+                    android:pivotY="60"
+                    android:scaleX="0.94"
+                    android:scaleY="0.94">
+                    <path
+                        android:name="hex"
+                        android:pathData="M60,14 L99.8,37 L99.8,83 L60,106 L20.2,83 L20.2,37 Z"
+                        android:strokeColor="#D9A032"
+                        android:strokeWidth="11"
+                        android:strokeLineCap="round"
+                        android:strokeLineJoin="round"
+                        android:trimPathEnd="0" />
+                    <path
+                        android:name="bar"
+                        android:pathData="M20.2,60 L99.8,60"
+                        android:strokeColor="#D9A032"
+                        android:strokeWidth="11"
+                        android:strokeLineCap="round"
+                        android:trimPathEnd="0" />
+                </group>
             </group>
         </vector>
     </aapt:attr>
