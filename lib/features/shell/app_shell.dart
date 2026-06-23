@@ -24,9 +24,14 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
         GlassAppBar,
         GlassBottomBar,
         GlassBottomBarTab,
+        GlassContainer,
         GlassIconButton,
-        LiquidGlassSettings;
+        GlassQuality,
+        LiquidGlassSettings,
+        LiquidRoundedSuperellipse;
+import '../../core/widgets/glass_panel.dart';
 import '../search/global_search_dialog.dart';
+import '../search/search_tokens.dart';
 import 'page_chrome.dart';
 
 class _Destination {
@@ -1402,6 +1407,7 @@ class _CompactShellState extends State<_CompactShell> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.32),
       builder: (sheetCtx) => _MoreSheet(
         location: widget.location,
         user: user,
@@ -1783,135 +1789,160 @@ class _MoreSheet extends StatelessWidget {
     // top bar bell, so they need no entry in the overflow sheet.
   ];
 
+  static const double _radius = 28;
+
   @override
   Widget build(BuildContext context) {
+    final tokens = SearchTokens.of(Theme.of(context).brightness);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
     final subtitle = user?.title?.isNotEmpty == true
         ? user!.title!
         : user?.roles.isNotEmpty == true
             ? user!.roles.first.toLowerCase()
             : user?.email ?? '';
 
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.96),
-            border: Border(top: BorderSide(color: AppColors.hairline)),
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Drag handle
-                const SizedBox(height: 10),
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.hairline,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+    final panel = GlassPanelShadow(
+      radius: BorderRadius.circular(_radius),
+      shadows: tokens.panelShadow,
+      child: GlassContainer(
+        useOwnLayer: true,
+        quality: GlassQuality.premium,
+        clipBehavior: Clip.antiAlias,
+        shape: const LiquidRoundedSuperellipse(borderRadius: _radius),
+        settings:
+            liquidGlassPanelSettings(glassFill: tokens.glassFill, dark: dark),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Drag handle
+              const SizedBox(height: 10),
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: tokens.hairline,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                // User header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
-                  child: Row(
-                    children: [
-                      AppAvatar(
-                        name: user?.displayName ?? '?',
-                        imageUrl: user?.avatarUrl,
-                        radius: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
+              ),
+              // User header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
+                child: Row(
+                  children: [
+                    AppAvatar(
+                      name: user?.displayName ?? '?',
+                      imageUrl: user?.avatarUrl,
+                      radius: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            user?.displayName ?? '',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: tokens.ink,
+                            ),
+                          ),
+                          if (subtitle.isNotEmpty)
                             Text(
-                              user?.displayName ?? '',
+                              subtitle,
                               style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                color: AppColors.ink,
+                                fontSize: 12,
+                                color: tokens.inkSoft,
                               ),
                             ),
-                            if (subtitle.isNotEmpty)
-                              Text(
-                                subtitle,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.inkSoft,
-                                ),
-                              ),
-                          ],
-                        ),
+                        ],
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(LucideIcons.x,
-                            size: 20, color: AppColors.inkSoft),
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: Icon(LucideIcons.x,
+                          size: 20, color: tokens.inkSoft),
+                    ),
+                  ],
                 ),
-                Divider(height: 1, color: AppColors.hairline),
-                const SizedBox(height: 12),
-                // Compact 3-column grid — fixed row height so tiles never bloat
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                    childAspectRatio: 1.1,
-                  ),
-                  itemCount: _items.length,
-                  itemBuilder: (context, i) => _MoreTile(
-                    destination: _items[i],
-                    active: location.startsWith(_items[i].route),
-                    onTap: () => onNavigate(_items[i].route),
-                  ),
+              ),
+              Container(
+                height: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                color: tokens.hairline,
+              ),
+              const SizedBox(height: 12),
+              // Compact 3-column grid — fixed row height so tiles never bloat
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 1.1,
                 ),
-              ],
-            ),
+                itemCount: _items.length,
+                itemBuilder: (context, i) => _MoreTile(
+                  tokens: tokens,
+                  destination: _items[i],
+                  active: location.startsWith(_items[i].route),
+                  onTap: () => onNavigate(_items[i].route),
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+        child: panel,
       ),
     );
   }
 }
 
 class _MoreTile extends StatelessWidget {
-  const _MoreTile(
-      {required this.destination, required this.active, required this.onTap});
+  const _MoreTile({
+    required this.tokens,
+    required this.destination,
+    required this.active,
+    required this.onTap,
+  });
 
+  final SearchTokens tokens;
   final _Destination destination;
   final bool active;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = active ? AppColors.accentStrong : AppColors.inkSoft;
-    final badgeBg = active ? AppColors.accentSoft : AppColors.canvas2;
+    final iconColor = active ? AppColors.accentStrong : tokens.inkSoft;
+    final badgeBg = active ? AppColors.accentSoft : tokens.field;
     return Material(
-      color: AppColors.surface,
+      type: MaterialType.transparency,
       borderRadius: BorderRadius.circular(AppTheme.radiusCard),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-        child: Container(
+        child: DecoratedBox(
           decoration: BoxDecoration(
+            color: active ? AppColors.accentSoft.withValues(alpha: 0.35) : null,
             borderRadius: BorderRadius.circular(AppTheme.radiusCard),
             border: Border.all(
-              color: active ? AppColors.accentLine : AppColors.hairline,
+              color: active ? AppColors.accentLine : tokens.hairline,
             ),
           ),
           child: Column(
