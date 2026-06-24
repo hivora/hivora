@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hinata/core/responsive/responsive.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/i18n/i18n.dart';
@@ -68,12 +69,14 @@ class BoardGroupByButton extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(width: 4),
-              Icon(
-                LucideIcons.chevronDown,
-                size: 15,
-                color: AppColors.inkFaint,
-              ),
+              if (!context.isCompact) ...[
+                const SizedBox(width: 4),
+                Icon(
+                  LucideIcons.chevronDown,
+                  size: 15,
+                  color: AppColors.inkFaint,
+                ),
+              ],
             ],
           ),
         ),
