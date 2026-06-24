@@ -13,6 +13,7 @@ import '../../core/widgets/hive_loader.dart';
 import '../board/board_filter.dart';
 import '../board/board_filter_popup.dart';
 import '../board/board_people_strip.dart';
+import '../board/board_swimlanes.dart';
 import '../issues/issue_form.dart';
 import 'modals/complete_sprint_dialog.dart';
 import 'modals/create_sprint_dialog.dart';
@@ -74,6 +75,13 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
   BoardFilter _filter = BoardFilter.empty;
   final GlobalKey _filterKey = GlobalKey();
 
+  // Swimlane grouping for the active-sprint board.
+  BoardGrouping _grouping = BoardGrouping.none;
+
+  /// Every project issue keyed by id — resolves an issue's epic (a sub-task's
+  /// epic is its grandparent) for swimlane grouping + the epic filter.
+  Map<String, Issue> _issuesById = const {};
+
   // Planning selection / drag.
   final Set<String> _selected = {};
 
@@ -89,8 +97,9 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
     _loadAll();
   }
 
-  List<Issue> get _activeIssues =>
-      _activeSprintId == null ? const [] : (_bySprint[_activeSprintId] ?? const []);
+  List<Issue> get _activeIssues => _activeSprintId == null
+      ? const []
+      : (_bySprint[_activeSprintId] ?? const []);
 
   Sprint? get _activeSprint {
     for (final s in _sprints) {
@@ -103,13 +112,11 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
       _sprints.where((s) => s.id != _activeSprintId && !s.archived).toList();
 
   /// Active sprint first, then the planned ones — the planning containers.
-  List<Sprint> get _planningSprints => [
-    ?_activeSprint,
-    ..._plannedSprints,
-  ];
+  List<Sprint> get _planningSprints => [?_activeSprint, ..._plannedSprints];
 
-  int get _backlogPages =>
-      _backlogTotal == 0 ? 1 : ((_backlogTotal + kBacklogPageSize - 1) ~/ kBacklogPageSize);
+  int get _backlogPages => _backlogTotal == 0
+      ? 1
+      : ((_backlogTotal + kBacklogPageSize - 1) ~/ kBacklogPageSize);
 
   /// Every issue currently loaded (all sprint containers + the backlog page) —
   /// the basis for the filter's facet options and the people strip.
@@ -128,7 +135,18 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
     return out;
   }
 
-  Map<String, String> get _sprintNames => {for (final s in _sprints) s.id: s.name};
+  Map<String, String> get _sprintNames => {
+    for (final s in _sprints) s.id: s.name,
+  };
+
+  /// Epics across the board's projects — drive grouping headers + the filter.
+  List<Issue> get _epics =>
+      _issuesById.values.where((i) => i.isEpic).toList()
+        ..sort((a, b) => a.readableId.compareTo(b.readableId));
+
+  Map<String, String> get _epicNames => {
+    for (final e in _epics) e.id: '${e.readableId}  ${e.title}',
+  };
 
   void _openFilter() => openBoardFilter(
     context,
@@ -138,9 +156,11 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
       issues: _allLoadedIssues,
       boardSprints: _sprints,
       projectLabels: const [],
+      epicIds: _epics.map((e) => e.id),
     ),
     names: widget.names,
     sprintNames: _sprintNames,
+    epicNames: _epicNames,
     onChanged: (f) => setState(() => _filter = f),
   );
 
@@ -168,6 +188,7 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
         _bySprint[sprints[i].id] = issueLists[i].issues;
       }
       await _loadBacklog();
+      await _loadIssueIndex();
       if (!mounted) return;
       setState(() {
         _sprints = sprints;
@@ -183,6 +204,24 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
         _error = failure.message;
       });
     }
+  }
+
+  /// Loads every project issue once into [_issuesById] so swimlane grouping can
+  /// resolve an issue's epic (including a sub-task's grandparent epic), which
+  /// the per-sprint working set alone can't reach.
+  Future<void> _loadIssueIndex() async {
+    final projectIds = _board.projectIds;
+    if (projectIds.isEmpty) {
+      _issuesById = const {};
+      return;
+    }
+    final pages = await Future.wait(
+      projectIds.map((p) => _repo.issues(projectId: p, size: 500)),
+    );
+    _issuesById = {
+      for (final page in pages)
+        for (final issue in page.issues) issue.id: issue,
+    };
   }
 
   Future<void> _loadBacklog() async {
@@ -202,22 +241,28 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
       // Multiple projects: the search endpoint is single-project, so merge a
       // bounded page per project and paginate client-side.
       final pages = await Future.wait(
-        projectIds.map((p) => _repo.issues(projectId: p, noSprint: true, size: 200)),
+        projectIds.map(
+          (p) => _repo.issues(projectId: p, noSprint: true, size: 200),
+        ),
       );
       var merged = [for (final pg in pages) ...pg.issues];
       if (query != null) {
         final q = query.toLowerCase();
         merged = merged
-            .where((i) =>
-                i.readableId.toLowerCase().contains(q) ||
-                i.title.toLowerCase().contains(q) ||
-                i.tags.any((t) => t.toLowerCase().contains(q)))
+            .where(
+              (i) =>
+                  i.readableId.toLowerCase().contains(q) ||
+                  i.title.toLowerCase().contains(q) ||
+                  i.tags.any((t) => t.toLowerCase().contains(q)),
+            )
             .toList();
       }
       _backlogTotal = merged.length;
       final start = _backlogPage * kBacklogPageSize;
-      _backlog =
-          merged.skip(start).take(kBacklogPageSize).toList(growable: false);
+      _backlog = merged
+          .skip(start)
+          .take(kBacklogPageSize)
+          .toList(growable: false);
     }
   }
 
@@ -259,9 +304,9 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
   /// mounted, so [context] is never read across an async gap.
   void _toastKey(String key, {Map<String, dynamic>? vars}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.t(key, variables: vars))),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.t(key, variables: vars))));
   }
 
   /// Locates an issue across the sprint containers and the backlog.
@@ -313,7 +358,9 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
     setState(() {
       for (final id in ids) {
         final issue = _findIssue(id);
-        if (issue != null) _applyLocalMove(issue, issue.copyWith(sprintId: sprintId));
+        if (issue != null) {
+          _applyLocalMove(issue, issue.copyWith(sprintId: sprintId));
+        }
       }
       _selected.clear();
     });
@@ -382,7 +429,9 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
   }
 
   Future<void> _addIssue(String? sprintId) async {
-    final projectId = _board.projectIds.isNotEmpty ? _board.projectIds.first : null;
+    final projectId = _board.projectIds.isNotEmpty
+        ? _board.projectIds.first
+        : null;
     // Pre-select the target sprint so the issue is created straight into it
     // (the server starts it in the working state, not the backlog).
     final created = await showIssueForm(
@@ -444,7 +493,11 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
     );
     if (data == null) return;
     try {
-      await _repo.startSprint(sprint.id, goal: data.goal, endDate: data.endDate);
+      await _repo.startSprint(
+        sprint.id,
+        goal: data.goal,
+        endDate: data.endDate,
+      );
       _activeSprintId = sprint.id;
       _report = null;
       _toastKey('sprint.toast.started', vars: {'name': sprint.name});
@@ -549,13 +602,24 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
                               names: widget.names,
                               selected: _filter.assignees,
                               onToggle: (id) => setState(
-                                () => _filter = _filter
-                                    .toggle(BoardFilterFacet.assignee, id),
+                                () => _filter = _filter.toggle(
+                                  BoardFilterFacet.assignee,
+                                  id,
+                                ),
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
+                      ],
+                      // Grouping applies to the active-sprint board only.
+                      if (_tab == _Tab.active) ...[
+                        BoardGroupByButton(
+                          value: _grouping,
+                          compact: compact,
+                          onChanged: (g) => setState(() => _grouping = g),
+                        ),
+                        const SizedBox(width: 10),
                       ],
                       _SprintFilterButton(
                         key: _filterKey,
@@ -624,6 +688,10 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
           columns: widget.view.columns,
           issues: _activeIssues,
           filter: _filter,
+          grouping: _grouping,
+          issuesById: _issuesById,
+          epics: _epics,
+          names: widget.names,
           onOpenIssue: widget.onOpenIssue,
           onMoveState: _moveIssueState,
         );
@@ -705,8 +773,9 @@ class _SprintTabSwitcher extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
-                          color:
-                              i == selected ? Colors.white : AppColors.inkSoft,
+                          color: i == selected
+                              ? Colors.white
+                              : AppColors.inkSoft,
                         ),
                       ),
                     ],
@@ -757,7 +826,11 @@ class _SprintFilterButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(LucideIcons.slidersHorizontal, size: 16, color: AppColors.inkSoft),
+              Icon(
+                LucideIcons.slidersHorizontal,
+                size: 16,
+                color: AppColors.inkSoft,
+              ),
               if (!compact) ...[
                 const SizedBox(width: 7),
                 Text(

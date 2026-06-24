@@ -1851,8 +1851,10 @@ class _DetailRow extends StatelessWidget {
 
 // ─────────────────────────── Sub-task quick-add ────────────────────────────
 
-/// Inline "add a sub-task" field — type a title, press enter (or the +) to
-/// create it under the parent. Clears itself on submit, Jira-style.
+/// "Add a sub-task" affordance — collapsed to a single "+" row by default so it
+/// takes no vertical space, then expands into an inline title field on tap. The
+/// field submits on Enter or via the "+" button and stays open for rapid entry;
+/// it collapses again on Escape or when left empty.
 class _SubtaskQuickAdd extends StatefulWidget {
   const _SubtaskQuickAdd({required this.onSubmit});
 
@@ -1864,12 +1866,25 @@ class _SubtaskQuickAdd extends StatefulWidget {
 
 class _SubtaskQuickAddState extends State<_SubtaskQuickAdd> {
   final _ctrl = TextEditingController();
+  final _focus = FocusNode();
+  bool _open = false;
   bool _busy = false;
 
   @override
   void dispose() {
     _ctrl.dispose();
+    _focus.dispose();
     super.dispose();
+  }
+
+  void _expand() {
+    setState(() => _open = true);
+    _focus.requestFocus();
+  }
+
+  void _collapse() {
+    _ctrl.clear();
+    setState(() => _open = false);
   }
 
   Future<void> _submit() async {
@@ -1877,38 +1892,94 @@ class _SubtaskQuickAddState extends State<_SubtaskQuickAdd> {
     if (value.isEmpty || _busy) return;
     setState(() => _busy = true);
     await widget.onSubmit(value);
-    if (mounted) {
-      _ctrl.clear();
-      setState(() => _busy = false);
-    }
+    if (!mounted) return;
+    _ctrl.clear();
+    setState(() => _busy = false);
+    // Keep the field open + focused so several sub-tasks can be added quickly.
+    _focus.requestFocus();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_open) {
+      return InkWell(
+        onTap: _expand,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          child: Row(
+            children: [
+              Icon(LucideIcons.plus, size: 16, color: AppColors.stTodo),
+              const SizedBox(width: 8),
+              Text(
+                context.t('issues.addSubtask'),
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.stTodo,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Row(
       children: [
-        Icon(LucideIcons.plus, size: 16, color: AppColors.inkFaint),
-        const SizedBox(width: 8),
+        // The "+" is the submit button while the field is open.
+        if (_busy)
+          const Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: HiveLoader(strokeWidth: 2),
+            ),
+          )
+        else
+          IconButton(
+            onPressed: _submit,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            icon: Icon(LucideIcons.plus, size: 18, color: AppColors.stTodo),
+          ),
+        const SizedBox(width: 4),
         Expanded(
-          child: TextField(
-            controller: _ctrl,
-            onSubmitted: (_) => _submit(),
-            textInputAction: TextInputAction.done,
-            style: const TextStyle(fontSize: 13.5),
-            decoration: InputDecoration(
-              isDense: true,
-              border: InputBorder.none,
-              hintText: context.t('issues.subtaskHint'),
-              hintStyle: TextStyle(fontSize: 13.5, color: AppColors.inkFaint),
+          child: Focus(
+            onKeyEvent: (_, event) {
+              if (event.logicalKey == LogicalKeyboardKey.escape) {
+                _collapse();
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: TextField(
+              controller: _ctrl,
+              focusNode: _focus,
+              autofocus: true,
+              onSubmitted: (_) => _submit(),
+              onTapOutside: (_) {
+                if (_ctrl.text.trim().isEmpty) _collapse();
+              },
+              textInputAction: TextInputAction.done,
+              style: const TextStyle(fontSize: 13.5),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: context.t('issues.subtaskHint'),
+                hintStyle: TextStyle(fontSize: 13.5, color: AppColors.inkFaint),
+              ),
             ),
           ),
         ),
-        if (_busy)
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: HiveLoader(strokeWidth: 2),
-          ),
+        IconButton(
+          onPressed: _collapse,
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          icon: Icon(LucideIcons.x, size: 16, color: AppColors.inkFaint),
+        ),
       ],
     );
   }

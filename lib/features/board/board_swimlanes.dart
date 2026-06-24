@@ -1,0 +1,469 @@
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
+import '../../core/i18n/i18n.dart';
+import '../../core/models/work_models.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/theme/project_palette.dart';
+import '../../core/widgets/glass_popup_menu.dart';
+import '../../core/widgets/hive_widgets.dart';
+
+/// Swimlane grouping for a board, Jira-style: each group becomes a horizontal
+/// lane that still shows the full set of status columns.
+enum BoardGrouping { none, epic, assignee, subtask }
+
+String boardGroupingLabel(BuildContext context, BoardGrouping g) => switch (g) {
+  BoardGrouping.none => context.t('board.group.none'),
+  BoardGrouping.epic => context.t('board.group.epic'),
+  BoardGrouping.assignee => context.t('board.group.assignee'),
+  BoardGrouping.subtask => context.t('board.group.subtask'),
+};
+
+/// The "Group by" control shared by the Kanban board and the Scrum active
+/// surface — a glass dropdown that mirrors the board's filter-button styling.
+class BoardGroupByButton extends StatelessWidget {
+  const BoardGroupByButton({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.compact = false,
+  });
+
+  final BoardGrouping value;
+  final ValueChanged<BoardGrouping> onChanged;
+
+  /// Phone layouts show only the icon + chevron to save room.
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final showLabel = !compact || value != BoardGrouping.none;
+    return GlassPopupMenu<BoardGrouping>(
+      value: value,
+      width: 220,
+      onSelected: onChanged,
+      items: [
+        for (final g in BoardGrouping.values)
+          GlassMenuItem(value: g, label: boardGroupingLabel(context, g)),
+      ],
+      child: Material(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(LucideIcons.rows3, size: 16, color: AppColors.inkSoft),
+              if (showLabel) ...[
+                const SizedBox(width: 7),
+                Text(
+                  value == BoardGrouping.none
+                      ? context.t('board.groupBy')
+                      : boardGroupingLabel(context, value),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              const SizedBox(width: 4),
+              Icon(
+                LucideIcons.chevronDown,
+                size: 15,
+                color: AppColors.inkFaint,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One swimlane: a stable [key], a rendered [header] and the issues that belong
+/// to the group (already passed through the board's filter).
+class BoardLane {
+  const BoardLane({
+    required this.key,
+    required this.header,
+    required this.issues,
+  });
+
+  final String key;
+  final Widget header;
+  final List<Issue> issues;
+}
+
+/// The epic an issue ultimately rolls up to (null = none): a standard issue's
+/// epic is its parent, a sub-task's epic is its grandparent. [byId] must index
+/// every project issue so a sub-task can reach its grandparent.
+String? boardEpicOf(Issue i, Map<String, Issue> byId) {
+  final pid = i.parentId;
+  if (pid == null) return null;
+  final parent = byId[pid];
+  if (parent == null) return null;
+  if (parent.isEpic) return parent.id;
+  final gp = parent.parentId != null ? byId[parent.parentId!] : null;
+  return (gp != null && gp.isEpic) ? gp.id : null;
+}
+
+/// Groups [issues] into ordered lanes for [grouping]. Shared by the Kanban
+/// board and the Scrum active surface so both behave identically.
+List<BoardLane> computeBoardLanes({
+  required BuildContext context,
+  required BoardGrouping grouping,
+  required List<Issue> issues,
+  required Map<String, Issue> issuesById,
+  required List<Issue> epics,
+  required Map<String, String> names,
+  required ProjectPalette palette,
+  required void Function(Issue) onOpenIssue,
+}) {
+  switch (grouping) {
+    case BoardGrouping.none:
+      return const [];
+    case BoardGrouping.epic:
+      final byEpic = <String?, List<Issue>>{};
+      for (final i in issues) {
+        byEpic.putIfAbsent(boardEpicOf(i, issuesById), () => []).add(i);
+      }
+      final lanes = <BoardLane>[];
+      for (final epic in epics) {
+        final group = byEpic[epic.id];
+        if (group == null || group.isEmpty) continue;
+        lanes.add(
+          BoardLane(
+            key: epic.id,
+            header: _issueLaneHeader(epic, group.length, palette, onOpenIssue),
+            issues: group,
+          ),
+        );
+      }
+      _appendNone(
+        lanes,
+        byEpic[null],
+        context.t('board.noEpic'),
+        LucideIcons.zapOff,
+      );
+      return lanes;
+    case BoardGrouping.assignee:
+      final byUser = <String?, List<Issue>>{};
+      for (final i in issues) {
+        final a = (i.assigneeId?.isNotEmpty ?? false) ? i.assigneeId : null;
+        byUser.putIfAbsent(a, () => []).add(i);
+      }
+      final ids = byUser.keys.whereType<String>().toList()
+        ..sort((a, b) => (names[a] ?? a).compareTo(names[b] ?? b));
+      final lanes = <BoardLane>[];
+      for (final id in ids) {
+        final name = names[id] ?? id;
+        lanes.add(
+          BoardLane(
+            key: id,
+            header: _avatarLaneHeader(name, byUser[id]!.length),
+            issues: byUser[id]!,
+          ),
+        );
+      }
+      _appendNone(
+        lanes,
+        byUser[null],
+        context.t('board.noAssignee'),
+        LucideIcons.userX,
+      );
+      return lanes;
+    case BoardGrouping.subtask:
+      // A sub-task's lane is its parent standard issue; everything else is its
+      // own "stand-alone" lane.
+      final byParent = <String?, List<Issue>>{};
+      for (final i in issues) {
+        final parent = i.parentId != null ? issuesById[i.parentId!] : null;
+        final key = (parent != null && parent.isStandard) ? parent.id : null;
+        byParent.putIfAbsent(key, () => []).add(i);
+      }
+      final parentIds = byParent.keys.whereType<String>().toList()
+        ..sort(
+          (a, b) => (issuesById[a]?.readableId ?? a).compareTo(
+            issuesById[b]?.readableId ?? b,
+          ),
+        );
+      final lanes = <BoardLane>[];
+      for (final id in parentIds) {
+        lanes.add(
+          BoardLane(
+            key: id,
+            header: _issueLaneHeader(
+              issuesById[id]!,
+              byParent[id]!.length,
+              palette,
+              onOpenIssue,
+            ),
+            issues: byParent[id]!,
+          ),
+        );
+      }
+      _appendNone(
+        lanes,
+        byParent[null],
+        context.t('board.standalone'),
+        LucideIcons.minus,
+      );
+      return lanes;
+  }
+}
+
+void _appendNone(
+  List<BoardLane> lanes,
+  List<Issue>? group,
+  String label,
+  IconData icon,
+) {
+  if (group == null || group.isEmpty) return;
+  lanes.add(
+    BoardLane(
+      key: '__none__',
+      header: _plainLaneHeader(label, group.length, icon),
+      issues: group,
+    ),
+  );
+}
+
+// ── lane headers ──────────────────────────────────────────────────────────
+
+Widget _issueLaneHeader(
+  Issue parent,
+  int count,
+  ProjectPalette palette,
+  void Function(Issue) onOpenIssue,
+) => Padding(
+  padding: const EdgeInsets.only(bottom: 8, top: 4),
+  child: Row(
+    children: [
+      InkWell(
+        onTap: () => onOpenIssue(parent),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TypeGlyph(type: parent.type, size: 20),
+              const SizedBox(width: 8),
+              IdMono(parent.readableId, fontSize: 13),
+              const SizedBox(width: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 280),
+                child: Text(
+                  parent.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(width: 10),
+      StateDotBadge(
+        state: parent.state,
+        color: palette.stateColor(parent.state),
+      ),
+      const SizedBox(width: 10),
+      _laneCount(count),
+    ],
+  ),
+);
+
+Widget _avatarLaneHeader(String name, int count) => Padding(
+  padding: const EdgeInsets.only(bottom: 8, top: 4),
+  child: Row(
+    children: [
+      HiveAvatar(name: name, size: 24),
+      const SizedBox(width: 9),
+      Text(
+        name,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+      ),
+      const SizedBox(width: 10),
+      _laneCount(count),
+    ],
+  ),
+);
+
+Widget _plainLaneHeader(String label, int count, IconData icon) => Padding(
+  padding: const EdgeInsets.only(bottom: 8, top: 4),
+  child: Row(
+    children: [
+      Icon(icon, size: 18, color: AppColors.inkFaint),
+      const SizedBox(width: 9),
+      Text(
+        label,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: AppColors.inkSoft,
+        ),
+      ),
+      const SizedBox(width: 10),
+      _laneCount(count),
+    ],
+  ),
+);
+
+Widget _laneCount(int count) => Container(
+  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+  decoration: BoxDecoration(
+    color: AppColors.surface,
+    borderRadius: BorderRadius.circular(99),
+    border: Border.all(color: AppColors.hairline),
+  ),
+  child: Text(
+    '$count',
+    style: TextStyle(
+      fontFamily: AppTheme.fontMono,
+      fontSize: 11.5,
+      fontWeight: FontWeight.w600,
+      color: AppColors.inkSoft,
+    ),
+  ),
+);
+
+/// Wraps a column's card list in a [Flexible] on the flat board (bounded
+/// viewport height) but renders it bare inside a swimlane, where the whole
+/// board scrolls as one unit and a [Flexible] would have no bounded height.
+class LaneAwareFlexible extends StatelessWidget {
+  const LaneAwareFlexible({
+    super.key,
+    required this.laneMode,
+    required this.child,
+  });
+
+  final bool laneMode;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      laneMode ? child : Flexible(child: child);
+}
+
+/// Renders [lanes] as one synced 2-D scroll: the vertical scroll stacks the
+/// lanes, a single horizontal scroll moves every lane's columns together, and
+/// columns size to their content so the whole board scrolls as one unit. Lanes
+/// collapse/expand via a chevron on their header (state kept here).
+class BoardSwimlanes extends StatefulWidget {
+  const BoardSwimlanes({
+    super.key,
+    required this.columns,
+    required this.lanes,
+    required this.columnBuilder,
+    this.columnWidth = 300,
+    this.columnGap = 16,
+    this.padding = EdgeInsets.zero,
+  });
+
+  final List<BoardColumnView> columns;
+  final List<BoardLane> lanes;
+
+  /// Renders one column of a lane from the issues that fall in it.
+  final Widget Function(BoardColumnView column, List<Issue> laneColumnIssues)
+  columnBuilder;
+
+  final double columnWidth;
+  final double columnGap;
+  final EdgeInsets padding;
+
+  @override
+  State<BoardSwimlanes> createState() => _BoardSwimlanesState();
+}
+
+class _BoardSwimlanesState extends State<BoardSwimlanes> {
+  final Set<String> _collapsed = {};
+
+  @override
+  void didUpdateWidget(BoardSwimlanes old) {
+    super.didUpdateWidget(old);
+    // Drop collapse state for lanes that no longer exist (e.g. after a grouping
+    // change) so the set doesn't leak keys.
+    final keys = {for (final l in widget.lanes) l.key};
+    _collapsed.removeWhere((k) => !keys.contains(k));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final columns = widget.columns;
+    final boardWidth =
+        columns.length * widget.columnWidth +
+        (columns.length - 1) * widget.columnGap;
+    return SingleChildScrollView(
+      padding: widget.padding,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: boardWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final lane in widget.lanes) ...[
+                _laneHeaderBar(lane),
+                if (!_collapsed.contains(lane.key))
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (var i = 0; i < columns.length; i++) ...[
+                        if (i > 0) SizedBox(width: widget.columnGap),
+                        SizedBox(
+                          width: widget.columnWidth,
+                          child: widget.columnBuilder(
+                            columns[i],
+                            lane.issues
+                                .where(
+                                  (x) => columns[i].states.contains(x.state),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                SizedBox(height: _collapsed.contains(lane.key) ? 6 : 20),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _laneHeaderBar(BoardLane lane) {
+    final collapsed = _collapsed.contains(lane.key);
+    return InkWell(
+      onTap: () => setState(() {
+        if (!_collapsed.remove(lane.key)) _collapsed.add(lane.key);
+      }),
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 2),
+            child: AnimatedRotation(
+              turns: collapsed ? -0.25 : 0,
+              duration: const Duration(milliseconds: 160),
+              child: Icon(
+                LucideIcons.chevronDown,
+                size: 18,
+                color: AppColors.inkSoft,
+              ),
+            ),
+          ),
+          Flexible(child: lane.header),
+        ],
+      ),
+    );
+  }
+}

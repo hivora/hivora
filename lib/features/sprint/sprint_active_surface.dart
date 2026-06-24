@@ -7,8 +7,10 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/hue_colors.dart';
+import '../../core/theme/project_palette.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../board/board_filter.dart';
+import '../board/board_swimlanes.dart';
 import 'widgets/glass_sprint_header.dart';
 
 /// Active-sprint surface: the Liquid-Glass sprint header above a sprint-scoped
@@ -22,6 +24,10 @@ class SprintActiveSurface extends StatelessWidget {
     required this.filter,
     required this.onOpenIssue,
     required this.onMoveState,
+    this.grouping = BoardGrouping.none,
+    this.issuesById = const {},
+    this.epics = const [],
+    this.names = const {},
   });
 
   final Sprint sprint;
@@ -31,15 +37,73 @@ class SprintActiveSurface extends StatelessWidget {
   final void Function(Issue) onOpenIssue;
   final void Function(Issue, String) onMoveState;
 
+  /// Swimlane grouping for the sprint board (none = flat columns).
+  final BoardGrouping grouping;
+  final Map<String, Issue> issuesById;
+  final List<Issue> epics;
+  final Map<String, String> names;
+
+  /// Every active facet plus the epic facet (resolved per issue).
+  bool _passes(Issue i) =>
+      filter.matches(i) && filter.matchesEpic(boardEpicOf(i, issuesById));
+
   bool _isBacklogColumn(BoardColumnView c) =>
       c.name.trim().toLowerCase() == 'backlog' ||
       c.states.any((s) => s.toUpperCase() == 'BACKLOG');
 
+  /// Swimlane board for the active sprint — reuses the shared [BoardSwimlanes]
+  /// with the sprint card column so it matches the Kanban board's grouping.
+  Widget _grouped(
+    BuildContext context,
+    List<BoardColumnView> boardColumns,
+    double gutter,
+  ) {
+    final lanes = computeBoardLanes(
+      context: context,
+      grouping: grouping,
+      issues: issues.where(_passes).toList(),
+      issuesById: issuesById,
+      epics: epics,
+      names: names,
+      palette: ProjectPalette.empty,
+      onOpenIssue: onOpenIssue,
+    );
+    if (lanes.isEmpty) {
+      return Center(
+        child: Text(
+          context.t('board.empty'),
+          style: TextStyle(color: AppColors.inkSoft),
+        ),
+      );
+    }
+    return BoardSwimlanes(
+      columns: boardColumns,
+      lanes: lanes,
+      padding: EdgeInsets.fromLTRB(
+        gutter,
+        0,
+        gutter,
+        gutter + context.bottomGutter,
+      ),
+      columnBuilder: (column, colIssues) => _SprintColumn(
+        column: column,
+        issues: colIssues,
+        laneMode: true,
+        onAccept: (issue) => onMoveState(
+          issue,
+          column.states.isNotEmpty ? column.states.first : issue.state,
+        ),
+        onOpenIssue: onOpenIssue,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final gutter = context.pageGutter;
-    final boardColumns =
-        columns.where((c) => !_isBacklogColumn(c)).toList(growable: false);
+    final boardColumns = columns
+        .where((c) => !_isBacklogColumn(c))
+        .toList(growable: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -56,7 +120,8 @@ class SprintActiveSurface extends StatelessWidget {
                     style: TextStyle(color: AppColors.inkSoft),
                   ),
                 )
-              : ListView.separated(
+              : grouping == BoardGrouping.none
+              ? ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: EdgeInsets.fromLTRB(
                     gutter,
@@ -69,20 +134,24 @@ class SprintActiveSurface extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final column = boardColumns[index];
                     final colIssues = issues
-                        .where((i) =>
-                            column.states.contains(i.state) && filter.matches(i))
+                        .where(
+                          (i) => column.states.contains(i.state) && _passes(i),
+                        )
                         .toList();
                     return _SprintColumn(
                       column: column,
                       issues: colIssues,
                       onAccept: (issue) => onMoveState(
                         issue,
-                        column.states.isNotEmpty ? column.states.first : issue.state,
+                        column.states.isNotEmpty
+                            ? column.states.first
+                            : issue.state,
                       ),
                       onOpenIssue: onOpenIssue,
                     );
                   },
-                ),
+                )
+              : _grouped(context, boardColumns, gutter),
         ),
       ],
     );
@@ -95,12 +164,17 @@ class _SprintColumn extends StatelessWidget {
     required this.issues,
     required this.onAccept,
     required this.onOpenIssue,
+    this.laneMode = false,
   });
 
   final BoardColumnView column;
   final List<Issue> issues;
   final void Function(Issue) onAccept;
   final void Function(Issue) onOpenIssue;
+
+  /// In a swimlane the board scrolls as one unit, so the column sizes to its
+  /// content (no [Flexible], which needs a bounded height).
+  final bool laneMode;
 
   @override
   Widget build(BuildContext context) {
@@ -161,7 +235,9 @@ class _SprintColumn extends StatelessWidget {
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 1),
+                          horizontal: 8,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: overWip
                               ? AppColors.dangerSoft
@@ -179,25 +255,33 @@ class _SprintColumn extends StatelessWidget {
                             fontFamily: AppTheme.fontMono,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w600,
-                            color:
-                                overWip ? AppColors.danger : AppColors.inkSoft,
+                            color: overWip
+                                ? AppColors.danger
+                                : AppColors.inkSoft,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                Flexible(
+                LaneAwareFlexible(
+                  laneMode: laneMode,
                   child: issues.isEmpty
                       ? const SizedBox(height: 8)
                       : ListView.separated(
                           shrinkWrap: true,
+                          physics: laneMode
+                              ? const NeverScrollableScrollPhysics()
+                              : null,
                           padding: const EdgeInsets.symmetric(horizontal: 2),
                           itemCount: issues.length,
                           separatorBuilder: (_, _) => const SizedBox(height: 9),
                           itemBuilder: (context, index) {
                             final issue = issues[index];
-                            final card = _SprintCard(issue: issue, accent: dotColor);
+                            final card = _SprintCard(
+                              issue: issue,
+                              accent: dotColor,
+                            );
                             return Draggable<Issue>(
                               data: issue,
                               dragAnchorStrategy: childDragAnchorStrategy,
@@ -206,8 +290,10 @@ class _SprintColumn extends StatelessWidget {
                                 color: Colors.transparent,
                                 child: SizedBox(width: 276, child: card),
                               ),
-                              childWhenDragging:
-                                  Opacity(opacity: 0.35, child: card),
+                              childWhenDragging: Opacity(
+                                opacity: 0.35,
+                                child: card,
+                              ),
                               child: _SprintCard(
                                 issue: issue,
                                 accent: dotColor,
@@ -238,7 +324,8 @@ class _SprintCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = this.accent ?? AppColors.stateColor(issue.state.toUpperCase());
+    final accent =
+        this.accent ?? AppColors.stateColor(issue.state.toUpperCase());
     final due = dueLabel(issue.dueDate);
     return Container(
       decoration: BoxDecoration(

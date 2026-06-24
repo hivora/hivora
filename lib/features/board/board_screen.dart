@@ -28,6 +28,7 @@ import '../shell/page_chrome.dart';
 import '../sprint/sprint_board_view.dart';
 import 'board_filter.dart';
 import 'board_manage_menu.dart';
+import 'board_swimlanes.dart';
 import 'create_board_dialog.dart';
 import 'board_filter_popup.dart';
 import 'board_people_strip.dart';
@@ -309,10 +310,6 @@ class KanbanBoardScreen extends StatefulWidget {
 /// Which view the kanban screen is showing.
 enum BoardViewMode { board, backlog, timeline }
 
-/// Swimlane grouping for the Kanban board, Jira-style: each group becomes a
-/// horizontal lane that still shows the full set of status columns.
-enum BoardGrouping { none, epic, assignee, subtask }
-
 class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
   String? _sprintId;
   BoardView? _view;
@@ -430,21 +427,9 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
     for (final e in _epics) e.id: '${e.readableId}  ${e.title}',
   };
 
-  /// The epic an issue ultimately rolls up to (null = none): a standard issue's
-  /// epic is its parent, a sub-task's epic is its grandparent.
-  String? _epicOf(Issue i) {
-    final pid = i.parentId;
-    if (pid == null) return null;
-    final parent = _issuesById[pid];
-    if (parent == null) return null;
-    if (parent.isEpic) return parent.id;
-    final gp = parent.parentId != null ? _issuesById[parent.parentId!] : null;
-    return (gp != null && gp.isEpic) ? gp.id : null;
-  }
-
   /// Combined predicate: every facet plus the epic facet (resolved per issue).
   bool _passes(Issue i) =>
-      _filter.matches(i) && _filter.matchesEpic(_epicOf(i));
+      _filter.matches(i) && _filter.matchesEpic(boardEpicOf(i, _issuesById));
 
   List<String> get _peopleIds {
     final seen = <String>{};
@@ -769,7 +754,10 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
           ),
         ),
         const SizedBox(width: 10),
-        _groupByButton(),
+        BoardGroupByButton(
+          value: _grouping,
+          onChanged: (g) => setState(() => _grouping = g),
+        ),
         const SizedBox(width: 10),
         _BoardFilterButton(
           key: _filterKey,
@@ -777,53 +765,6 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
           onTap: _openFilter,
         ),
       ],
-    );
-  }
-
-  Widget _groupByButton() {
-    String labelOf(BoardGrouping g) => switch (g) {
-      BoardGrouping.none => context.t('board.group.none'),
-      BoardGrouping.epic => context.t('board.group.epic'),
-      BoardGrouping.assignee => context.t('board.group.assignee'),
-      BoardGrouping.subtask => context.t('board.group.subtask'),
-    };
-    return GlassPopupMenu<BoardGrouping>(
-      value: _grouping,
-      width: 220,
-      onSelected: (g) => setState(() => _grouping = g),
-      items: [
-        for (final g in BoardGrouping.values)
-          GlassMenuItem(value: g, label: labelOf(g)),
-      ],
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(LucideIcons.rows3, size: 16, color: AppColors.inkSoft),
-              const SizedBox(width: 7),
-              Text(
-                _grouping == BoardGrouping.none
-                    ? context.t('board.groupBy')
-                    : labelOf(_grouping),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(
-                LucideIcons.chevronDown,
-                size: 15,
-                color: AppColors.inkFaint,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -887,238 +828,20 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
 
   // ---- swimlanes (grouped board) ----
 
-  /// One swimlane: a header and the issues that belong to the group.
-  /// [issues] are pre-filtered through [_passes].
-
-  /// Groups every visible board issue into ordered lanes per [_grouping]. Each
-  /// lane carries the issues belonging to it; the columns are applied per lane.
-  List<({String key, Widget header, List<Issue> issues})> _lanes() {
-    final visible = _allBoardIssues.where(_passes).toList();
-    switch (_grouping) {
-      case BoardGrouping.none:
-        return const [];
-      case BoardGrouping.epic:
-        return _lanesEpic(visible);
-      case BoardGrouping.assignee:
-        return _lanesAssignee(visible);
-      case BoardGrouping.subtask:
-        return _lanesSubtask(visible);
-    }
-  }
-
-  List<({String key, Widget header, List<Issue> issues})> _lanesEpic(
-    List<Issue> visible,
-  ) {
-    final byEpic = <String?, List<Issue>>{};
-    for (final i in visible) {
-      byEpic.putIfAbsent(_epicOf(i), () => []).add(i);
-    }
-    final lanes = <({String key, Widget header, List<Issue> issues})>[];
-    for (final epic in _epics) {
-      final issues = byEpic[epic.id];
-      if (issues == null || issues.isEmpty) continue;
-      lanes.add((
-        key: epic.id,
-        header: _epicLaneHeader(epic, issues.length),
-        issues: issues,
-      ));
-    }
-    final none = byEpic[null];
-    if (none != null && none.isNotEmpty) {
-      lanes.add((
-        key: '__none__',
-        header: _plainLaneHeader(
-          context.t('board.noEpic'),
-          none.length,
-          LucideIcons.zapOff,
-        ),
-        issues: none,
-      ));
-    }
-    return lanes;
-  }
-
-  List<({String key, Widget header, List<Issue> issues})> _lanesAssignee(
-    List<Issue> visible,
-  ) {
-    final byUser = <String?, List<Issue>>{};
-    for (final i in visible) {
-      final a = (i.assigneeId?.isNotEmpty ?? false) ? i.assigneeId : null;
-      byUser.putIfAbsent(a, () => []).add(i);
-    }
-    final ids = byUser.keys.whereType<String>().toList()
-      ..sort((a, b) => (_names[a] ?? a).compareTo(_names[b] ?? b));
-    final lanes = <({String key, Widget header, List<Issue> issues})>[];
-    for (final id in ids) {
-      final name = _names[id] ?? id;
-      lanes.add((
-        key: id,
-        header: _avatarLaneHeader(name, byUser[id]!.length),
-        issues: byUser[id]!,
-      ));
-    }
-    final none = byUser[null];
-    if (none != null && none.isNotEmpty) {
-      lanes.add((
-        key: '__none__',
-        header: _plainLaneHeader(
-          context.t('board.noAssignee'),
-          none.length,
-          LucideIcons.userX,
-        ),
-        issues: none,
-      ));
-    }
-    return lanes;
-  }
-
-  List<({String key, Widget header, List<Issue> issues})> _lanesSubtask(
-    List<Issue> visible,
-  ) {
-    // A sub-task's lane is its parent standard issue; everything else is its own
-    // "stand-alone" card lane.
-    final byParent = <String?, List<Issue>>{};
-    for (final i in visible) {
-      final parent = i.parentId != null ? _issuesById[i.parentId!] : null;
-      final key = (parent != null && parent.isStandard) ? parent.id : null;
-      byParent.putIfAbsent(key, () => []).add(i);
-    }
-    final parentIds = byParent.keys.whereType<String>().toList()
-      ..sort(
-        (a, b) => (_issuesById[a]?.readableId ?? a).compareTo(
-          _issuesById[b]?.readableId ?? b,
-        ),
-      );
-    final lanes = <({String key, Widget header, List<Issue> issues})>[];
-    for (final id in parentIds) {
-      final parent = _issuesById[id]!;
-      lanes.add((
-        key: id,
-        header: _epicLaneHeader(parent, byParent[id]!.length),
-        issues: byParent[id]!,
-      ));
-    }
-    final standalone = byParent[null];
-    if (standalone != null && standalone.isNotEmpty) {
-      lanes.add((
-        key: '__none__',
-        header: _plainLaneHeader(
-          context.t('board.standalone'),
-          standalone.length,
-          LucideIcons.minus,
-        ),
-        issues: standalone,
-      ));
-    }
-    return lanes;
-  }
-
-  // --- lane headers ---
-
-  Widget _epicLaneHeader(Issue parent, int count) => Padding(
-    padding: const EdgeInsets.only(bottom: 8, top: 4),
-    child: Row(
-      children: [
-        InkWell(
-          onTap: () => _openIssue(parent),
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TypeGlyph(type: parent.type, size: 20),
-                const SizedBox(width: 8),
-                IdMono(parent.readableId, fontSize: 13),
-                const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 280),
-                  child: Text(
-                    parent.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        StateDotBadge(
-          state: parent.state,
-          color: _projStateColor(parent.state),
-        ),
-        const SizedBox(width: 10),
-        _laneCount(count),
-      ],
-    ),
-  );
-
-  Widget _avatarLaneHeader(String name, int count) => Padding(
-    padding: const EdgeInsets.only(bottom: 8, top: 4),
-    child: Row(
-      children: [
-        HiveAvatar(name: name, size: 24),
-        const SizedBox(width: 9),
-        Text(
-          name,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(width: 10),
-        _laneCount(count),
-      ],
-    ),
-  );
-
-  Widget _plainLaneHeader(String label, int count, IconData icon) => Padding(
-    padding: const EdgeInsets.only(bottom: 8, top: 4),
-    child: Row(
-      children: [
-        Icon(icon, size: 18, color: AppColors.inkFaint),
-        const SizedBox(width: 9),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: AppColors.inkSoft,
-          ),
-        ),
-        const SizedBox(width: 10),
-        _laneCount(count),
-      ],
-    ),
-  );
-
-  Widget _laneCount(int count) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-    decoration: BoxDecoration(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(99),
-      border: Border.all(color: AppColors.hairline),
-    ),
-    child: Text(
-      '$count',
-      style: TextStyle(
-        fontFamily: AppTheme.fontMono,
-        fontSize: 11.5,
-        fontWeight: FontWeight.w600,
-        color: AppColors.inkSoft,
-      ),
-    ),
-  );
-
-  Color _projStateColor(String state) => _palette.stateColor(state);
-
-  /// One synced 2-D scroll: the vertical scroll stacks the lanes, the single
-  /// horizontal scroll moves every lane's columns together (Jira-style), and the
-  /// columns size to their content so the whole board scrolls as one unit.
+  /// Renders the grouped board via the shared [BoardSwimlanes]: lanes per the
+  /// active grouping, each lane carrying the full column set and its own
+  /// collapse toggle.
   Widget _groupedBoard(List<BoardColumnView> columns) {
-    final lanes = _lanes();
+    final lanes = computeBoardLanes(
+      context: context,
+      grouping: _grouping,
+      issues: _allBoardIssues.where(_passes).toList(),
+      issuesById: _issuesById,
+      epics: _epics,
+      names: _names,
+      palette: _palette,
+      onOpenIssue: _openIssue,
+    );
     if (lanes.isEmpty) {
       return Center(
         child: Text(
@@ -1127,53 +850,23 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
         ),
       );
     }
-    const colWidth = 300.0;
-    const colGap = 16.0;
-    final boardWidth =
-        columns.length * colWidth + (columns.length - 1) * colGap;
-    return SingleChildScrollView(
+    return BoardSwimlanes(
+      columns: columns,
+      lanes: lanes,
       padding: EdgeInsets.fromLTRB(
         context.pageGutter,
         0,
         context.pageGutter,
         context.pageGutter + context.bottomGutter,
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: boardWidth,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final lane in lanes) ...[
-                lane.header,
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (var i = 0; i < columns.length; i++) ...[
-                      if (i > 0) const SizedBox(width: colGap),
-                      SizedBox(
-                        width: colWidth,
-                        child: _BoardColumn(
-                          column: columns[i],
-                          laneMode: true,
-                          issues: lane.issues
-                              .where((x) => columns[i].states.contains(x.state))
-                              .toList(),
-                          palette: _palette,
-                          onAccept: (issue) => _moveIssue(issue, columns[i]),
-                          onAddIssue: () => _addIssue(columns[i]),
-                          onOpenIssue: _openIssue,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 20),
-              ],
-            ],
-          ),
-        ),
+      columnBuilder: (column, issues) => _BoardColumn(
+        column: column,
+        laneMode: true,
+        issues: issues,
+        palette: _palette,
+        onAccept: (issue) => _moveIssue(issue, column),
+        onAddIssue: () => _addIssue(column),
+        onOpenIssue: _openIssue,
       ),
     );
   }
@@ -1908,20 +1601,6 @@ class _ProjectFilterChip extends StatelessWidget {
 
 // ─────────────────────────── Kanban column ────────────────────────────────
 
-/// Wraps the card list in a [Flexible] on the flat board (bounded viewport
-/// height) but renders it bare inside a swimlane, where the whole board scrolls
-/// as one unit and a [Flexible] would have no bounded height to flex within.
-class _LaneAwareFlexible extends StatelessWidget {
-  const _LaneAwareFlexible({required this.laneMode, required this.child});
-
-  final bool laneMode;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) =>
-      laneMode ? child : Flexible(child: child);
-}
-
 class _BoardColumn extends StatefulWidget {
   const _BoardColumn({
     required this.column,
@@ -2052,7 +1731,7 @@ class _BoardColumnState extends State<_BoardColumn> {
                       ],
                     ),
                   ),
-                  _LaneAwareFlexible(
+                  LaneAwareFlexible(
                     laneMode: widget.laneMode,
                     child: issues.isEmpty
                         ? const SizedBox(height: 8)
