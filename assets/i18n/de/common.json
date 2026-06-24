@@ -575,6 +575,7 @@
     "themeDark": "Dunkel",
     "privacyPolicy": "Datenschutzerklärung",
     "adminArea": "Adminbereich",
+    "adminAreaDesc": "Verwalte Workspace, Nutzer, SSO und mehr.",
     "about": "Über",
     "appVersion": "App-Version",
     "serverVersion": "Server-Version",
@@ -1244,6 +1245,7 @@
     },
     "sessions": {
       "title": "Aktive Sitzungen",
+      "subtitle": "Geräte, die bei deinem Konto angemeldet sind.",
       "devices_one": "{{count}} angemeldetes Gerät.",
       "devices_other": "{{count}} angemeldete Geräte.",
       "signOutOthers": "Andere abmelden",

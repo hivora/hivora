@@ -575,6 +575,7 @@
     "themeDark": "Dark",
     "privacyPolicy": "Privacy policy",
     "adminArea": "Admin area",
+    "adminAreaDesc": "Manage the workspace, users, SSO and more.",
     "about": "About",
     "appVersion": "App version",
     "serverVersion": "Server version",
@@ -1244,6 +1245,7 @@
     },
     "sessions": {
       "title": "Active sessions",
+      "subtitle": "Devices currently signed in to your account.",
       "devices_one": "{{count}} signed-in device.",
       "devices_other": "{{count}} signed-in devices.",
       "signOutOthers": "Sign out others",

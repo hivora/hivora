@@ -23,9 +23,36 @@ import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/hex_mark.dart';
 import '../../core/widgets/hive_loader.dart';
 import '../../core/widgets/honeycomb_background.dart';
+import '../shell/page_chrome.dart';
 import 'account_modals.dart';
 import 'account_widgets.dart';
 import 'twofa_modals.dart';
+
+/// The settings categories. On compact (phone) layouts each is its own
+/// in-page sub-screen reached from the index list; on medium/expanded layouts
+/// they all stack/column together on a single scroll.
+enum _SettingsSection {
+  security,
+  sessions,
+  notifications,
+  access,
+  appearance,
+  data,
+  danger,
+}
+
+/// Icon + section for each row of the compact settings index. Titles/subtitles
+/// are looked up per-section so the index row, the sub-page app bar and the
+/// section card header all stay in sync.
+const _settingsMenu = <({_SettingsSection section, IconData icon})>[
+  (section: _SettingsSection.security, icon: LucideIcons.shieldCheck),
+  (section: _SettingsSection.sessions, icon: LucideIcons.monitorSmartphone),
+  (section: _SettingsSection.notifications, icon: LucideIcons.bell),
+  (section: _SettingsSection.access, icon: LucideIcons.layers),
+  (section: _SettingsSection.appearance, icon: LucideIcons.sunMoon),
+  (section: _SettingsSection.data, icon: LucideIcons.fileText),
+  (section: _SettingsSection.danger, icon: LucideIcons.triangleAlert),
+];
 
 /// The self-service `/me` account surface — profile, email & security, 2FA,
 /// device sessions, notification preferences, access overview, appearance and
@@ -63,6 +90,10 @@ class _AccountScreenState extends State<AccountScreen> {
   Timer? _prefsDebounce;
   bool _accessTeams = true;
   bool _avatarBusy = false;
+
+  /// The open sub-page on compact layouts; `null` shows the index list. Always
+  /// `null` on medium/expanded, where every section renders on one scroll.
+  _SettingsSection? _section;
 
   @override
   void initState() {
@@ -335,7 +366,16 @@ class _AccountScreenState extends State<AccountScreen> {
       );
     }
 
-    final expanded = context.isExpanded;
+    // Phone: an index list whose rows open one section at a time, so the
+    // surface never overloads. Desktop / tablet keep the single rich scroll.
+    if (context.isCompact) return _compactView();
+    return _wideView(expanded: context.isExpanded);
+  }
+
+  /// Desktop (two-column) / tablet (single-column) layout — unchanged: every
+  /// section renders together on one scroll behind the account hero.
+  Widget _wideView({required bool expanded}) {
+    final isAdmin = context.read<AuthBloc>().state.user?.isAdmin ?? false;
     final left = <Widget>[
       _securitySection(),
       const SizedBox(height: 16),
@@ -347,6 +387,11 @@ class _AccountScreenState extends State<AccountScreen> {
       _accessSection(),
       const SizedBox(height: 16),
       _appearanceSection(),
+      // Admin area is its own top-level entry here, not buried in Appearance.
+      if (isAdmin) ...[
+        const SizedBox(height: 16),
+        _adminSection(),
+      ],
       const SizedBox(height: 16),
       _dataSection(),
       const SizedBox(height: 16),
@@ -384,6 +429,185 @@ class _AccountScreenState extends State<AccountScreen> {
       ),
     );
   }
+
+  // --- compact (phone) master → detail --------------------------------------
+
+  /// Phone layout: list ↔ detail in-page navigation. Both steps live on the
+  /// same `/settings` route, so the shell's back button is wired through
+  /// [PageChrome] — in a detail it returns to the index, on the index it pops
+  /// back to where settings was opened from.
+  Widget _compactView() {
+    final section = _section;
+    if (section != null) {
+      return PageChrome(
+        title: _sectionTitle(section),
+        onBack: () => setState(() => _section = null),
+        child: RefreshIndicator(
+          onRefresh: _load,
+          child: ListView(
+            key: ValueKey(section),
+            padding: context.pagePadding,
+            children: [_sectionCard(section)],
+          ),
+        ),
+      );
+    }
+    // Index: the hero (profile + sign-out) above a grouped list of categories.
+    // The explicit title also resets any stale chrome a closed detail published.
+    return PageChrome(
+      title: context.t('nav.settings'),
+      child: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: context.pagePadding,
+          children: [
+            _profileHero(),
+            const SizedBox(height: 16),
+            _sectionMenu(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The grouped list of category rows on the compact index. The Admin area —
+  /// when the user is an admin — sits here as its own top-level entry (it
+  /// navigates to `/admin` rather than opening an in-page section).
+  Widget _sectionMenu() {
+    final isAdmin = context.read<AuthBloc>().state.user?.isAdmin ?? false;
+    final tiles = <Widget>[];
+    for (final item in _settingsMenu) {
+      tiles.add(_navTile(
+        icon: item.icon,
+        title: _sectionTitle(item.section),
+        subtitle: _sectionSubtitle(item.section),
+        danger: item.section == _SettingsSection.danger,
+        onTap: () => setState(() => _section = item.section),
+      ));
+      if (item.section == _SettingsSection.appearance && isAdmin) {
+        tiles.add(_navTile(
+          icon: LucideIcons.shieldUser,
+          title: context.t('settings.adminArea'),
+          subtitle: context.t('settings.adminAreaDesc'),
+          onTap: () => context.go('/admin'),
+        ));
+      }
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        border: Border.all(color: AppColors.hairline),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (var i = 0; i < tiles.length; i++) ...[
+            if (i > 0) Divider(height: 1, indent: 62, color: AppColors.hairline2),
+            tiles[i],
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// A tappable navigation row: amber (or red) icon tile, title, subtitle and a
+  /// chevron. Shared by the compact index list and the desktop admin nav card.
+  Widget _navTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    bool danger = false,
+  }) {
+    final accent = danger ? AppColors.danger : AppColors.accentStrong;
+    final accentBg = danger
+        ? AppColors.danger.withValues(alpha: 0.12)
+        : AppColors.accentSoft;
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: accentBg,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Icon(icon, size: 18, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontBrand,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: danger ? AppColors.danger : AppColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.35,
+                        color: AppColors.inkSoft,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(LucideIcons.chevronRight, size: 18, color: AppColors.inkFaint),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _sectionTitle(_SettingsSection s) => context.t(switch (s) {
+    _SettingsSection.security => 'account.security.title',
+    _SettingsSection.sessions => 'account.sessions.title',
+    _SettingsSection.notifications => 'account.notifications.title',
+    _SettingsSection.access => 'account.access.title',
+    _SettingsSection.appearance => 'account.appearance.title',
+    _SettingsSection.data => 'account.data.title',
+    _SettingsSection.danger => 'account.danger.title',
+  });
+
+  String _sectionSubtitle(_SettingsSection s) => context.t(switch (s) {
+    _SettingsSection.security => 'account.security.subtitle',
+    _SettingsSection.sessions => 'account.sessions.subtitle',
+    _SettingsSection.notifications => 'account.notifications.subtitle',
+    _SettingsSection.access => 'account.access.subtitle',
+    _SettingsSection.appearance => 'account.appearance.subtitle',
+    _SettingsSection.data => 'account.data.subtitle',
+    _SettingsSection.danger => 'account.danger.subtitle',
+  });
+
+  Widget _sectionCard(_SettingsSection s) => switch (s) {
+    _SettingsSection.security => _securitySection(),
+    _SettingsSection.sessions => _sessionsSection(),
+    _SettingsSection.notifications => _notificationsSection(),
+    _SettingsSection.access => _accessSection(),
+    _SettingsSection.appearance => _appearanceSection(),
+    _SettingsSection.data => _dataSection(),
+    _SettingsSection.danger => _dangerSection(),
+  };
 
   // --- profile hero ---------------------------------------------------------
 
@@ -1172,7 +1396,6 @@ class _AccountScreenState extends State<AccountScreen> {
     final config = context.watch<AppConfigBloc>().state;
     final locale = context.watch<LocaleCubit>().state;
     final themeMode = context.watch<ThemeCubit>().state;
-    final isAdmin = context.read<AuthBloc>().state.user?.isAdmin ?? false;
     return AccountSection(
       icon: LucideIcons.sunMoon,
       title: context.t('account.appearance.title'),
@@ -1219,18 +1442,6 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
           ),
         ],
-        if (isAdmin) ...[
-          Divider(height: 1, color: AppColors.hairline2),
-          SettingRow(
-            label: context.t('settings.adminArea'),
-            icon: LucideIcons.shieldUser,
-            onTap: () => context.go('/admin'),
-            trailing: IconButton(
-              icon: const Icon(LucideIcons.chevronRight),
-              onPressed: () => context.go('/admin'),
-            ),
-          ),
-        ],
         Divider(height: 1, color: AppColors.hairline2),
         Padding(
           padding: const EdgeInsets.only(top: 8),
@@ -1269,6 +1480,27 @@ class _AccountScreenState extends State<AccountScreen> {
       ],
     ),
   );
+
+  // --- admin (top-level nav, admins only) -----------------------------------
+
+  /// A standalone nav card on the wide layout that opens the Admin area —
+  /// promoted out of the Appearance section to its own top-level entry.
+  Widget _adminSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        border: Border.all(color: AppColors.hairline),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: _navTile(
+        icon: LucideIcons.shieldUser,
+        title: context.t('settings.adminArea'),
+        subtitle: context.t('settings.adminAreaDesc'),
+        onTap: () => context.go('/admin'),
+      ),
+    );
+  }
 
   // --- data & privacy -------------------------------------------------------
 
