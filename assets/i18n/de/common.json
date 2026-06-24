@@ -1278,8 +1278,8 @@
       "passwordResetHint": "Zurücksetzen per einmaligem E-Mail-Link",
       "reset": "Zurücksetzen",
       "twoFactor": "Zwei-Faktor-Authentifizierung",
-      "twoFactorOn_one": "Aktiv · {{count}} Wiederherstellungscode übrig",
-      "twoFactorOn_other": "Aktiv · {{count}} Wiederherstellungscodes übrig",
+      "twoFactorOn": "Aktiv · {{count}} Wiederherstellungscode übrig",
+      "twoFactorOn_plural": "Aktiv · {{count}} Wiederherstellungscodes übrig",
       "twoFactorOff": "Füge eine Authenticator-App für einen zweiten Anmeldeschritt hinzu",
       "codes": "Codes",
       "disable": "Deaktivieren",
@@ -1288,8 +1288,8 @@
     "sessions": {
       "title": "Aktive Sitzungen",
       "subtitle": "Geräte, die bei deinem Konto angemeldet sind.",
-      "devices_one": "{{count}} angemeldetes Gerät.",
-      "devices_other": "{{count}} angemeldete Geräte.",
+      "devices": "{{count}} angemeldetes Gerät.",
+      "devices_plural": "{{count}} angemeldete Geräte.",
       "signOutOthers": "Andere abmelden",
       "thisDevice": "Dieses Gerät",
       "signOut": "Abmelden",
@@ -1361,8 +1361,8 @@
       "projects": "Projekte",
       "noTeams": "Du bist noch in keinem Team",
       "noProjects": "Noch keine Projekte, auf die du zugreifen kannst",
-      "members_one": "{{count}} Mitglied",
-      "members_other": "{{count}} Mitglieder"
+      "members": "{{count}} Mitglied",
+      "members_plural": "{{count}} Mitglieder"
     },
     "appearance": {
       "title": "Darstellung & App",

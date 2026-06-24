@@ -1278,8 +1278,8 @@
       "passwordResetHint": "Reset via a one-time email link",
       "reset": "Reset",
       "twoFactor": "Two-factor authentication",
-      "twoFactorOn_one": "On · {{count}} recovery code left",
-      "twoFactorOn_other": "On · {{count}} recovery codes left",
+      "twoFactorOn": "On · {{count}} recovery code left",
+      "twoFactorOn_plural": "On · {{count}} recovery codes left",
       "twoFactorOff": "Add an authenticator app for a second sign-in step",
       "codes": "Codes",
       "disable": "Disable",
@@ -1288,8 +1288,8 @@
     "sessions": {
       "title": "Active sessions",
       "subtitle": "Devices currently signed in to your account.",
-      "devices_one": "{{count}} signed-in device.",
-      "devices_other": "{{count}} signed-in devices.",
+      "devices": "{{count}} signed-in device.",
+      "devices_plural": "{{count}} signed-in devices.",
       "signOutOthers": "Sign out others",
       "thisDevice": "This device",
       "signOut": "Sign out",
@@ -1361,8 +1361,8 @@
       "projects": "Projects",
       "noTeams": "You're not in any teams yet",
       "noProjects": "No projects you can access yet",
-      "members_one": "{{count}} member",
-      "members_other": "{{count}} members"
+      "members": "{{count}} member",
+      "members_plural": "{{count}} members"
     },
     "appearance": {
       "title": "Appearance & app",

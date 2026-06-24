@@ -55,7 +55,9 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
 
   _Mode _mode = _Mode.home;
   String? _selectedId;
-  late String _spaceId = _repo.spaces.first.id;
+  // Empty when the knowledge base has no spaces yet (fresh workspace); the
+  // create-space flow sets it once the first space exists.
+  late String _spaceId = _repo.spaces.isNotEmpty ? _repo.spaces.first.id : '';
   final _scrollKey = GlobalKey();
 
   // Reader panel collapse (desktop fullscreen reading) + pending parent for the

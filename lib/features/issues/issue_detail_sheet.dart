@@ -2762,26 +2762,33 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     }
   }
 
+  // Reuses the detail view's searchable people picker so assigning while
+  // creating an issue scales past a handful of users (anchor unused: it's a
+  // taller search sheet, not an anchored dropdown).
   Future<void> _pickAssignee(Rect anchor) async {
-    final chosen = await _pickOption<String>(
+    final me = context.read<AuthBloc>().state.user;
+    await showGlassBottomSheet<void>(
       context,
-      title: context.t('issues.assignee'),
-      anchorRect: anchor,
-      options: [
-        (
-          value: _none,
-          child: Text(
-            context.t('issues.unassigned'),
-            style: TextStyle(color: AppColors.inkFaint),
-          ),
-        ),
-        for (final u in _users)
-          (value: u.id, child: _person(u.displayName, fallback: '')),
-      ],
+      showHandle: false,
+      builder: (sheetContext) => _PeoplePicker(
+        users: _users,
+        meId: me?.id,
+        onUnassign: () {
+          Navigator.of(sheetContext).pop();
+          setState(() => _assigneeId = null);
+        },
+        onAssignMe: me == null
+            ? null
+            : () {
+                Navigator.of(sheetContext).pop();
+                setState(() => _assigneeId = me.id);
+              },
+        onSelect: (id) {
+          Navigator.of(sheetContext).pop();
+          setState(() => _assigneeId = id);
+        },
+      ),
     );
-    if (chosen != null) {
-      setState(() => _assigneeId = chosen == _none ? null : chosen);
-    }
   }
 
   Future<void> _pickDate({required bool isStart}) async {

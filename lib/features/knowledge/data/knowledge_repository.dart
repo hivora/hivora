@@ -31,30 +31,6 @@ class KnowledgeRepository {
   /// Presentational metadata for known spaces (icon · hue · description). The
   /// space *names* are real (they live on the articles); only the chrome is
   /// configured here.
-  static const Map<String, ({String icon, int hue, String desc})> _spaceCatalog =
-      {
-    'Engineering': (
-      icon: 'code-xml',
-      hue: 250,
-      desc: 'Architecture, services, release & on-call runbooks.'
-    ),
-    'Product': (
-      icon: 'compass',
-      hue: 155,
-      desc: 'Specs, workflow rules and decision records.'
-    ),
-    'Design': (
-      icon: 'palette',
-      hue: 300,
-      desc: 'Brand, motion and the Hive design system.'
-    ),
-    'Operations': (
-      icon: 'server-cog',
-      hue: 200,
-      desc: 'Infra, deploy and observability.'
-    ),
-  };
-
   KbUser get me =>
       _me ?? (_users.values.isNotEmpty ? _users.values.first : _fallbackUser);
   static const _fallbackUser = KbUser(id: '', name: 'You', title: '', hue: 248);
@@ -111,24 +87,16 @@ class KnowledgeRepository {
     final articleNames = <String>{for (final a in _articles.values) a.spaceId}
       ..removeWhere((n) => n.isEmpty);
     // Persisted backend spaces first (already in sortOrder), then any space that
-    // only exists as an article's `space` value — catalog order, then the rest
-    // alphabetically.
+    // only exists as an article's `space` value (alphabetically). No hardcoded
+    // placeholder spaces — an empty knowledge base shows the create-space action,
+    // and every listed space is a real, deletable backend entity.
     final ordered = <String>[
       ..._backendSpaces.keys,
-      ..._spaceCatalog.keys
-          .where((n) => !_backendSpaces.containsKey(n) && articleNames.contains(n)),
-      ...(articleNames
-          .where((n) => !_backendSpaces.containsKey(n) && !_spaceCatalog.containsKey(n))
-          .toList()
-        ..sort()),
+      ...(articleNames.where((n) => !_backendSpaces.containsKey(n)).toList()..sort()),
     ];
     _spaces
       ..clear()
       ..addAll(ordered.map(_spaceFor));
-    if (_spaces.isEmpty) {
-      // Never leave the home/tree without a space to land on.
-      _spaces.addAll(_spaceCatalog.keys.map(_spaceFor));
-    }
   }
 
   // ── mappers ───────────────────────────────────────────────────────────────
@@ -161,7 +129,6 @@ class KnowledgeRepository {
 
   KbSpace _spaceFor(String name) {
     final backend = _backendSpaces[name];
-    final catalog = _spaceCatalog[name];
     final key = name.length >= 3
         ? name.substring(0, 3).toUpperCase()
         : name.toUpperCase();
@@ -169,9 +136,9 @@ class KnowledgeRepository {
       id: name,
       key: key,
       name: name,
-      hue: backend?.hue ?? catalog?.hue ?? 250,
-      icon: backend?.icon ?? catalog?.icon ?? 'file-text',
-      desc: backend?.description ?? catalog?.desc ?? '',
+      hue: backend?.hue ?? 250,
+      icon: backend?.icon ?? 'file-text',
+      desc: backend?.description ?? '',
     );
   }
 
