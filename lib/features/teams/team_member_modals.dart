@@ -204,7 +204,11 @@ class _AddMembersBodyState extends State<_AddMembersBody> with _ProjectLookup {
               final id = filtered[i].id;
               _selected.contains(id) ? _selected.remove(id) : _selected.add(id);
             }),
-            leading: HiveAvatar(name: filtered[i].displayName, size: 34),
+            leading: HiveAvatar(
+              name: filtered[i].displayName,
+              imageUrl: filtered[i].avatarUrl,
+              size: 34,
+            ),
             title: filtered[i].displayName,
             subtitle: filtered[i].title,
           ),

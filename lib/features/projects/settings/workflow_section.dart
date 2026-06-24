@@ -231,7 +231,7 @@ class _ResolvedPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final green = hueInk(155);
+    final green = hueChipText(155);
     return Material(
       color: on ? hueSoft(155) : AppColors.surface,
       borderRadius: BorderRadius.circular(AppTheme.radiusPill),

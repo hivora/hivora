@@ -3521,7 +3521,11 @@ class _PeoplePickerState extends State<_PeoplePicker> {
                 if (q.isEmpty) const Divider(height: 1),
                 for (final u in filtered)
                   ListTile(
-                    leading: HiveAvatar(name: u.displayName, size: 34),
+                    leading: HiveAvatar(
+                      name: u.displayName,
+                      imageUrl: u.avatarUrl,
+                      size: 34,
+                    ),
                     title: Text(
                       u.displayName,
                       maxLines: 1,

@@ -1,12 +1,15 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../api/api_client.dart';
 import '../i18n/i18n.dart';
 import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/hue_colors.dart';
+import 'app_avatar.dart';
 
 /// App-wide toggle — Cupertino style (the product's switch convention), tinted
 /// with the honey accent when on. Use this instead of Material [Switch].
@@ -370,24 +373,51 @@ class HiveAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: background ?? hiveHueColor(name),
-        shape: BoxShape.circle,
-        image: hasImage
-            ? DecorationImage(image: NetworkImage(imageUrl!), fit: BoxFit.cover)
-            : null,
-        boxShadow: ring
-            ? [BoxShadow(color: AppColors.surface, spreadRadius: 2)]
-            : null,
-      ),
-      alignment: Alignment.center,
-      child: hasImage
-          ? null
-          : glyph ??
+    final url = imageUrl;
+    final hasImage = url != null && url.isNotEmpty;
+    if (hasImage) {
+      // External absolute images keep the plain network path; our own avatar
+      // URLs (/api/v1/users/.../avatar) are authenticated and must be loaded as
+      // bytes via the ApiClient — a cross-origin NetworkImage taints the
+      // CanvasKit canvas on web and silently fails (same fix as AppAvatar).
+      final isExternal = url.startsWith('http') && !url.contains('/api/v1/users/');
+      if (isExternal) return _circle(NetworkImage(url));
+      ApiClient? api;
+      try {
+        api = context.read<ApiClient>();
+      } catch (_) {
+        api = null;
+      }
+      if (api != null) {
+        return ApiImageAvatar(
+          key: ValueKey(url),
+          path: url,
+          api: api,
+          placeholder: _circle(null),
+          builder: _circle,
+        );
+      }
+    }
+    return _circle(null);
+  }
+
+  Widget _circle(ImageProvider? image) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: background ?? hiveHueColor(name),
+          shape: BoxShape.circle,
+          image: image != null
+              ? DecorationImage(image: image, fit: BoxFit.cover)
+              : null,
+          boxShadow: ring
+              ? [BoxShadow(color: AppColors.surface, spreadRadius: 2)]
+              : null,
+        ),
+        alignment: Alignment.center,
+        child: image != null
+            ? null
+            : glyph ??
                 Text(
                   _initials(name),
                   style: TextStyle(
@@ -396,8 +426,7 @@ class HiveAvatar extends StatelessWidget {
                     fontSize: size * 0.4,
                   ),
                 ),
-    );
-  }
+      );
 }
 
 /// Overlapping avatar stack with optional +N overflow chip.

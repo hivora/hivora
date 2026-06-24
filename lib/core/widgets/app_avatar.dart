@@ -46,7 +46,7 @@ class AppAvatar extends StatelessWidget {
       // No ApiClient in scope (e.g. widget tests) — show initials.
       return _circle(null);
     }
-    return _ApiImageAvatar(
+    return ApiImageAvatar(
       key: ValueKey(url),
       path: url,
       api: api,
@@ -80,8 +80,8 @@ class AppAvatar extends StatelessWidget {
 /// Loads avatar bytes for [path] (relative to the API base) once, caches them,
 /// and renders them with [Image.memory]; shows [placeholder] while loading or
 /// on failure.
-class _ApiImageAvatar extends StatefulWidget {
-  const _ApiImageAvatar({
+class ApiImageAvatar extends StatefulWidget {
+  const ApiImageAvatar({
     super.key,
     required this.path,
     required this.api,
@@ -95,10 +95,10 @@ class _ApiImageAvatar extends StatefulWidget {
   final Widget Function(ImageProvider? image) builder;
 
   @override
-  State<_ApiImageAvatar> createState() => _ApiImageAvatarState();
+  State<ApiImageAvatar> createState() => ApiImageAvatarState();
 }
 
-class _ApiImageAvatarState extends State<_ApiImageAvatar> {
+class ApiImageAvatarState extends State<ApiImageAvatar> {
   Uint8List? _bytes;
 
   @override

@@ -622,7 +622,7 @@ class _Header extends StatelessWidget {
               fontFamily: AppTheme.fontMono,
               fontWeight: FontWeight.w700,
               fontSize: 15,
-              color: hueInk(hue),
+              color: hueChipText(hue),
             ),
           ),
         ),
