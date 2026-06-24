@@ -6,13 +6,11 @@ WORKDIR /app
 # screen). Override at build time: --build-arg HINATA_DEFAULT_SERVER=...
 ARG HINATA_DEFAULT_SERVER=https://api.track.asta.hn
 
-# Warm the pub cache on the dependency manifest before copying the full source.
-# pubspec.lock is gitignored in this repo, so it isn't present in the CI build
-# context — copy only the manifest and let `pub get` resolve.
-COPY pubspec.yaml ./
-RUN flutter pub get
-
+# Copy the full source first: the app has a path dependency
+# (packages/liquid_glass_widgets), so `pub get` needs the vendored package
+# present. pubspec.lock is gitignored, so it isn't in the build context anyway.
 COPY . .
+RUN flutter pub get
 RUN flutter build web --release \
     --dart-define=HINATA_DEFAULT_SERVER=${HINATA_DEFAULT_SERVER}
 
