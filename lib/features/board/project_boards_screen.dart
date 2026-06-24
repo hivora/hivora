@@ -18,6 +18,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/soft_card.dart';
 import '../../core/widgets/status_widgets.dart';
 import '../shell/page_chrome.dart';
+import '../sprint/modals/glass_modal.dart' show glassWoltSurface;
 import 'board_manage_menu.dart';
 
 /// Lists all boards for a single project and allows creating new ones.
@@ -79,9 +80,11 @@ class _ProjectBoardsScreenState extends State<ProjectBoardsScreen> {
     final repository = context.read<HinataRepository>();
     final created = await WoltModalSheet.show<AgileBoard?>(
       context: context,
+      pageContentDecorator: glassWoltSurface,
       pageListBuilder: (modalContext) => [
         WoltModalSheetPage(
-          backgroundColor: AppColors.surface,
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
           hasTopBarLayer: false,
           child: RepositoryProvider.value(
             value: repository,

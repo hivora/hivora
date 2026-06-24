@@ -217,6 +217,7 @@
       "priority": "die Priorität",
       "type": "den Typ",
       "sprint": "den Sprint",
+      "parent": "den übergeordneten Vorgang",
       "startDate": "das Startdatum",
       "dueDate": "das Fälligkeitsdatum",
       "estimate": "die Schätzung",
@@ -306,13 +307,26 @@
       }
     },
     "storyPoints": "Story Points",
-    "timeline": "Timeline"
+    "timeline": "Timeline",
+    "epic": "Epic",
+    "parent": "Übergeordnet",
+    "noEpic": "Kein Epic",
+    "childIssues": "Untergeordnete Vorgänge",
+    "subtasks": "Sub-Tasks",
+    "addChild": "Untervorgang hinzufügen",
+    "addSubtask": "Sub-Task hinzufügen",
+    "subtaskHint": "Was ist zu tun?",
+    "noChildren": "Noch keine untergeordneten Vorgänge.",
+    "noSubtasks": "Noch keine Sub-Tasks.",
+    "progressDone": "{{done}} von {{total}} erledigt"
   },
   "type": {
     "task": "Aufgabe",
     "bug": "Fehler",
     "feature": "Feature",
-    "epic": "Epic"
+    "story": "Story",
+    "epic": "Epic",
+    "subtask": "Sub-Task"
   },
   "priority": {
     "showstopper": "Showstopper",
@@ -325,6 +339,7 @@
     "hours": "Stunden",
     "minutes": "Minuten",
     "activityType": "Tätigkeitsart",
+    "date": "Datum",
     "note": "Notiz (optional)"
   },
   "projects": {
@@ -387,8 +402,19 @@
       "assignee": "Zugewiesen",
       "sprint": "Sprint",
       "author": "Autor",
-      "label": "Stichwort"
+      "label": "Stichwort",
+      "epic": "Epic"
     },
+    "groupBy": "Gruppieren nach",
+    "group": {
+      "none": "Keine",
+      "epic": "Epic",
+      "assignee": "Zugewiesene Person",
+      "subtask": "Sub-Task"
+    },
+    "noEpic": "Kein Epic",
+    "standalone": "Eigenständig",
+    "noParent": "Ohne übergeordnet",
     "filterSearch": "{{scope}} suchen…",
     "filterNoOptions": "Hier gibt es nichts zu filtern.",
     "clearFilters": "Zurücksetzen",
@@ -486,6 +512,22 @@
     "moveToTopLevel": "Auf oberste Ebene verschieben",
     "delete": "Löschen",
     "deleteHasChildren": "Löschen (zuerst Unterseiten verschieben)",
+    "deleteArticleTitle": "Artikel löschen?",
+    "deleteArticleConfirm": "„{{title}}“ wirklich löschen? Das kann nicht rückgängig gemacht werden.",
+    "newSpace": "Neuer Bereich",
+    "newSpaceSubtitle": "Fasse verwandte Artikel in einem Bereich zusammen.",
+    "spaceName": "Name",
+    "spaceNameHint": "z. B. Engineering",
+    "spaceDescription": "Beschreibung",
+    "spaceDescriptionHint": "Was gehört in diesen Bereich?",
+    "spaceIcon": "Symbol",
+    "spaceColor": "Farbe",
+    "createSpace": "Bereich erstellen",
+    "spaceCreated": "Bereich erstellt",
+    "spaceDeleted": "Bereich gelöscht",
+    "deleteSpace": "Bereich löschen",
+    "deleteSpaceTitle": "Bereich löschen?",
+    "deleteSpaceConfirm": "Bereich „{{name}}“ wirklich löschen? Das kann nicht rückgängig gemacht werden.",
     "more": "Mehr",
     "showPages": "Seiten anzeigen",
     "hidePages": "Seiten ausblenden",

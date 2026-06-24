@@ -12,10 +12,13 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_loader.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../issues/issue_detail_sheet.dart';
+import '../sprint/modals/glass_modal.dart'
+    show showGlassBottomSheet, showGlassConfirm;
 import 'data/knowledge_models.dart';
 import 'data/knowledge_repository.dart';
 import 'knowledge_editor.dart';
 import 'knowledge_home.dart';
+import 'knowledge_space_dialog.dart';
 import 'knowledge_link_resolver.dart';
 import 'knowledge_reader.dart';
 import 'knowledge_scope.dart';
@@ -180,6 +183,23 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
     }
   }
 
+  /// Confirms, then deletes [id]. Used by both the tree row menu and the
+  /// reader's delete button so the destructive action always asks first.
+  Future<void> _confirmDeleteArticle(String id) async {
+    final article = _repo.articleById(id);
+    final confirmed = await showGlassConfirm(
+      context,
+      icon: lucideIcon('trash-2'),
+      title: context.t('knowledge.deleteArticleTitle'),
+      message: context.t('knowledge.deleteArticleConfirm',
+          variables: {'title': article?.title ?? ''}),
+      confirmLabel: context.t('knowledge.delete'),
+      destructive: true,
+      confirmIcon: lucideIcon('trash-2'),
+    );
+    if (confirmed == true) await _deleteArticle(id);
+  }
+
   Future<void> _deleteArticle(String id) async {
     try {
       await _repo.deleteArticle(id);
@@ -196,9 +216,62 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
     }
   }
 
+  // ── space actions ─────────────────────────────────────────────────────────
+
+  Future<void> _createSpace() async {
+    final created = await showCreateSpaceDialog(
+      context,
+      onCreate: ({
+        required String name,
+        required String icon,
+        required int hue,
+        required String description,
+      }) async {
+        try {
+          final space = await _repo.createSpace(
+            name: name,
+            icon: icon,
+            hue: hue,
+            description: description,
+          );
+          if (mounted) _spaceId = space.id;
+          return null;
+        } on ApiFailure catch (failure) {
+          return failure.message;
+        }
+      },
+    );
+    if (created != null && mounted) {
+      setState(() {});
+      _toast(context.t('knowledge.spaceCreated'));
+    }
+  }
+
+  Future<void> _deleteSpace(String id) async {
+    final confirmed = await showGlassConfirm(
+      context,
+      icon: lucideIcon('trash-2'),
+      title: context.t('knowledge.deleteSpaceTitle'),
+      message: context.t('knowledge.deleteSpaceConfirm', variables: {'name': id}),
+      confirmLabel: context.t('knowledge.delete'),
+      destructive: true,
+      confirmIcon: lucideIcon('trash-2'),
+    );
+    if (confirmed != true) return;
+    try {
+      await _repo.deleteSpace(id);
+      if (!mounted) return;
+      setState(() {});
+      _toast(context.t('knowledge.spaceDeleted'));
+    } on ApiFailure catch (failure) {
+      if (mounted) _toast(failure.message);
+    }
+  }
+
   Future<void> _save(EditorResult r) async {
-    final title =
-        r.title.trim().isEmpty ? context.t('knowledge.untitled') : r.title.trim();
+    final title = r.title.trim().isEmpty
+        ? context.t('knowledge.untitled')
+        : r.title.trim();
     try {
       if (_mode == _Mode.newDoc) {
         final parentId = _pendingParentId;
@@ -236,38 +309,30 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   void _openTreeDrawer() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetCtx) => Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(sheetCtx).padding.top + 40),
-        decoration: BoxDecoration(
-          color: AppColors.canvas,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: KnowledgeTree(
-              repo: _repo,
-              spaceId: _spaceId,
-              selectedId: _selectedId,
-              onSelect: (id) {
-                Navigator.of(sheetCtx).pop();
-                _openArticle(id);
-              },
-              onSpaceChange: (id) {
-                Navigator.of(sheetCtx).pop();
-                _openSpace(id);
-              },
-              onNewChild: (pid) {
-                Navigator.of(sheetCtx).pop();
-                _newChild(pid);
-              },
-              onMove: _moveArticle,
-              onDelete: _deleteArticle,
-            ),
+    showGlassBottomSheet<void>(
+      context,
+      builder: (sheetCtx) => SizedBox(
+        height: MediaQuery.sizeOf(sheetCtx).height * 0.7,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+          child: KnowledgeTree(
+            repo: _repo,
+            spaceId: _spaceId,
+            selectedId: _selectedId,
+            onSelect: (id) {
+              Navigator.of(sheetCtx).pop();
+              _openArticle(id);
+            },
+            onSpaceChange: (id) {
+              Navigator.of(sheetCtx).pop();
+              _openSpace(id);
+            },
+            onNewChild: (pid) {
+              Navigator.of(sheetCtx).pop();
+              _newChild(pid);
+            },
+            onMove: _moveArticle,
+            onDelete: _confirmDeleteArticle,
           ),
         ),
       ),
@@ -308,10 +373,13 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
   Widget _head() {
     return PageHead(
       title: context.t('knowledge.title'),
-      subtitle: context.t('knowledge.subtitle', variables: {
-        'articles': '${_repo.articles.length}',
-        'spaces': '${_repo.spaces.length}',
-      }),
+      subtitle: context.t(
+        'knowledge.subtitle',
+        variables: {
+          'articles': '${_repo.articles.length}',
+          'spaces': '${_repo.spaces.length}',
+        },
+      ),
       actions: [
         if (_mode != _Mode.home)
           GhostButton(
@@ -354,6 +422,8 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
               repo: _repo,
               onOpenArticle: _openArticle,
               onOpenSpace: _openSpace,
+              onNewSpace: _createSpace,
+              onDeleteSpace: _deleteSpace,
             )
           else if (_current != null)
             _articleLayout(bp, showTree),
@@ -375,6 +445,7 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
       article: _current!,
       asideMode: asideMode,
       onEdit: () => setState(() => _mode = _Mode.edit),
+      onDelete: () => _confirmDeleteArticle(_current!.id),
     );
 
     if (!showTree) {
@@ -445,7 +516,7 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
               onSpaceChange: _openSpace,
               onNewChild: _newChild,
               onMove: _moveArticle,
-              onDelete: _deleteArticle,
+              onDelete: _confirmDeleteArticle,
             ),
           ),
           const SizedBox(width: 28),
@@ -453,11 +524,7 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _readerControls(bp),
-              const SizedBox(height: 4),
-              reader,
-            ],
+            children: [_readerControls(bp), const SizedBox(height: 4), reader],
           ),
         ),
       ],
@@ -476,7 +543,8 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
               ? LucideIcons.panelLeftOpen
               : LucideIcons.panelLeftClose,
           tooltip: context.t(
-              _treeCollapsed ? 'knowledge.showPages' : 'knowledge.hidePages'),
+            _treeCollapsed ? 'knowledge.showPages' : 'knowledge.hidePages',
+          ),
           onTap: () => setState(() => _treeCollapsed = !_treeCollapsed),
         ),
         // Right edge: only the wide layout has a side aside to collapse.
@@ -485,9 +553,11 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
             icon: _asideCollapsed
                 ? LucideIcons.panelRightOpen
                 : LucideIcons.panelRightClose,
-            tooltip: context.t(_asideCollapsed
-                ? 'knowledge.showDetails'
-                : 'knowledge.hideDetails'),
+            tooltip: context.t(
+              _asideCollapsed
+                  ? 'knowledge.showDetails'
+                  : 'knowledge.hideDetails',
+            ),
             onTap: () => setState(() => _asideCollapsed = !_asideCollapsed),
           )
         else

@@ -13,6 +13,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
+import '../sprint/modals/glass_modal.dart' show showGlassConfirm;
 import 'team_detail_screen.dart' show TeamDetailData;
 import 'team_modals.dart';
 import 'team_widgets.dart';
@@ -641,24 +642,17 @@ class TeamProjectsTab extends StatelessWidget {
   final Future<void> Function() onReload;
 
   Future<void> _detach(BuildContext context, Project project) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.t('teams.detachTitle')),
-        content: Text(
-          context.t('teams.detachConfirm', variables: {'name': project.name}),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(context.t('common.cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(context.t('teams.detach')),
-          ),
-        ],
+    final confirmed = await showGlassConfirm(
+      context,
+      icon: LucideIcons.unlink,
+      title: context.t('teams.detachTitle'),
+      message: context.t(
+        'teams.detachConfirm',
+        variables: {'name': project.name},
       ),
+      confirmLabel: context.t('teams.detach'),
+      confirmIcon: LucideIcons.unlink,
+      destructive: true,
     );
     if (confirmed != true || !context.mounted) return;
     final repo = context.read<HinataRepository>();

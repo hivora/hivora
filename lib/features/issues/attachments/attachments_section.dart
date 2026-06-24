@@ -20,6 +20,7 @@ import '../../../core/models/core_models.dart';
 import '../../../core/models/work_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../sprint/modals/glass_modal.dart' show showGlassConfirm;
 import 'attachment_kind.dart';
 import 'attachment_lightbox.dart';
 import 'upload_source_sheet.dart';
@@ -273,12 +274,14 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
     for (final item in detail.files) {
       final len = await item.length();
       final bytes = kIsWeb ? await item.readAsBytes() : null;
-      srcs.add(_Src(
-        name: item.name,
-        size: len,
-        path: kIsWeb ? null : item.path,
-        bytes: bytes,
-      ));
+      srcs.add(
+        _Src(
+          name: item.name,
+          size: len,
+          path: kIsWeb ? null : item.path,
+          bytes: bytes,
+        ),
+      );
     }
     if (!_disposed) _enqueue(srcs);
   }
@@ -289,26 +292,40 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
     final accepted = <_Src>[];
     for (final f in files) {
       if (isBlockedFileName(f.name)) {
-        _toast(context.t('issues.attachments.blocked', variables: {'name': f.name}));
+        _toast(
+          context.t('issues.attachments.blocked', variables: {'name': f.name}),
+        );
         continue;
       }
       if (f.size > limits.maxFileBytes) {
-        _toast(context.t('issues.attachments.tooLarge',
-            variables: {'name': f.name, 'size': limits.maxFileMb}));
+        _toast(
+          context.t(
+            'issues.attachments.tooLarge',
+            variables: {'name': f.name, 'size': limits.maxFileMb},
+          ),
+        );
         continue;
       }
       accepted.add(f);
     }
     if (accepted.isEmpty) return;
     if (accepted.length > limits.maxFiles) {
-      _toast(context.t('issues.attachments.tooManyFiles',
-          variables: {'count': limits.maxFiles}));
+      _toast(
+        context.t(
+          'issues.attachments.tooManyFiles',
+          variables: {'count': limits.maxFiles},
+        ),
+      );
       accepted.removeRange(limits.maxFiles, accepted.length);
     }
     final total = accepted.fold<int>(0, (sum, f) => sum + f.size);
     if (total > limits.maxRequestBytes) {
-      _toast(context.t('issues.attachments.batchTooLarge',
-          variables: {'size': limits.maxRequestMb}));
+      _toast(
+        context.t(
+          'issues.attachments.batchTooLarge',
+          variables: {'size': limits.maxRequestMb},
+        ),
+      );
       return;
     }
     final ups = accepted.map(_Upload.new).toList();
@@ -371,12 +388,12 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
 
   // ── Actions ───────────────────────────────────────────────────────────────
   Future<String?> _resolveUrl(String id) => _urlCache.putIfAbsent(id, () async {
-        try {
-          return await _repo.attachmentDownloadUrl(widget.issueId, id);
-        } catch (_) {
-          return null;
-        }
-      });
+    try {
+      return await _repo.attachmentDownloadUrl(widget.issueId, id);
+    } catch (_) {
+      return null;
+    }
+  });
 
   Future<void> _download(IssueAttachment a) async {
     final url = await _resolveUrl(a.id);
@@ -388,23 +405,14 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
   }
 
   Future<void> _delete(IssueAttachment a) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(a.fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
-        content: Text(ctx.t('issues.attachments.removeConfirm')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(ctx.t('common.cancel')),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(ctx.t('issues.attachments.remove')),
-          ),
-        ],
-      ),
+    final confirmed = await showGlassConfirm(
+      context,
+      icon: LucideIcons.trash2,
+      title: a.fileName,
+      message: context.t('issues.attachments.removeConfirm'),
+      confirmLabel: context.t('issues.attachments.remove'),
+      confirmIcon: LucideIcons.trash2,
+      destructive: true,
     );
     if (confirmed != true || _disposed) return;
     final prev = _server;
@@ -442,7 +450,8 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
     } else {
       // PDFs and text/JSON/CSV preview inline too — resolve the presigned URL
       // so the lightbox can fetch the content. Other types just show a card.
-      final previewable = kindIsPdf(kind) ||
+      final previewable =
+          kindIsPdf(kind) ||
           isTextPreviewable(tapped.fileName, tapped.contentType);
       final url = previewable ? await _resolveUrl(tapped.id) : null;
       if (!mounted) return;
@@ -514,8 +523,7 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
           child: Stack(
             children: [
               if (count == 0) _empty() else _grid(phone),
-              if (_dragging)
-                Positioned.fill(child: const _DropOverlay()),
+              if (_dragging) Positioned.fill(child: const _DropOverlay()),
             ],
           ),
         ),
@@ -559,10 +567,7 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
         // Always-available add affordance (the empty dropzone only shows when
         // there are no attachments yet).
         if (count > 0)
-          _AddButton(
-            onTap: _add,
-            label: context.t('issues.attachments.add'),
-          ),
+          _AddButton(onTap: _add, label: context.t('issues.attachments.add')),
       ],
     );
   }
@@ -583,8 +588,11 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
                   color: AppColors.canvas2,
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(LucideIcons.paperclip,
-                    size: 18, color: AppColors.inkSoft),
+                child: Icon(
+                  LucideIcons.paperclip,
+                  size: 18,
+                  color: AppColors.inkSoft,
+                ),
               ),
               const SizedBox(width: 13),
               Expanded(
@@ -595,16 +603,22 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
                     Text(
                       context.t('issues.attachments.emptyTitle'),
                       style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 1),
                     Text(
-                      context.t('issues.attachments.emptyHint',
-                          variables: {'size': _limits.maxFileMb}),
+                      context.t(
+                        'issues.attachments.emptyHint',
+                        variables: {'size': _limits.maxFileMb},
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: 11.5, color: AppColors.inkFaint),
+                        fontSize: 11.5,
+                        color: AppColors.inkFaint,
+                      ),
                     ),
                   ],
                 ),
@@ -660,12 +674,12 @@ class _AttachmentTile extends StatefulWidget {
     required this.upload,
     required this.onRetry,
     required this.onCancel,
-  })  : attachment = null,
-        subtitle = '',
-        resolveImageUrl = null,
-        onOpen = null,
-        onDownload = null,
-        onDelete = null;
+  }) : attachment = null,
+       subtitle = '',
+       resolveImageUrl = null,
+       onOpen = null,
+       onDownload = null,
+       onDelete = null;
 
   const _AttachmentTile.done({
     required this.attachment,
@@ -674,9 +688,9 @@ class _AttachmentTile extends StatefulWidget {
     required this.onOpen,
     required this.onDownload,
     required this.onDelete,
-  })  : upload = null,
-        onRetry = null,
-        onCancel = null;
+  }) : upload = null,
+       onRetry = null,
+       onCancel = null;
 
   final _Upload? upload;
   final IssueAttachment? attachment;
@@ -752,15 +766,19 @@ class _AttachmentTileState extends State<_AttachmentTile> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontSize: 12.5, fontWeight: FontWeight.w600),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       up != null ? formatBytes(size) : widget.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style:
-                          TextStyle(fontSize: 10.5, color: AppColors.inkFaint),
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: AppColors.inkFaint,
+                      ),
                     ),
                   ],
                 ),
@@ -774,8 +792,7 @@ class _AttachmentTileState extends State<_AttachmentTile> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      cursor:
-          att != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor: att != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
       child: GestureDetector(
         onTap: widget.onOpen,
         child: Stack(
@@ -874,8 +891,7 @@ class _AttachmentTileState extends State<_AttachmentTile> {
                     const SizedBox(height: 8),
                     Text(
                       context.t('issues.attachments.uploadFailed'),
-                      style: TextStyle(
-                          fontSize: 11, color: AppColors.danger),
+                      style: TextStyle(fontSize: 11, color: AppColors.danger),
                     ),
                   ],
                 )
@@ -890,7 +906,8 @@ class _AttachmentTileState extends State<_AttachmentTile> {
                         strokeWidth: 4,
                         backgroundColor: AppColors.hairline,
                         valueColor: AlwaysStoppedAnimation(
-                            AppColors.accentStrong),
+                          AppColors.accentStrong,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -968,8 +985,11 @@ class _TileAction extends StatelessWidget {
           child: SizedBox(
             width: 28,
             height: 28,
-            child: Icon(icon,
-                size: 15, color: danger ? AppColors.danger : AppColors.ink),
+            child: Icon(
+              icon,
+              size: 15,
+              color: danger ? AppColors.danger : AppColors.ink,
+            ),
           ),
         ),
       ),
@@ -999,8 +1019,11 @@ class _AddButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(LucideIcons.paperclip,
-                  size: 14, color: AppColors.accentStrong),
+              const Icon(
+                LucideIcons.paperclip,
+                size: 14,
+                color: AppColors.accentStrong,
+              ),
               const SizedBox(width: 7),
               Text(
                 label,
@@ -1057,8 +1080,11 @@ class _DropOverlay extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Icon(LucideIcons.cloudUpload,
-                      size: 22, color: AppColors.accentStrong),
+                  child: Icon(
+                    LucideIcons.cloudUpload,
+                    size: 22,
+                    color: AppColors.accentStrong,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(

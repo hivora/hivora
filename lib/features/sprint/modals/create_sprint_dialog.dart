@@ -29,10 +29,8 @@ Future<CreateSprintData?> showCreateSprintDialog(
 }) {
   return showGlassModal<CreateSprintData>(
     context,
-    builder: (_) => _CreateSprintBody(
-      nextNumber: nextNumber,
-      defaultStart: defaultStart,
-    ),
+    builder: (_) =>
+        _CreateSprintBody(nextNumber: nextNumber, defaultStart: defaultStart),
   );
 }
 
@@ -47,8 +45,9 @@ class _CreateSprintBody extends StatefulWidget {
 }
 
 class _CreateSprintBodyState extends State<_CreateSprintBody> {
-  late final TextEditingController _name =
-      TextEditingController(text: 'Sprint ${widget.nextNumber}');
+  late final TextEditingController _name = TextEditingController(
+    text: 'Sprint ${widget.nextNumber}',
+  );
   final _goal = TextEditingController();
   int _weeks = 2; // index+1; default 2 weeks
   late DateTime _start =
@@ -70,8 +69,9 @@ class _CreateSprintBodyState extends State<_CreateSprintBody> {
   }
 
   Future<void> _pickStart() async {
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await showGlassDatePicker(
+      context,
+      title: context.t('issues.startDate'),
       initialDate: _start,
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 730)),
@@ -114,8 +114,9 @@ class _CreateSprintBodyState extends State<_CreateSprintBody> {
                     controller: _goal,
                     minLines: 2,
                     maxLines: 4,
-                    decoration:
-                        glassInputDecoration(hint: context.t('sprint.goalHint')),
+                    decoration: glassInputDecoration(
+                      hint: context.t('sprint.goalHint'),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -126,7 +127,10 @@ class _CreateSprintBodyState extends State<_CreateSprintBody> {
                       for (var w = 1; w <= 4; w++)
                         w == 1
                             ? context.t('sprint.week')
-                            : context.t('sprint.weeksN', variables: {'count': '$w'}),
+                            : context.t(
+                                'sprint.weeksN',
+                                variables: {'count': '$w'},
+                              ),
                     ],
                     selected: _weeks - 1,
                     onChanged: (i) => setState(() => _weeks = i + 1),
@@ -229,11 +233,7 @@ class _DateButton extends StatelessWidget {
                 ),
               ),
               if (!muted)
-                Icon(
-                  LucideIcons.calendar,
-                  size: 15,
-                  color: AppColors.inkSoft,
-                ),
+                Icon(LucideIcons.calendar, size: 15, color: AppColors.inkSoft),
             ],
           ),
         ),

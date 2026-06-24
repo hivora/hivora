@@ -102,9 +102,11 @@ class _AppShellState extends State<AppShell> {
     if (event is! KeyDownEvent) return false;
     if (event.logicalKey != LogicalKeyboardKey.keyK) return false;
     final keys = HardwareKeyboard.instance.logicalKeysPressed;
-    final meta = keys.contains(LogicalKeyboardKey.metaLeft) ||
+    final meta =
+        keys.contains(LogicalKeyboardKey.metaLeft) ||
         keys.contains(LogicalKeyboardKey.metaRight);
-    final ctrl = keys.contains(LogicalKeyboardKey.controlLeft) ||
+    final ctrl =
+        keys.contains(LogicalKeyboardKey.controlLeft) ||
         keys.contains(LogicalKeyboardKey.controlRight);
     if (!meta && !ctrl) return false;
     // Don't stack a second palette (or open one over another modal).
@@ -172,7 +174,11 @@ String _subPageBackRoute(String location) {
 
 /// Resolves the back action for a sub-page: a page-supplied [override] wins,
 /// otherwise pop the stack, otherwise jump to the parent route.
-void _handleBack(BuildContext context, String location, VoidCallback? override) {
+void _handleBack(
+  BuildContext context,
+  String location,
+  VoidCallback? override,
+) {
   if (override != null) {
     override();
   } else if (context.canPop()) {
@@ -299,175 +305,185 @@ class _NavRail extends StatelessWidget {
           ),
           SafeArea(
             child: Column(
-          // Centre every item on the rail's vertical axis when collapsed;
-          // left-align them in the expanded view.
-          crossAxisAlignment:
-              collapsed ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-          children: [
-            // Logo
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: collapsed ? 18 : 20,
-                vertical: 20,
-              ),
-              child: collapsed
-                  ? HexMark(size: 32, color: AppColors.accent)
-                  : Row(
-                      children: [
-                        HexMark(size: 28, color: AppColors.accent),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'hinata',
-                          style: TextStyle(
-                            fontFamily: AppTheme.fontBrand,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            letterSpacing: -0.4,
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-
-            // New issue CTA
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: collapsed ? 12 : 16,
-                vertical: 4,
-              ),
-              child: collapsed
-                  ? _RailIconButton(
-                      icon: LucideIcons.plus,
-                      active: false,
-                      amber: true,
-                      tooltip: context.t('issues.new'),
-                      onTap: () => context.go('/issues'),
-                    )
-                  : DecoratedBox(
-                      // Soft honey glow beneath the CTA (matches the web
-                      // prototype's box-shadow: 0 6px 18px -8px amber/0.7).
-                      decoration: BoxDecoration(
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.radiusControl),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.accent.withValues(alpha: 0.45),
-                            blurRadius: 18,
-                            spreadRadius: -6,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: () => context.go('/issues'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.accent,
-                            foregroundColor: const Color(0xFF2A2410),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppTheme.radiusControl),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 12),
-                            textStyle: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 13.5),
-                          ),
-                          icon: const Icon(LucideIcons.plus, size: 18),
-                          label: Text(context.t('issues.new')),
-                        ),
-                      ),
-                    ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Primary group
-            if (!collapsed)
-              _RailGroupLabel('WORK'),
-            for (final dest in _primary)
-              _RailItem(
-                destination: dest,
-                selected: _isActive(location, dest.route),
-                collapsed: collapsed,
-              ),
-
-            const SizedBox(height: 8),
-            if (!collapsed) _RailGroupLabel('PLAN'),
-            for (final dest in _secondary)
-              _RailItem(
-                destination: dest,
-                selected: _isActive(location, dest.route),
-                collapsed: collapsed,
-              ),
-
-            const Spacer(),
-
-            // Collapse / expand toggle — desktop only, sits above the user.
-            if (canToggle && onToggle != null) _CollapseToggle(
-              collapsed: collapsed,
-              onToggle: onToggle!,
-            ),
-
-            if (!collapsed)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: InkWell(
-                  onTap: () => context.go('/settings'),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Row(
-                    children: [
-                      AppAvatar(
-                        name: user?.displayName ?? '?',
-                        imageUrl: user?.avatarUrl,
-                        radius: 16,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
+              // Centre every item on the rail's vertical axis when collapsed;
+              // left-align them in the expanded view.
+              crossAxisAlignment: collapsed
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
+              children: [
+                // Logo
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: collapsed ? 18 : 20,
+                    vertical: 20,
+                  ),
+                  child: collapsed
+                      ? HexMark(size: 32, color: AppColors.accent)
+                      : Row(
                           children: [
-                            Text(
-                              user?.displayName ?? '',
-                              style: const TextStyle(
-                                  color: AppColors.railInk,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              user?.email ?? '',
-                              style: const TextStyle(
-                                  color: AppColors.railFaint, fontSize: 11),
-                              overflow: TextOverflow.ellipsis,
+                            HexMark(size: 28, color: AppColors.accent),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'hinata',
+                              style: TextStyle(
+                                fontFamily: AppTheme.fontBrand,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: -0.4,
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Center(
-                  child: InkWell(
-                    onTap: () => context.go('/settings'),
-                    borderRadius: BorderRadius.circular(20),
-                    child: AppAvatar(
-                      name: user?.displayName ?? '?',
-                      imageUrl: user?.avatarUrl,
-                      radius: 16,
+
+                // New issue CTA
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: collapsed ? 12 : 16,
+                    vertical: 4,
+                  ),
+                  child: collapsed
+                      ? _RailIconButton(
+                          icon: LucideIcons.plus,
+                          active: false,
+                          amber: true,
+                          tooltip: context.t('issues.new'),
+                          onTap: () => context.go('/issues'),
+                        )
+                      : DecoratedBox(
+                          // Soft honey glow beneath the CTA (matches the web
+                          // prototype's box-shadow: 0 6px 18px -8px amber/0.7).
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusControl,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.accent.withValues(alpha: 0.45),
+                                blurRadius: 18,
+                                spreadRadius: -6,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: () => context.go('/issues'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: const Color(0xFF2A2410),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    AppTheme.radiusControl,
+                                  ),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13.5,
+                                ),
+                              ),
+                              icon: const Icon(LucideIcons.plus, size: 18),
+                              label: Text(context.t('issues.new')),
+                            ),
+                          ),
+                        ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Primary group
+                if (!collapsed) _RailGroupLabel('WORK'),
+                for (final dest in _primary)
+                  _RailItem(
+                    destination: dest,
+                    selected: _isActive(location, dest.route),
+                    collapsed: collapsed,
+                  ),
+
+                const SizedBox(height: 8),
+                if (!collapsed) _RailGroupLabel('PLAN'),
+                for (final dest in _secondary)
+                  _RailItem(
+                    destination: dest,
+                    selected: _isActive(location, dest.route),
+                    collapsed: collapsed,
+                  ),
+
+                const Spacer(),
+
+                // Collapse / expand toggle — desktop only, sits above the user.
+                if (canToggle && onToggle != null)
+                  _CollapseToggle(collapsed: collapsed, onToggle: onToggle!),
+
+                if (!collapsed)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: InkWell(
+                      onTap: () => context.go('/settings'),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Row(
+                        children: [
+                          AppAvatar(
+                            name: user?.displayName ?? '?',
+                            imageUrl: user?.avatarUrl,
+                            radius: 16,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  user?.displayName ?? '',
+                                  style: const TextStyle(
+                                    color: AppColors.railInk,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  user?.email ?? '',
+                                  style: const TextStyle(
+                                    color: AppColors.railFaint,
+                                    fontSize: 11,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Center(
+                      child: InkWell(
+                        onTap: () => context.go('/settings'),
+                        borderRadius: BorderRadius.circular(20),
+                        child: AppAvatar(
+                          name: user?.displayName ?? '?',
+                          imageUrl: user?.avatarUrl,
+                          radius: 16,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-          ],
-        ),
+              ],
+            ),
           ),
         ],
       ),
@@ -567,7 +583,9 @@ class _RailItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(
-          horizontal: collapsed ? 8 : 10, vertical: 2),
+        horizontal: collapsed ? 8 : 10,
+        vertical: 2,
+      ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -610,39 +628,41 @@ class _RailItem extends StatelessWidget {
                       )
                     : null,
                 child: collapsed
-                ? Tooltip(
-                    message: context.t(destination.labelKey),
-                    preferBelow: false,
-                    child: Icon(
-                      destination.icon,
-                      size: 20,
-                      color: selected ? AppColors.accent : AppColors.railFaint,
-                    ),
-                  )
-                : Row(
-                    children: [
-                      Icon(
-                        destination.icon,
-                        size: 18,
-                        color: selected
-                            ? AppColors.accent
-                            : AppColors.railFaint,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        context.t(destination.labelKey),
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: selected
-                              ? FontWeight.w600
-                              : FontWeight.w400,
+                    ? Tooltip(
+                        message: context.t(destination.labelKey),
+                        preferBelow: false,
+                        child: Icon(
+                          destination.icon,
+                          size: 20,
                           color: selected
-                              ? AppColors.railInk
+                              ? AppColors.accent
                               : AppColors.railFaint,
                         ),
+                      )
+                    : Row(
+                        children: [
+                          Icon(
+                            destination.icon,
+                            size: 18,
+                            color: selected
+                                ? AppColors.accent
+                                : AppColors.railFaint,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            context.t(destination.labelKey),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: selected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: selected
+                                  ? AppColors.railInk
+                                  : AppColors.railFaint,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
               ),
             ),
           ),
@@ -677,15 +697,15 @@ class _RailIconButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppTheme.radiusControl),
         child: Padding(
           padding: const EdgeInsets.all(10),
-          child: Icon(icon,
-              size: 20,
-              color: amber ? const Color(0xFF2A2410) : AppColors.railFaint),
+          child: Icon(
+            icon,
+            size: 20,
+            color: amber ? const Color(0xFF2A2410) : AppColors.railFaint,
+          ),
         ),
       ),
     );
-    return tooltip != null
-        ? Tooltip(message: tooltip!, child: child)
-        : child;
+    return tooltip != null ? Tooltip(message: tooltip!, child: child) : child;
   }
 }
 
@@ -723,7 +743,10 @@ class _HinataTopBar extends StatelessWidget {
     }
     final segStyle = TextStyle(fontSize: 13, color: AppColors.inkSoft);
     final curStyle = TextStyle(
-        fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink);
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: AppColors.ink,
+    );
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -734,7 +757,9 @@ class _HinataTopBar extends StatelessWidget {
         bottom: false,
         child: Padding(
           padding: EdgeInsets.symmetric(
-              horizontal: compact ? 16 : 28, vertical: 11),
+            horizontal: compact ? 16 : 28,
+            vertical: 11,
+          ),
           child: Row(
             children: [
               if (compact) ...[
@@ -750,8 +775,11 @@ class _HinataTopBar extends StatelessWidget {
                   onPressed: onBack,
                   visualDensity: VisualDensity.compact,
                   tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  icon: Icon(LucideIcons.arrowLeft,
-                      size: 20, color: AppColors.inkSoft),
+                  icon: Icon(
+                    LucideIcons.arrowLeft,
+                    size: 20,
+                    color: AppColors.inkSoft,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Expanded(
@@ -769,8 +797,11 @@ class _HinataTopBar extends StatelessWidget {
                         Text(context.t('appbar.workspace'), style: segStyle),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Icon(LucideIcons.chevronRight,
-                              size: 16, color: AppColors.inkFaint),
+                          child: Icon(
+                            LucideIcons.chevronRight,
+                            size: 16,
+                            color: AppColors.inkFaint,
+                          ),
                         ),
                       ],
                       Flexible(
@@ -832,21 +863,21 @@ class _TopSearchField extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             child: Row(
               children: [
-                Icon(LucideIcons.search,
-                    size: 16, color: AppColors.inkFaint),
+                Icon(LucideIcons.search, size: 16, color: AppColors.inkFaint),
                 const SizedBox(width: 9),
                 Expanded(
                   child: Text(
                     context.t('appbar.search'),
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 13, color: AppColors.inkFaint),
+                    style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
                   ),
                 ),
                 const SizedBox(width: 9),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceMuted,
                     borderRadius: BorderRadius.circular(6),
@@ -895,7 +926,8 @@ class _TopIconButton extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.radiusControl),
         side: BorderSide(
-            color: active ? AppColors.hairline : Colors.transparent),
+          color: active ? AppColors.hairline : Colors.transparent,
+        ),
       ),
       child: InkWell(
         onTap: onTap,
@@ -908,18 +940,18 @@ class _TopIconButton extends StatelessWidget {
             clipBehavior: Clip.none,
             alignment: Alignment.center,
             children: [
-              Icon(icon,
-                  size: 18,
-                  color: active ? AppColors.ink : AppColors.inkSoft),
+              Icon(
+                icon,
+                size: 18,
+                color: active ? AppColors.ink : AppColors.inkSoft,
+              ),
               ?child,
             ],
           ),
         ),
       ),
     );
-    return tooltip != null
-        ? Tooltip(message: tooltip!, child: button)
-        : button;
+    return tooltip != null ? Tooltip(message: tooltip!, child: button) : button;
   }
 }
 
@@ -1001,29 +1033,36 @@ class _NotificationBellState extends State<_NotificationBell> {
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: _cubit,
-      child: BlocBuilder<FetchCubit<List<AppNotification>>,
-          FetchState<List<AppNotification>>>(
-        builder: (context, state) {
-          final items = state.data ?? const <AppNotification>[];
-          final hasUnread = items.any((n) => !n.read);
-          return OverlayPortal(
-            controller: _portalController,
-            overlayChildBuilder: (_) => _buildOverlay(items),
-            child: CompositedTransformTarget(
-              link: _link,
-              child: _TopIconButton(
-                icon: LucideIcons.bell,
-                tooltip: context.t('nav.notifications'),
-                active: widget.active || _open,
-                onTap: _toggle,
-                child: (hasUnread && !_open)
-                    ? const Positioned(top: 7, right: 8, child: _UnreadDot())
-                    : null,
-              ),
-            ),
-          );
-        },
-      ),
+      child:
+          BlocBuilder<
+            FetchCubit<List<AppNotification>>,
+            FetchState<List<AppNotification>>
+          >(
+            builder: (context, state) {
+              final items = state.data ?? const <AppNotification>[];
+              final hasUnread = items.any((n) => !n.read);
+              return OverlayPortal(
+                controller: _portalController,
+                overlayChildBuilder: (_) => _buildOverlay(items),
+                child: CompositedTransformTarget(
+                  link: _link,
+                  child: _TopIconButton(
+                    icon: LucideIcons.bell,
+                    tooltip: context.t('nav.notifications'),
+                    active: widget.active || _open,
+                    onTap: _toggle,
+                    child: (hasUnread && !_open)
+                        ? const Positioned(
+                            top: 7,
+                            right: 8,
+                            child: _UnreadDot(),
+                          )
+                        : null,
+                  ),
+                ),
+              );
+            },
+          ),
     );
   }
 
@@ -1097,116 +1136,132 @@ class _NotifPopoverCard extends StatelessWidget {
     final maxListHeight = media.size.height * 0.5;
     final latest = items.take(10).toList();
     final hasUnread = items.any((n) => !n.read);
+    final tokens = SearchTokens.of(Theme.of(context).brightness);
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     return _PopIn(
-      child: Container(
+      child: SizedBox(
         width: width,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-          border: Border.all(color: AppColors.hairline),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x222D2B55),
-              blurRadius: 28,
-              spreadRadius: -6,
-              offset: Offset(0, 12),
+        child: GlassPanelShadow(
+          radius: BorderRadius.circular(AppTheme.radiusCard),
+          shadows: tokens.panelShadow,
+          child: GlassContainer(
+            useOwnLayer: true,
+            quality: GlassQuality.premium,
+            clipBehavior: Clip.antiAlias,
+            shape: const LiquidRoundedSuperellipse(
+              borderRadius: AppTheme.radiusCard,
             ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Material(
-          color: Colors.transparent,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 10, 14),
-                child: Row(
-                  children: [
-                    Text(
-                      context.t('notifications.title'),
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13.5,
-                          color: AppColors.ink),
+            settings: liquidGlassPanelSettings(
+              glassFill: tokens.glassFill,
+              dark: dark,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 10, 14),
+                    child: Row(
+                      children: [
+                        Text(
+                          context.t('notifications.title'),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13.5,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (hasUnread)
+                          InkWell(
+                            onTap: onMarkAllRead,
+                            borderRadius: BorderRadius.circular(6),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              child: Text(
+                                context.t('notifications.markAllRead'),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.accentStrong,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    const Spacer(),
-                    if (hasUnread)
-                      InkWell(
-                        onTap: onMarkAllRead,
-                        borderRadius: BorderRadius.circular(6),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          child: Text(
-                            context.t('notifications.markAllRead'),
-                            style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.accentStrong),
+                  ),
+                  Divider(height: 1, color: AppColors.hairline2),
+                  // List (max 10 latest)
+                  if (latest.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 30,
+                        horizontal: 16,
+                      ),
+                      child: Text(
+                        context.t('notifications.empty'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.inkSoft,
+                          fontSize: 13,
+                        ),
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxHeight: maxListHeight),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          padding: EdgeInsets.zero,
+                          itemCount: latest.length,
+                          separatorBuilder: (_, _) =>
+                              Divider(height: 1, color: AppColors.hairline2),
+                          itemBuilder: (_, i) => _NotifRow(
+                            notification: latest[i],
+                            onTap: () => onTapNotification(latest[i]),
                           ),
                         ),
                       ),
-                  ],
-                ),
-              ),
-              Divider(height: 1, color: AppColors.hairline2),
-              // List (max 10 latest)
-              if (latest.isEmpty)
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 30, horizontal: 16),
-                  child: Text(
-                    context.t('notifications.empty'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: AppColors.inkSoft, fontSize: 13),
-                  ),
-                )
-              else
-                Flexible(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: maxListHeight),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      padding: EdgeInsets.zero,
-                      itemCount: latest.length,
-                      separatorBuilder: (_, _) =>
-                          Divider(height: 1, color: AppColors.hairline2),
-                      itemBuilder: (_, i) => _NotifRow(
-                        notification: latest[i],
-                        onTap: () => onTapNotification(latest[i]),
+                    ),
+                  Divider(height: 1, color: AppColors.hairline2),
+                  // Fixed footer → full notifications page
+                  InkWell(
+                    onTap: onViewAll,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            context.t('notifications.viewAll'),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.inkSoft,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(
+                            LucideIcons.arrowRight,
+                            size: 15,
+                            color: AppColors.inkSoft,
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ),
-              Divider(height: 1, color: AppColors.hairline2),
-              // Fixed footer → full notifications page
-              InkWell(
-                onTap: onViewAll,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        context.t('notifications.viewAll'),
-                        style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.inkSoft),
-                      ),
-                      const SizedBox(width: 6),
-                      Icon(LucideIcons.arrowRight,
-                          size: 15, color: AppColors.inkSoft),
-                    ],
-                  ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -1226,7 +1281,9 @@ class _NotifRow extends StatelessWidget {
     final (icon, tint) = _notifVisual(notification.type);
     final ago = _timeAgo(notification.createdAt);
     return Material(
-      color: unread ? AppColors.accentSoft : AppColors.surface,
+      // Transparent read rows let the glass panel show through; unread keep a
+      // soft accent wash.
+      color: unread ? AppColors.accentSoft : Colors.transparent,
       child: InkWell(
         onTap: onTap,
         hoverColor: AppColors.surfaceMuted,
@@ -1262,8 +1319,9 @@ class _NotifRow extends StatelessWidget {
                               fontSize: 12.5,
                               height: 1.4,
                               color: AppColors.ink,
-                              fontWeight:
-                                  unread ? FontWeight.w700 : FontWeight.w500,
+                              fontWeight: unread
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                             ),
                           ),
                         ),
@@ -1272,7 +1330,9 @@ class _NotifRow extends StatelessWidget {
                           Text(
                             ago,
                             style: TextStyle(
-                                fontSize: 11, color: AppColors.inkFaint),
+                              fontSize: 11,
+                              color: AppColors.inkFaint,
+                            ),
                           ),
                         ],
                       ],
@@ -1284,9 +1344,10 @@ class _NotifRow extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.inkSoft,
-                            height: 1.4),
+                          fontSize: 12,
+                          color: AppColors.inkSoft,
+                          height: 1.4,
+                        ),
                       ),
                     ],
                   ],
@@ -1302,18 +1363,16 @@ class _NotifRow extends StatelessWidget {
 
 /// Leading icon + tint for a notification type.
 (IconData, Color) _notifVisual(String type) => switch (type.toUpperCase()) {
-      'MENTION' => (LucideIcons.atSign, AppColors.stReview),
-      'ASSIGN' ||
-      'ASSIGNED' ||
-      'ASSIGNMENT' =>
-        (LucideIcons.userCheck, AppColors.stTodo),
-      'COMMENT' => (LucideIcons.messageSquare, AppColors.stProgress),
-      'REVIEW' ||
-      'REVIEW_REQUEST' =>
-        (LucideIcons.messageSquareText, AppColors.stReview),
-      'DUE' || 'DEADLINE' => (LucideIcons.calendarDays, AppColors.priHigh),
-      _ => (LucideIcons.bell, AppColors.inkSoft),
-    };
+  'MENTION' => (LucideIcons.atSign, AppColors.stReview),
+  'ASSIGN' ||
+  'ASSIGNED' ||
+  'ASSIGNMENT' => (LucideIcons.userCheck, AppColors.stTodo),
+  'COMMENT' => (LucideIcons.messageSquare, AppColors.stProgress),
+  'REVIEW' ||
+  'REVIEW_REQUEST' => (LucideIcons.messageSquareText, AppColors.stReview),
+  'DUE' || 'DEADLINE' => (LucideIcons.calendarDays, AppColors.priHigh),
+  _ => (LucideIcons.bell, AppColors.inkSoft),
+};
 
 /// Compact relative time ("now", "8m", "2h", "3d", "5w").
 String? _timeAgo(DateTime? time) {
@@ -1349,8 +1408,10 @@ class _PopInState extends State<_PopIn> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final curve =
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    final curve = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
     return FadeTransition(
       opacity: curve,
       child: AnimatedBuilder(
@@ -1387,8 +1448,7 @@ class _CompactShellState extends State<_CompactShell> {
       if (_isActive(widget.location, _bottomTabs[i].route)) return i;
     }
     // Everything not in first 3 tabs → "More" tab (index 3)
-    final inPrimary =
-        _primary.any((d) => _isActive(widget.location, d.route));
+    final inPrimary = _primary.any((d) => _isActive(widget.location, d.route));
     return inPrimary ? 0 : 3;
   }
 
@@ -1431,33 +1491,35 @@ class _CompactShellState extends State<_CompactShell> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Builder(builder: (context) {
-              final mq = MediaQuery.of(context);
-              // Glass app bar: status-bar inset + bar content height.
-              final topFootprint = _kCompactBarHeight + mq.viewPadding.top;
-              // Floating nav: GlassBottomBar barHeight(64) + verticalPadding
-              // (8 top + 8 bottom) + device safe-area.
-              final navFootprint = 80 + mq.viewPadding.bottom;
-              return MediaQuery(
-                data: mq.copyWith(
-                  padding: mq.padding.copyWith(
-                    top: topFootprint,
-                    bottom: navFootprint,
+            child: Builder(
+              builder: (context) {
+                final mq = MediaQuery.of(context);
+                // Glass app bar: status-bar inset + bar content height.
+                final topFootprint = _kCompactBarHeight + mq.viewPadding.top;
+                // Floating nav: GlassBottomBar barHeight(64) + verticalPadding
+                // (8 top + 8 bottom) + device safe-area.
+                final navFootprint = 80 + mq.viewPadding.bottom;
+                return MediaQuery(
+                  data: mq.copyWith(
+                    padding: mq.padding.copyWith(
+                      top: topFootprint,
+                      bottom: navFootprint,
+                    ),
+                    viewPadding: mq.viewPadding.copyWith(
+                      top: topFootprint,
+                      bottom: navFootprint,
+                    ),
                   ),
-                  viewPadding: mq.viewPadding.copyWith(
-                    top: topFootprint,
-                    bottom: navFootprint,
+                  // Keep left/right safe-area handling; top/bottom flow through as
+                  // gutters so content can scroll behind the bars.
+                  child: SafeArea(
+                    top: false,
+                    bottom: false,
+                    child: widget.child,
                   ),
-                ),
-                // Keep left/right safe-area handling; top/bottom flow through as
-                // gutters so content can scroll behind the bars.
-                child: SafeArea(
-                  top: false,
-                  bottom: false,
-                  child: widget.child,
-                ),
-              );
-            }),
+                );
+              },
+            ),
           ),
           // Black gradient scrim rising from the bottom up to the nav so content
           // dissolves beneath the floating glass pill.
@@ -1497,15 +1559,18 @@ class _CompactShellState extends State<_CompactShell> {
                         refractiveIndex: 1.59,
                         saturation: 0.7,
                         ambientStrength: 1,
-                        lightAngle: 2.356194490192345, // 0.75π — Apple key light
+                        lightAngle:
+                            2.356194490192345, // 0.75π — Apple key light
                         glassColor: Color(0x4D0A0A0A),
                       )
                     : null,
                 // Honey-amber indicator (translucent so the glass shows through).
-                indicatorColor: AppColors.accent
-                    .withValues(alpha: dark ? 0.30 : 0.22),
-                selectedIconColor:
-                    dark ? AppColors.accent : AppColors.accentStrong,
+                indicatorColor: AppColors.accent.withValues(
+                  alpha: dark ? 0.30 : 0.22,
+                ),
+                selectedIconColor: dark
+                    ? AppColors.accent
+                    : AppColors.accentStrong,
                 unselectedIconColor: dark ? AppColors.inkDark : AppColors.ink,
                 tabs: [
                   for (final d in _bottomTabs)
@@ -1577,9 +1642,7 @@ class _GlassTopBar extends StatelessWidget {
           // Progressive blur: heavy at the top, fading to perfectly sharp at the
           // lower edge — so the bar dissolves into the content instead of ending
           // on a hard cut-off line.
-          Positioned.fill(
-            child: _ProgressiveBlur(maxSigma: dark ? 26 : 22),
-          ),
+          Positioned.fill(child: _ProgressiveBlur(maxSigma: dark ? 26 : 22)),
           // Matching darkening scrim (also fades to transparent at the bottom).
           Positioned.fill(
             child: DecoratedBox(
@@ -1609,7 +1672,9 @@ class _GlassTopBar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 6),
             leading: onBack != null
                 ? Tooltip(
-                    message: MaterialLocalizations.of(context).backButtonTooltip,
+                    message: MaterialLocalizations.of(
+                      context,
+                    ).backButtonTooltip,
                     child: GlassIconButton(
                       icon: Icon(LucideIcons.arrowLeft, color: AppColors.ink),
                       onPressed: onBack,
@@ -1799,8 +1864,8 @@ class _MoreSheet extends StatelessWidget {
     final subtitle = user?.title?.isNotEmpty == true
         ? user!.title!
         : user?.roles.isNotEmpty == true
-            ? user!.roles.first.toLowerCase()
-            : user?.email ?? '';
+        ? user!.roles.first.toLowerCase()
+        : user?.email ?? '';
 
     final panel = GlassPanelShadow(
       radius: BorderRadius.circular(_radius),
@@ -1810,8 +1875,10 @@ class _MoreSheet extends StatelessWidget {
         quality: GlassQuality.premium,
         clipBehavior: Clip.antiAlias,
         shape: const LiquidRoundedSuperellipse(borderRadius: _radius),
-        settings:
-            liquidGlassPanelSettings(glassFill: tokens.glassFill, dark: dark),
+        settings: liquidGlassPanelSettings(
+          glassFill: tokens.glassFill,
+          dark: dark,
+        ),
         child: Material(
           type: MaterialType.transparency,
           child: Column(
@@ -1867,8 +1934,11 @@ class _MoreSheet extends StatelessWidget {
                     ),
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      icon: Icon(LucideIcons.x,
-                          size: 20, color: tokens.inkSoft),
+                      icon: Icon(
+                        LucideIcons.x,
+                        size: 20,
+                        color: tokens.inkSoft,
+                      ),
                     ),
                   ],
                 ),

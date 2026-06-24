@@ -16,11 +16,17 @@ class KnowledgeHome extends StatefulWidget {
     required this.repo,
     required this.onOpenArticle,
     required this.onOpenSpace,
+    required this.onNewSpace,
+    required this.onDeleteSpace,
   });
 
   final KnowledgeRepository repo;
   final ValueChanged<String> onOpenArticle;
   final ValueChanged<String> onOpenSpace;
+  final VoidCallback onNewSpace;
+
+  /// Delete an empty, persisted space (by name/id).
+  final ValueChanged<String> onDeleteSpace;
 
   @override
   State<KnowledgeHome> createState() => _KnowledgeHomeState();
@@ -167,8 +173,16 @@ class _KnowledgeHomeState extends State<KnowledgeHome> {
                   space: s,
                   count: repo.articleCountInSpace(s.id),
                   onTap: () => widget.onOpenSpace(s.id),
+                  onDelete: repo.isPersistedSpace(s.id) &&
+                          repo.articleCountInSpace(s.id) == 0
+                      ? () => widget.onDeleteSpace(s.id)
+                      : null,
                 ),
               ),
+            SizedBox(
+              width: tileW,
+              child: _NewSpaceCard(onTap: widget.onNewSpace),
+            ),
           ],
         );
       },
@@ -187,11 +201,18 @@ class _KnowledgeHomeState extends State<KnowledgeHome> {
 }
 
 class _SpaceCard extends StatelessWidget {
-  const _SpaceCard(
-      {required this.space, required this.count, required this.onTap});
+  const _SpaceCard({
+    required this.space,
+    required this.count,
+    required this.onTap,
+    this.onDelete,
+  });
   final KbSpace space;
   final int count;
   final VoidCallback onTap;
+
+  /// When non-null, an empty persisted space — show a delete affordance.
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -215,6 +236,23 @@ class _SpaceCard extends StatelessWidget {
                 bottom: 0,
                 child: Container(width: 4, color: hueSwatch(space.hue)),
               ),
+              if (onDelete != null)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Tooltip(
+                    message: context.t('knowledge.deleteSpace'),
+                    child: InkWell(
+                      onTap: onDelete,
+                      borderRadius: BorderRadius.circular(KbTokens.radiusControl),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Icon(lucideIcon('trash-2'),
+                            size: 15, color: AppColors.inkFaint),
+                      ),
+                    ),
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 20, 20, 20),
                 child: Column(
@@ -253,6 +291,60 @@ class _SpaceCard extends StatelessWidget {
                             fontSize: 11,
                             color: AppColors.inkFaint)),
                   ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Dashed "+ New space" tile that closes the spaces grid; opens the create-space
+/// dialog.
+class _NewSpaceCard extends StatelessWidget {
+  const _NewSpaceCard({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(KbTokens.radiusCard),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(KbTokens.radiusCard),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(KbTokens.radiusCard),
+            border: Border.all(color: AppColors.hairline2),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 20, 20, 20),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceMuted,
+                  borderRadius: BorderRadius.circular(KbTokens.radiusControl),
+                ),
+                alignment: Alignment.center,
+                child: Icon(lucideIcon('folder-plus'),
+                    size: 22, color: AppColors.inkSoft),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  context.t('knowledge.newSpace'),
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontBrand,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                    color: AppColors.inkSoft,
+                  ),
                 ),
               ),
             ],

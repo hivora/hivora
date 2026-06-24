@@ -20,6 +20,11 @@ class KnowledgeRepository {
   final Map<String, KbArticle> _articles = {};
   final Map<String, KbUser> _users = {};
   final List<KbSpace> _spaces = [];
+
+  /// Persisted backend spaces, keyed by name (insertion-ordered by sortOrder).
+  /// Source of truth for a space's icon/hue/description, and the reason an empty
+  /// space (no articles yet) still shows on the home grid.
+  final Map<String, Space> _backendSpaces = {};
   KbUser? _me;
   bool _loaded = false;
 
@@ -86,6 +91,15 @@ class KnowledgeRepository {
       // Non-critical — `me` falls back to the first directory user.
     }
 
+    _backendSpaces.clear();
+    try {
+      for (final s in await _backend.spaces()) {
+        _backendSpaces[s.name] = s;
+      }
+    } catch (_) {
+      // Older backend without /spaces — fall back to derived spaces only.
+    }
+
     _articles
       ..clear()
       ..addEntries(articles.map((a) => MapEntry(a.id, _toKbArticle(a))));
@@ -94,12 +108,19 @@ class KnowledgeRepository {
   }
 
   void _rebuildSpaces() {
-    final names = <String>{for (final a in _articles.values) a.spaceId}
+    final articleNames = <String>{for (final a in _articles.values) a.spaceId}
       ..removeWhere((n) => n.isEmpty);
-    // Stable order: catalog order first, then any extra spaces alphabetically.
+    // Persisted backend spaces first (already in sortOrder), then any space that
+    // only exists as an article's `space` value — catalog order, then the rest
+    // alphabetically.
     final ordered = <String>[
-      ..._spaceCatalog.keys.where(names.contains),
-      ...(names.where((n) => !_spaceCatalog.containsKey(n)).toList()..sort()),
+      ..._backendSpaces.keys,
+      ..._spaceCatalog.keys
+          .where((n) => !_backendSpaces.containsKey(n) && articleNames.contains(n)),
+      ...(articleNames
+          .where((n) => !_backendSpaces.containsKey(n) && !_spaceCatalog.containsKey(n))
+          .toList()
+        ..sort()),
     ];
     _spaces
       ..clear()
@@ -139,8 +160,8 @@ class KnowledgeRepository {
   }
 
   KbSpace _spaceFor(String name) {
-    final meta = _spaceCatalog[name] ??
-        (icon: 'file-text', hue: 250, desc: '');
+    final backend = _backendSpaces[name];
+    final catalog = _spaceCatalog[name];
     final key = name.length >= 3
         ? name.substring(0, 3).toUpperCase()
         : name.toUpperCase();
@@ -148,9 +169,9 @@ class KnowledgeRepository {
       id: name,
       key: key,
       name: name,
-      hue: meta.hue,
-      icon: meta.icon,
-      desc: meta.desc,
+      hue: backend?.hue ?? catalog?.hue ?? 250,
+      icon: backend?.icon ?? catalog?.icon ?? 'file-text',
+      desc: backend?.description ?? catalog?.desc ?? '',
     );
   }
 
@@ -312,6 +333,39 @@ class KnowledgeRepository {
     _articles.remove(id);
     _rebuildSpaces();
   }
+
+  /// Creates a persisted space and returns its view model. The space shows up on
+  /// the home grid immediately, even before it has any articles.
+  Future<KbSpace> createSpace({
+    required String name,
+    required String icon,
+    required int hue,
+    String? description,
+  }) async {
+    final s = await _backend.createSpace(
+      name: name,
+      icon: icon,
+      hue: hue,
+      description: description,
+    );
+    _backendSpaces[s.name] = s;
+    _rebuildSpaces();
+    return _spaceFor(s.name);
+  }
+
+  /// Deletes the persisted space named [spaceId]. The backend rejects this while
+  /// the space still has articles (surfaced as an [ApiFailure]).
+  Future<void> deleteSpace(String spaceId) async {
+    final backend = _backendSpaces[spaceId];
+    if (backend == null) return Future.error('unknown space');
+    await _backend.deleteSpace(backend.id);
+    _backendSpaces.remove(spaceId);
+    _rebuildSpaces();
+  }
+
+  /// Whether [spaceId] is a persisted backend space (vs. one merely derived from
+  /// an article's `space` value) — only persisted spaces can be deleted.
+  bool isPersistedSpace(String spaceId) => _backendSpaces.containsKey(spaceId);
 
   /// Whether [maybeAncestorId] is [id] itself or one of its ancestors — used to
   /// reject moves that would create a cycle.

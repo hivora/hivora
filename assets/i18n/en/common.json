@@ -217,6 +217,7 @@
       "priority": "priority",
       "type": "type",
       "sprint": "sprint",
+      "parent": "parent",
       "startDate": "start date",
       "dueDate": "due date",
       "estimate": "estimate",
@@ -306,13 +307,26 @@
       }
     },
     "storyPoints": "Story points",
-    "timeline": "Timeline"
+    "timeline": "Timeline",
+    "epic": "Epic",
+    "parent": "Parent",
+    "noEpic": "No epic",
+    "childIssues": "Child issues",
+    "subtasks": "Sub-tasks",
+    "addChild": "Add child issue",
+    "addSubtask": "Add sub-task",
+    "subtaskHint": "What needs doing?",
+    "noChildren": "No child issues yet.",
+    "noSubtasks": "No sub-tasks yet.",
+    "progressDone": "{{done}} of {{total}} done"
   },
   "type": {
     "task": "Task",
     "bug": "Bug",
     "feature": "Feature",
-    "epic": "Epic"
+    "story": "Story",
+    "epic": "Epic",
+    "subtask": "Sub-task"
   },
   "priority": {
     "showstopper": "Showstopper",
@@ -325,6 +339,7 @@
     "hours": "Hours",
     "minutes": "Minutes",
     "activityType": "Activity type",
+    "date": "Date",
     "note": "Note (optional)"
   },
   "projects": {
@@ -387,8 +402,19 @@
       "assignee": "Assignee",
       "sprint": "Sprint",
       "author": "Author",
-      "label": "Label"
+      "label": "Label",
+      "epic": "Epic"
     },
+    "groupBy": "Group by",
+    "group": {
+      "none": "None",
+      "epic": "Epic",
+      "assignee": "Assignee",
+      "subtask": "Sub-task"
+    },
+    "noEpic": "No epic",
+    "standalone": "Stand-alone",
+    "noParent": "No parent",
     "filterSearch": "Search {{scope}}…",
     "filterNoOptions": "Nothing to filter here.",
     "clearFilters": "Clear all",
@@ -486,6 +512,22 @@
     "moveToTopLevel": "Move to top level",
     "delete": "Delete",
     "deleteHasChildren": "Delete (move sub-pages first)",
+    "deleteArticleTitle": "Delete article?",
+    "deleteArticleConfirm": "Delete “{{title}}”? This can’t be undone.",
+    "newSpace": "New space",
+    "newSpaceSubtitle": "Group related articles into a space.",
+    "spaceName": "Name",
+    "spaceNameHint": "e.g. Engineering",
+    "spaceDescription": "Description",
+    "spaceDescriptionHint": "What lives in this space?",
+    "spaceIcon": "Icon",
+    "spaceColor": "Color",
+    "createSpace": "Create space",
+    "spaceCreated": "Space created",
+    "spaceDeleted": "Space deleted",
+    "deleteSpace": "Delete space",
+    "deleteSpaceTitle": "Delete space?",
+    "deleteSpaceConfirm": "Delete the “{{name}}” space? This can’t be undone.",
     "more": "More",
     "showPages": "Show pages",
     "hidePages": "Hide pages",

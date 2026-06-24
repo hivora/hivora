@@ -44,12 +44,13 @@ class _TypeMeta {
 }
 
 const _typeMeta = <String, _TypeMeta>{
-  // Backend Issue.Type: TASK, BUG, FEATURE, EPIC (STORY kept for compatibility).
+  // Backend Issue.Type: TASK, BUG, FEATURE, STORY, EPIC, SUBTASK.
   'TASK': _TypeMeta(LucideIcons.circleCheck, AppColors.stTodo),
   'BUG': _TypeMeta(LucideIcons.bug, AppColors.priUrgent),
   'FEATURE': _TypeMeta(LucideIcons.sparkles, AppColors.stProgress),
   'EPIC': _TypeMeta(LucideIcons.zap, AppColors.stReview),
   'STORY': _TypeMeta(LucideIcons.bookmark, AppColors.stDone),
+  'SUBTASK': _TypeMeta(LucideIcons.gitBranch, AppColors.priLow),
 };
 
 _TypeMeta _typeOf(String type) =>

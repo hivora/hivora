@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
+    show GlassContainer, GlassQuality, LiquidRoundedSuperellipse;
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/glass_panel.dart';
+import '../../search/search_tokens.dart';
 import '../data/knowledge_models.dart' show lucideIcon;
 import '../knowledge_tokens.dart';
 import 'smart_link_resolver.dart';
@@ -332,57 +336,68 @@ class _MentionMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final card = Material(
-      color: Colors.transparent,
-      child: Container(
-        constraints: const BoxConstraints(maxHeight: 280),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(KbTokens.radiusCard),
-          border: Border.all(color: AppColors.hairline),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.navyDeep.withValues(alpha: 0.18),
-              blurRadius: 28,
-              offset: const Offset(0, 12),
-            ),
-          ],
+    final tokens = SearchTokens.of(Theme.of(context).brightness);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final card = GlassPanelShadow(
+      radius: BorderRadius.circular(KbTokens.radiusCard),
+      shadows: tokens.panelShadow,
+      child: GlassContainer(
+        useOwnLayer: true,
+        quality: GlassQuality.premium,
+        clipBehavior: Clip.antiAlias,
+        shape: const LiquidRoundedSuperellipse(
+          borderRadius: KbTokens.radiusCard,
         ),
-        padding: const EdgeInsets.all(6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 6, 10, 5),
-              child: Text(
-                'LINK TO…',
-                style: TextStyle(
-                  fontSize: 10.5,
-                  letterSpacing: 0.7,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.inkFaint,
-                ),
+        settings: liquidGlassPanelSettings(
+          glassFill: tokens.glassFill,
+          dark: dark,
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 280),
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 6, 10, 5),
+                    child: Text(
+                      'LINK TO…',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        letterSpacing: 0.7,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.inkFaint,
+                      ),
+                    ),
+                  ),
+                  if (items.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        'No matches',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.inkFaint,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      itemCount: items.length,
+                      itemBuilder: (context, i) => _row(items[i], i),
+                    ),
+                  ),
+                ],
               ),
             ),
-            if (items.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(
-                  'No matches',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.inkFaint, fontSize: 13),
-                ),
-              ),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                padding: EdgeInsets.zero,
-                itemCount: items.length,
-                itemBuilder: (context, i) => _row(items[i], i),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

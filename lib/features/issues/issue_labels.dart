@@ -4,6 +4,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../sprint/modals/glass_modal.dart'
+    show showGlassBottomSheet, showGlassConfirm;
 
 /// Multi-select label ("Stichwort") picker shown as a bottom sheet. Lets the
 /// user toggle existing project labels, filter by typing, create a new label
@@ -15,14 +17,8 @@ Future<List<String>?> showLabelPicker(
   required List<String> selected,
   Future<void> Function(String label)? onDelete,
 }) {
-  return showModalBottomSheet<List<String>>(
-    context: context,
-    useRootNavigator: true,
-    isScrollControlled: true,
-    backgroundColor: AppColors.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
+  return showGlassBottomSheet<List<String>>(
+    context,
     builder: (sheetContext) => _LabelPickerSheet(
       available: available,
       selected: selected,
@@ -102,25 +98,17 @@ class _LabelPickerSheetState extends State<_LabelPickerSheet> {
   Future<void> _delete(String label) async {
     final onDelete = widget.onDelete;
     if (onDelete == null) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.t('issues.deleteLabel')),
-        content: Text(
-          context.t('issues.deleteLabelConfirm', variables: {'name': label}),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(context.t('common.cancel')),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(context.t('common.delete')),
-          ),
-        ],
+    final confirmed = await showGlassConfirm(
+      context,
+      icon: LucideIcons.trash2,
+      title: context.t('issues.deleteLabel'),
+      message: context.t(
+        'issues.deleteLabelConfirm',
+        variables: {'name': label},
       ),
+      confirmLabel: context.t('common.delete'),
+      confirmIcon: LucideIcons.trash2,
+      destructive: true,
     );
     if (confirmed != true) return;
     try {
@@ -147,123 +135,113 @@ class _LabelPickerSheetState extends State<_LabelPickerSheet> {
     final exists = _all.any((l) => l.toLowerCase() == q);
     final canCreate = q.isNotEmpty && !exists;
 
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
-              child: Row(
-                children: [
-                  Text(
-                    context.t('issues.labels'),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: _confirm,
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.accentStrong,
-                    ),
-                    child: Text(
-                      context.t('common.save'),
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: TextField(
-                controller: _controller,
-                autofocus: true,
-                onChanged: (v) => setState(() => _query = v),
-                onSubmitted: canCreate ? _create : null,
-                textInputAction: TextInputAction.done,
-                decoration: InputDecoration(
-                  isDense: true,
-                  prefixIcon: Icon(
-                    LucideIcons.search,
-                    size: 18,
-                    color: AppColors.inkFaint,
-                  ),
-                  hintText: context.t('issues.addLabel'),
-                  hintStyle: TextStyle(
-                    color: AppColors.inkFaint,
-                    fontSize: 13.5,
-                  ),
-                  filled: true,
-                  fillColor: AppColors.surfaceMuted,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusControl),
-                    borderSide: BorderSide(color: AppColors.hairline),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusControl),
-                    borderSide: BorderSide(color: AppColors.hairline),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusControl),
-                    borderSide: BorderSide(color: AppColors.accentLine),
-                  ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+          child: Row(
+            children: [
+              Text(
+                context.t('issues.labels'),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
+              const Spacer(),
+              TextButton(
+                onPressed: _confirm,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.accentStrong,
+                ),
+                child: Text(
+                  context.t('common.save'),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          child: TextField(
+            controller: _controller,
+            autofocus: true,
+            onChanged: (v) => setState(() => _query = v),
+            onSubmitted: canCreate ? _create : null,
+            textInputAction: TextInputAction.done,
+            decoration: InputDecoration(
+              isDense: true,
+              prefixIcon: Icon(
+                LucideIcons.search,
+                size: 18,
+                color: AppColors.inkFaint,
+              ),
+              hintText: context.t('issues.addLabel'),
+              hintStyle: TextStyle(color: AppColors.inkFaint, fontSize: 13.5),
+              filled: true,
+              fillColor: AppColors.surfaceMuted,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+                borderSide: BorderSide(color: AppColors.hairline),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+                borderSide: BorderSide(color: AppColors.hairline),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+                borderSide: BorderSide(color: AppColors.accentLine),
+              ),
             ),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (canCreate)
-                      _CreateRow(
-                        label: _query.trim(),
-                        onTap: () => _create(_query),
+          ),
+        ),
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (canCreate)
+                  _CreateRow(
+                    label: _query.trim(),
+                    onTap: () => _create(_query),
+                  ),
+                if (filtered.isEmpty && !canCreate)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text(
+                        context.t('issues.noLabels'),
+                        style: TextStyle(color: AppColors.inkFaint),
                       ),
-                    if (filtered.isEmpty && !canCreate)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Center(
-                          child: Text(
-                            context.t('issues.noLabels'),
-                            style: TextStyle(color: AppColors.inkFaint),
-                          ),
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final l in filtered)
+                        _LabelChip(
+                          label: l,
+                          selected: _selected.contains(l),
+                          onTap: () => _toggle(l),
+                          onDelete: widget.onDelete == null
+                              ? null
+                              : () => _delete(l),
                         ),
-                      )
-                    else
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final l in filtered)
-                            _LabelChip(
-                              label: l,
-                              selected: _selected.contains(l),
-                              onTap: () => _toggle(l),
-                              onDelete: widget.onDelete == null
-                                  ? null
-                                  : () => _delete(l),
-                            ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
+                    ],
+                  ),
+              ],
             ),
-            const SizedBox(height: 8),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }
@@ -366,9 +344,7 @@ class _LabelChip extends StatelessWidget {
                   message: context.t('issues.deleteLabel'),
                   child: Container(
                     padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                    ),
+                    decoration: BoxDecoration(shape: BoxShape.circle),
                     child: Icon(
                       LucideIcons.x,
                       size: 13,

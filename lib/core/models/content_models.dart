@@ -65,6 +65,48 @@ class Article extends Equatable {
   List<Object?> get props => [id, title, parentId, space, updatedAt];
 }
 
+/// A knowledge-base space ("Bereich"). Its [name] is the key articles reference
+/// through [Article.space]; icon/hue/description carry the space's chrome.
+class Space extends Equatable {
+  const Space({
+    required this.id,
+    required this.name,
+    this.icon,
+    this.hue = 250,
+    this.description = '',
+    this.sortOrder = 0,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  final String id;
+  final String name;
+  final String? icon;
+  final int hue;
+  final String description;
+  final int sortOrder;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  factory Space.fromJson(Map<String, dynamic> json) => Space(
+        id: json['id'] as String,
+        name: json['name'] as String? ?? '',
+        icon: json['icon'] as String?,
+        hue: (json['hue'] as num?)?.toInt() ?? 250,
+        description: json['description'] as String? ?? '',
+        sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
+        createdAt: json['createdAt'] is String
+            ? DateTime.tryParse(json['createdAt'] as String)
+            : null,
+        updatedAt: json['updatedAt'] is String
+            ? DateTime.tryParse(json['updatedAt'] as String)
+            : null,
+      );
+
+  @override
+  List<Object?> get props => [id, name, icon, hue, description, sortOrder];
+}
+
 class AppNotification extends Equatable {
   const AppNotification({
     required this.id,

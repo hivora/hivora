@@ -261,6 +261,15 @@ class Issue extends Equatable {
 
   bool get resolved => resolvedAt != null;
 
+  /// Top of the hierarchy — groups standard issues, never has a parent.
+  bool get isEpic => type.toUpperCase() == 'EPIC';
+
+  /// Leaf of the hierarchy — lives under a standard issue, holds no children.
+  bool get isSubtask => type.toUpperCase() == 'SUBTASK';
+
+  /// Story / Task / Bug / Feature — may sit under an epic and hold sub-tasks.
+  bool get isStandard => !isEpic && !isSubtask;
+
   factory Issue.fromJson(Map<String, dynamic> json) => Issue(
     id: json['id'] as String,
     projectId: json['projectId'] as String,
@@ -296,6 +305,7 @@ class Issue extends Equatable {
     String? assigneeId,
     Object? sprintId = _noChange,
     Object? storyPoints = _noChange,
+    Object? parentId = _noChange,
     double? rank,
   }) => Issue(
     id: id,
@@ -309,7 +319,7 @@ class Issue extends Equatable {
     assigneeId: assigneeId ?? this.assigneeId,
     reporterId: reporterId,
     tags: tags,
-    parentId: parentId,
+    parentId: parentId == _noChange ? this.parentId : parentId as String?,
     dependsOnIds: dependsOnIds,
     sprintId: sprintId == _noChange ? this.sprintId : sprintId as String?,
     startDate: startDate,
@@ -343,6 +353,30 @@ class Issue extends Equatable {
 /// Sentinel so [Issue.copyWith] can distinguish "leave unchanged" from
 /// "set to null" for nullable fields.
 const Object _noChange = Object();
+
+/// The hierarchy around one issue: its breadcrumb [ancestors] (root → immediate
+/// parent) and its direct [children] (an epic's standard issues, or a standard
+/// issue's sub-tasks). Backs the breadcrumb and the child / sub-task panels.
+class IssueHierarchy extends Equatable {
+  const IssueHierarchy({this.ancestors = const [], this.children = const []});
+
+  final List<Issue> ancestors;
+  final List<Issue> children;
+
+  factory IssueHierarchy.fromJson(Map<String, dynamic> json) => IssueHierarchy(
+    ancestors: ((json['ancestors'] as List<dynamic>?) ?? [])
+        .map((i) => Issue.fromJson(i as Map<String, dynamic>))
+        .toList(),
+    children: ((json['children'] as List<dynamic>?) ?? [])
+        .map((i) => Issue.fromJson(i as Map<String, dynamic>))
+        .toList(),
+  );
+
+  static const empty = IssueHierarchy();
+
+  @override
+  List<Object?> get props => [ancestors, children];
+}
 
 class IssueAttachment extends Equatable {
   const IssueAttachment({

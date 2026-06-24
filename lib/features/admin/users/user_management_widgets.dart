@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
+    show GlassContainer, GlassQuality, LiquidRoundedSuperellipse;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/i18n/i18n.dart';
 import '../../../core/models/admin_user_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/glass_panel.dart';
 import '../../../core/widgets/glass_popup_menu.dart';
+import '../../search/search_tokens.dart';
+import '../../sprint/modals/glass_modal.dart' show showGlassBottomSheet;
 
 // ════════════════════════════════════════════════════════════════════════
 //  Shared presentation for the admin User-management board: avatars, badges,
@@ -705,20 +710,15 @@ Future<void> showUserDrawer(
   required bool phone,
 }) {
   if (phone) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      // Push onto the root navigator so the sheet floats *above* the shell's
-      // liquid-glass bottom nav. On the nested go_router navigator it would
-      // render inside the content layer, beneath the floating nav — which then
-      // paints over the sheet's lower actions (the Danger-zone delete button).
-      useRootNavigator: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (_) => FractionallySizedBox(
-        heightFactor: 0.92,
+    // The glass bottom-sheet helper pushes onto the root navigator so the sheet
+    // floats *above* the shell's liquid-glass bottom nav. On the nested
+    // go_router navigator it would render inside the content layer, beneath the
+    // floating nav — which then paints over the sheet's lower actions (the
+    // Danger-zone delete button).
+    return showGlassBottomSheet<void>(
+      context,
+      builder: (ctx) => SizedBox(
+        height: MediaQuery.sizeOf(ctx).height * 0.92,
         child: UserDrawerBody(user: user, actions: actions),
       ),
     );
@@ -733,6 +733,8 @@ Future<void> showUserDrawer(
     pageBuilder: (_, _, _) => const SizedBox.shrink(),
     transitionBuilder: (ctx, anim, _, _) {
       final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+      final tokens = SearchTokens.of(Theme.of(ctx).brightness);
+      final dark = Theme.of(ctx).brightness == Brightness.dark;
       return Stack(
         children: [
           Positioned.fill(
@@ -745,15 +747,33 @@ Future<void> showUserDrawer(
                 begin: const Offset(1, 0),
                 end: Offset.zero,
               ).animate(curved),
-              child: SizedBox(
-                width: 440,
-                height: double.infinity,
-                child: Material(
-                  color: AppColors.surface,
-                  elevation: 16,
-                  child: SafeArea(
-                    left: false,
-                    child: UserDrawerBody(user: user, actions: actions),
+              // A floating liquid-glass panel inset from the screen edges.
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: SafeArea(
+                  left: false,
+                  child: SizedBox(
+                    width: 440,
+                    child: GlassPanelShadow(
+                      radius: BorderRadius.circular(26),
+                      shadows: tokens.panelShadow,
+                      child: GlassContainer(
+                        useOwnLayer: true,
+                        quality: GlassQuality.premium,
+                        clipBehavior: Clip.antiAlias,
+                        shape: const LiquidRoundedSuperellipse(
+                          borderRadius: 26,
+                        ),
+                        settings: liquidGlassPanelSettings(
+                          glassFill: tokens.glassFill,
+                          dark: dark,
+                        ),
+                        child: Material(
+                          type: MaterialType.transparency,
+                          child: UserDrawerBody(user: user, actions: actions),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),

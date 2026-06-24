@@ -28,6 +28,7 @@ Future<void> openBoardFilter(
   required BoardFilterOptions options,
   required Map<String, String> names,
   required Map<String, String> sprintNames,
+  Map<String, String> epicNames = const {},
   required ValueChanged<BoardFilter> onChanged,
 }) {
   final box = anchorKey.currentContext?.findRenderObject() as RenderBox?;
@@ -47,6 +48,7 @@ Future<void> openBoardFilter(
       options: options,
       names: names,
       sprintNames: sprintNames,
+      epicNames: epicNames,
       onChanged: onChanged,
     ),
     transitionBuilder: (_, _, _, child) => child,
@@ -68,6 +70,7 @@ class _BoardFilterDialog extends StatefulWidget {
     required this.options,
     required this.names,
     required this.sprintNames,
+    required this.epicNames,
     required this.onChanged,
   });
 
@@ -76,6 +79,7 @@ class _BoardFilterDialog extends StatefulWidget {
   final BoardFilterOptions options;
   final Map<String, String> names;
   final Map<String, String> sprintNames;
+  final Map<String, String> epicNames;
   final ValueChanged<BoardFilter> onChanged;
 
   @override
@@ -93,6 +97,7 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
     BoardFilterFacet.assignee,
     BoardFilterFacet.priority,
     BoardFilterFacet.type,
+    BoardFilterFacet.epic,
     BoardFilterFacet.sprint,
     BoardFilterFacet.author,
     BoardFilterFacet.label,
@@ -118,6 +123,7 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
     BoardFilterFacet.assignee => context.t('board.filterSection.assignee'),
     BoardFilterFacet.priority => context.t('board.filterSection.priority'),
     BoardFilterFacet.type => context.t('board.filterSection.type'),
+    BoardFilterFacet.epic => context.t('board.filterSection.epic'),
     BoardFilterFacet.sprint => context.t('board.filterSection.sprint'),
     BoardFilterFacet.author => context.t('board.filterSection.author'),
     BoardFilterFacet.label => context.t('board.filterSection.label'),
@@ -128,6 +134,7 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
     BoardFilterFacet.assignee => LucideIcons.user,
     BoardFilterFacet.priority => LucideIcons.flag,
     BoardFilterFacet.type => LucideIcons.shapes,
+    BoardFilterFacet.epic => LucideIcons.zap,
     BoardFilterFacet.sprint => LucideIcons.zap,
     BoardFilterFacet.author => LucideIcons.penLine,
     BoardFilterFacet.label => LucideIcons.tag,
@@ -214,6 +221,15 @@ class _BoardFilterDialogState extends State<_BoardFilterDialog> {
                 size: 16,
                 color: AppColors.inkFaint,
               ),
+            ),
+        ];
+      case BoardFilterFacet.epic:
+        return [
+          for (final id in widget.options.epics)
+            _Opt(
+              value: id,
+              label: widget.epicNames[id] ?? id,
+              leading: const TypeGlyph(type: 'EPIC', size: 18),
             ),
         ];
     }

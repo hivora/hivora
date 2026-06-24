@@ -145,9 +145,8 @@ class HinataRepository {
 
   // --- Account (/me self-service) -------------------------------------------
 
-  Future<Me> meAccount() async => Me.fromJson(
-    await _api.get('/api/v1/me') as Map<String, dynamic>,
-  );
+  Future<Me> meAccount() async =>
+      Me.fromJson(await _api.get('/api/v1/me') as Map<String, dynamic>);
 
   Future<Me> updateMyProfile({
     String? displayName,
@@ -172,12 +171,14 @@ class HinataRepository {
     void Function(double pct)? onProgress,
   }) async =>
       ((await _api.upload(
-        '/api/v1/me/avatar',
-        file,
-        onSendProgress: onProgress == null
-            ? null
-            : (sent, total) => onProgress(total > 0 ? sent / total : 0),
-      )) as Map<String, dynamic>)['avatarUrl'] as String;
+                '/api/v1/me/avatar',
+                file,
+                onSendProgress: onProgress == null
+                    ? null
+                    : (sent, total) => onProgress(total > 0 ? sent / total : 0),
+              ))
+              as Map<String, dynamic>)['avatarUrl']
+          as String;
 
   /// Removes the current profile picture.
   Future<void> deleteAvatar() => _api.delete('/api/v1/me/avatar');
@@ -228,8 +229,10 @@ class HinataRepository {
           .cast<String>();
 
   Future<List<String>> regenerateRecoveryCodes(String code) async =>
-      (((await _api.post('/api/v1/me/2fa/recovery-codes/regenerate',
-                      body: {'code': code}))
+      (((await _api.post(
+                    '/api/v1/me/2fa/recovery-codes/regenerate',
+                    body: {'code': code},
+                  ))
                   as Map<String, dynamic>)['recoveryCodes']
               as List<dynamic>)
           .cast<String>();
@@ -268,8 +271,10 @@ class HinataRepository {
   // --- Projects -------------------------------------------------------------
 
   Future<List<Project>> projects({bool archived = false}) async =>
-      ((await _api.get('/api/v1/projects',
-                  query: archived ? {'archived': 'true'} : null))
+      ((await _api.get(
+                '/api/v1/projects',
+                query: archived ? {'archived': 'true'} : null,
+              ))
               as List<dynamic>)
           .map((p) => Project.fromJson(p as Map<String, dynamic>))
           .toList();
@@ -310,12 +315,11 @@ class HinataRepository {
   /// Atomically commits the full edited project from the settings surface. Pass
   /// only the fields that changed; the server re-validates every invariant
   /// (>=1 lead, >=2 states, >=1 resolved) and cascades workflow/label renames.
-  Future<Project> updateProject(
-    String id,
-    Map<String, dynamic> patch,
-  ) async => Project.fromJson(
-    await _api.patch('/api/v1/projects/$id', body: patch) as Map<String, dynamic>,
-  );
+  Future<Project> updateProject(String id, Map<String, dynamic> patch) async =>
+      Project.fromJson(
+        await _api.patch('/api/v1/projects/$id', body: patch)
+            as Map<String, dynamic>,
+      );
 
   /// Permanently removes a label from the project and every issue using it.
   Future<void> deleteProjectLabel(
@@ -364,6 +368,12 @@ class HinataRepository {
     await _api.get('/api/v1/issues/$id') as Map<String, dynamic>,
   );
 
+  /// Breadcrumb ancestors + direct children for the issue hierarchy view.
+  Future<IssueHierarchy> issueHierarchy(String id) async =>
+      IssueHierarchy.fromJson(
+        await _api.get('/api/v1/issues/$id/hierarchy') as Map<String, dynamic>,
+      );
+
   Future<Issue> createIssue(Map<String, dynamic> body) async => Issue.fromJson(
     await _api.post('/api/v1/issues', body: body) as Map<String, dynamic>,
   );
@@ -402,24 +412,28 @@ class HinataRepository {
     MultipartFile file, {
     void Function(double pct)? onProgress,
     CancelToken? cancelToken,
-  }) async =>
-      Issue.fromJson(
-        await _api.upload(
+  }) async => Issue.fromJson(
+    await _api.upload(
           '/api/v1/issues/$issueId/attachments',
           file,
           cancelToken: cancelToken,
           onSendProgress: onProgress == null
               ? null
               : (sent, total) => onProgress(total > 0 ? sent / total : 0),
-        ) as Map<String, dynamic>,
-      );
+        )
+        as Map<String, dynamic>,
+  );
 
   /// Short-lived presigned download URL for an attachment.
   Future<String> attachmentDownloadUrl(
-          String issueId, String attachmentId) async =>
+    String issueId,
+    String attachmentId,
+  ) async =>
       ((await _api.get(
-        '/api/v1/issues/$issueId/attachments/$attachmentId/download-url',
-      )) as Map<String, dynamic>)['url'] as String;
+                '/api/v1/issues/$issueId/attachments/$attachmentId/download-url',
+              ))
+              as Map<String, dynamic>)['url']
+          as String;
 
   Future<void> deleteAttachment(String issueId, String attachmentId) =>
       _api.delete('/api/v1/issues/$issueId/attachments/$attachmentId');
@@ -436,11 +450,10 @@ class HinataRepository {
   Future<Stream<List<int>>> attachmentEventStream(
     String issueId, {
     CancelToken? cancelToken,
-  }) =>
-      _api.openEventStream(
-        '/api/v1/issues/$issueId/attachments/stream',
-        cancelToken: cancelToken,
-      );
+  }) => _api.openEventStream(
+    '/api/v1/issues/$issueId/attachments/stream',
+    cancelToken: cancelToken,
+  );
 
   // --- Boards ---------------------------------------------------------------
 
@@ -562,8 +575,8 @@ class HinataRepository {
 
   /// Archives the sprint; re-homes every unfinished issue to [moveOpenTo]
   /// (`backlog` → no sprint, or a sibling sprint id).
-  Future<void> completeSprint(String id, {required String moveOpenTo}) =>
-      _api.post('/api/v1/sprints/$id/complete', body: {'moveOpenTo': moveOpenTo});
+  Future<void> completeSprint(String id, {required String moveOpenTo}) => _api
+      .post('/api/v1/sprints/$id/complete', body: {'moveOpenTo': moveOpenTo});
 
   /// Server-computed insights (summary, burndown, velocity, scope, breakdown).
   Future<SprintReport> sprintReport(String id) async => SprintReport.fromJson(
@@ -650,8 +663,10 @@ class HinataRepository {
   /// across projects + org-wide); otherwise scoped by [projectId] (or org-wide
   /// when null).
   Future<List<Article>> articles({String? projectId, bool all = false}) async =>
-      ((await _api.get('/api/v1/articles',
-                  query: {'projectId': ?projectId, if (all) 'all': true}))
+      ((await _api.get(
+                '/api/v1/articles',
+                query: {'projectId': ?projectId, if (all) 'all': true},
+              ))
               as List<dynamic>)
           .map((a) => Article.fromJson(a as Map<String, dynamic>))
           .toList();
@@ -696,16 +711,42 @@ class HinataRepository {
     String? parentId,
     String? space,
   }) async {
-    final data = await _api.patch('/api/v1/articles/$id', body: {
-      'title': title,
-      'parentId': parentId,
-      'space': ?space,
-    });
+    final data = await _api.patch(
+      '/api/v1/articles/$id',
+      body: {'title': title, 'parentId': parentId, 'space': ?space},
+    );
     return Article.fromJson(data as Map<String, dynamic>);
   }
 
   Future<void> deleteArticle(String id) async =>
       _api.delete('/api/v1/articles/$id');
+
+  /// Lists every knowledge-base space (organisation-wide, sorted).
+  Future<List<Space>> spaces() async =>
+      ((await _api.get('/api/v1/spaces')) as List<dynamic>)
+          .map((s) => Space.fromJson(s as Map<String, dynamic>))
+          .toList();
+
+  Future<Space> createSpace({
+    required String name,
+    String? icon,
+    int? hue,
+    String? description,
+  }) async {
+    final data = await _api.post(
+      '/api/v1/spaces',
+      body: {
+        'name': name,
+        'icon': ?icon,
+        'hue': ?hue,
+        'description': ?description,
+      },
+    );
+    return Space.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteSpace(String id) async =>
+      _api.delete('/api/v1/spaces/$id');
 
   // --- Dashboard, reports, notifications ------------------------------------
 
@@ -797,30 +838,37 @@ class HinataRepository {
     bool desc = true,
     int page = 1,
     int perPage = 25,
-  }) async =>
-      AdminUserPage.fromJson(
-        await _api.get('/api/v1/admin/users', query: {
-          'q': ?(query.trim().isEmpty ? null : query.trim()),
-          'role': ?role?.wire,
-          'status': ?status?.wire,
-          'origin': ?origin?.wire,
-          'sort': sort.wire,
-          'dir': desc ? 'desc' : 'asc',
-          'page': '$page',
-          'perPage': '$perPage',
-        }) as Map<String, dynamic>,
-      );
+  }) async => AdminUserPage.fromJson(
+    await _api.get(
+          '/api/v1/admin/users',
+          query: {
+            'q': ?(query.trim().isEmpty ? null : query.trim()),
+            'role': ?role?.wire,
+            'status': ?status?.wire,
+            'origin': ?origin?.wire,
+            'sort': sort.wire,
+            'dir': desc ? 'desc' : 'asc',
+            'page': '$page',
+            'perPage': '$perPage',
+          },
+        )
+        as Map<String, dynamic>,
+  );
 
   Future<int> adminInvite({
     required List<String> emails,
     required AdminRole role,
     String? message,
   }) async {
-    final result = await _api.post('/api/v1/admin/users/invite', body: {
-      'emails': emails,
-      'admin': role == AdminRole.admin,
-      if (message != null && message.trim().isNotEmpty) 'message': message.trim(),
-    });
+    final result = await _api.post(
+      '/api/v1/admin/users/invite',
+      body: {
+        'emails': emails,
+        'admin': role == AdminRole.admin,
+        if (message != null && message.trim().isNotEmpty)
+          'message': message.trim(),
+      },
+    );
     return (result is Map && result['sent'] is num)
         ? (result['sent'] as num).toInt()
         : emails.length;
@@ -829,12 +877,15 @@ class HinataRepository {
   Future<void> adminResendInvites(List<String> ids) =>
       _api.post('/api/v1/admin/users/resend', body: {'ids': ids});
 
-  Future<void> adminSetStatus(List<String> ids, UserStatus status) =>
-      _api.post('/api/v1/admin/users/status',
-          body: {'ids': ids, 'status': status.wire});
+  Future<void> adminSetStatus(List<String> ids, UserStatus status) => _api.post(
+    '/api/v1/admin/users/status',
+    body: {'ids': ids, 'status': status.wire},
+  );
 
-  Future<void> adminSetRole(List<String> ids, AdminRole role) =>
-      _api.post('/api/v1/admin/users/role', body: {'ids': ids, 'role': role.wire});
+  Future<void> adminSetRole(List<String> ids, AdminRole role) => _api.post(
+    '/api/v1/admin/users/role',
+    body: {'ids': ids, 'role': role.wire},
+  );
 
   Future<void> adminSendPasswordReset(List<String> ids) =>
       _api.post('/api/v1/admin/users/password-reset', body: {'ids': ids});
@@ -847,12 +898,10 @@ class HinataRepository {
     String? displayName,
     String? title,
     String? email,
-  }) =>
-      _api.patch('/api/v1/admin/users/$id', body: {
-        'displayName': ?displayName,
-        'title': ?title,
-        'email': ?email,
-      });
+  }) => _api.patch(
+    '/api/v1/admin/users/$id',
+    body: {'displayName': ?displayName, 'title': ?title, 'email': ?email},
+  );
 
   Future<void> adminDeleteUsers(List<String> ids) =>
       _api.post('/api/v1/admin/users/delete', body: {'ids': ids});
@@ -870,23 +919,26 @@ class HinataRepository {
     String? actorId,
     int page = 1,
     int perPage = 30,
-  }) async =>
-      AuditPage.fromJson(
-        await _api.get('/api/v1/admin/audit', query: {
-          'query': ?(query.trim().isEmpty ? null : query.trim()),
-          'category': ?(category == null || category == AuditCategory.unknown
-              ? null
-              : category.wire),
-          'severity': ?(severity == null || severity == AuditSeverity.unknown
-              ? null
-              : severity.wire),
-          'action': ?action,
-          'outcome': ?outcome,
-          'actorId': ?actorId,
-          'page': '$page',
-          'perPage': '$perPage',
-        }) as Map<String, dynamic>,
-      );
+  }) async => AuditPage.fromJson(
+    await _api.get(
+          '/api/v1/admin/audit',
+          query: {
+            'query': ?(query.trim().isEmpty ? null : query.trim()),
+            'category': ?(category == null || category == AuditCategory.unknown
+                ? null
+                : category.wire),
+            'severity': ?(severity == null || severity == AuditSeverity.unknown
+                ? null
+                : severity.wire),
+            'action': ?action,
+            'outcome': ?outcome,
+            'actorId': ?actorId,
+            'page': '$page',
+            'perPage': '$perPage',
+          },
+        )
+        as Map<String, dynamic>,
+  );
 
   /// The catalogue of audit event types — used to render the per-event toggles.
   Future<List<AuditEventType>> auditEventTypes() async =>
@@ -902,8 +954,8 @@ class HinataRepository {
           .toList();
 
   Future<Team> team(String id) async => Team.fromJson(
-        await _api.get('/api/v1/teams/$id') as Map<String, dynamic>,
-      );
+    await _api.get('/api/v1/teams/$id') as Map<String, dynamic>,
+  );
 
   Future<Team> createTeam({
     required String name,
@@ -911,16 +963,19 @@ class HinataRepository {
     String? description,
     required int colorHue,
     required String icon,
-  }) async =>
-      Team.fromJson(
-        await _api.post('/api/v1/teams', body: {
-          'name': name,
-          'key': key,
-          'description': ?description,
-          'colorHue': colorHue,
-          'icon': icon,
-        }) as Map<String, dynamic>,
-      );
+  }) async => Team.fromJson(
+    await _api.post(
+          '/api/v1/teams',
+          body: {
+            'name': name,
+            'key': key,
+            'description': ?description,
+            'colorHue': colorHue,
+            'icon': icon,
+          },
+        )
+        as Map<String, dynamic>,
+  );
 
   Future<Team> updateTeam(String id, Map<String, dynamic> patch) async =>
       Team.fromJson(
@@ -936,27 +991,33 @@ class HinataRepository {
     List<String> userIds, {
     required TeamRole role,
     required ProjectAccess access,
-  }) async =>
-      Team.fromJson(
-        await _api.post('/api/v1/teams/$teamId/members', body: {
-          'userIds': userIds,
-          'role': role.wire,
-          'access': access.toJson(),
-        }) as Map<String, dynamic>,
-      );
+  }) async => Team.fromJson(
+    await _api.post(
+          '/api/v1/teams/$teamId/members',
+          body: {
+            'userIds': userIds,
+            'role': role.wire,
+            'access': access.toJson(),
+          },
+        )
+        as Map<String, dynamic>,
+  );
 
   Future<Team> updateTeamMembership(
     String teamId,
     String userId, {
     TeamRole? role,
     ProjectAccess? access,
-  }) async =>
-      Team.fromJson(
-        await _api.patch('/api/v1/teams/$teamId/members/$userId', body: {
-          if (role != null) 'role': role.wire,
-          if (access != null) 'access': access.toJson(),
-        }) as Map<String, dynamic>,
-      );
+  }) async => Team.fromJson(
+    await _api.patch(
+          '/api/v1/teams/$teamId/members/$userId',
+          body: {
+            if (role != null) 'role': role.wire,
+            if (access != null) 'access': access.toJson(),
+          },
+        )
+        as Map<String, dynamic>,
+  );
 
   Future<Team> removeTeamMember(String teamId, String userId) async =>
       Team.fromJson(
@@ -964,11 +1025,16 @@ class HinataRepository {
             as Map<String, dynamic>,
       );
 
-  Future<Team> attachTeamProjects(String teamId, List<String> projectIds) async =>
-      Team.fromJson(
-        await _api.post('/api/v1/teams/$teamId/projects',
-            body: {'projectIds': projectIds}) as Map<String, dynamic>,
-      );
+  Future<Team> attachTeamProjects(
+    String teamId,
+    List<String> projectIds,
+  ) async => Team.fromJson(
+    await _api.post(
+          '/api/v1/teams/$teamId/projects',
+          body: {'projectIds': projectIds},
+        )
+        as Map<String, dynamic>,
+  );
 
   Future<Project> createTeamProject(
     String teamId, {
@@ -977,16 +1043,19 @@ class HinataRepository {
     String? description,
     String? color,
     String? leadId,
-  }) async =>
-      Project.fromJson(
-        await _api.post('/api/v1/teams/$teamId/projects/new', body: {
-          'key': key,
-          'name': name,
-          'description': ?description,
-          'color': ?color,
-          'leadId': ?leadId,
-        }) as Map<String, dynamic>,
-      );
+  }) async => Project.fromJson(
+    await _api.post(
+          '/api/v1/teams/$teamId/projects/new',
+          body: {
+            'key': key,
+            'name': name,
+            'description': ?description,
+            'color': ?color,
+            'leadId': ?leadId,
+          },
+        )
+        as Map<String, dynamic>,
+  );
 
   Future<Team> detachTeamProject(String teamId, String projectId) async =>
       Team.fromJson(
@@ -995,8 +1064,9 @@ class HinataRepository {
       );
 
   Future<List<TeamActivity>> teamActivity(String teamId, {int page = 0}) async {
-    final data = await _api.get('/api/v1/teams/$teamId/activity',
-        query: {'page': page}) as Map<String, dynamic>;
+    final data =
+        await _api.get('/api/v1/teams/$teamId/activity', query: {'page': page})
+            as Map<String, dynamic>;
     return ((data['content'] as List<dynamic>?) ?? const [])
         .map((a) => TeamActivity.fromJson(a as Map<String, dynamic>))
         .toList();
@@ -1030,11 +1100,10 @@ class HinataRepository {
   Future<Stream<List<int>>> boardDeleteStream(
     String boardId, {
     CancelToken? cancelToken,
-  }) =>
-      _api.openEventStream(
-        '/api/v1/boards/$boardId/delete-stream',
-        cancelToken: cancelToken,
-      );
+  }) => _api.openEventStream(
+    '/api/v1/boards/$boardId/delete-stream',
+    cancelToken: cancelToken,
+  );
 
   /// Raw SSE byte stream of a project deletion. [strategy]/[migrateToProjectId]
   /// are required only when the project still has issues.
@@ -1061,9 +1130,8 @@ class HinataRepository {
   Future<Stream<List<int>>> teamDeleteStream(
     String teamId, {
     CancelToken? cancelToken,
-  }) =>
-      _api.openEventStream(
-        '/api/v1/teams/$teamId/delete-stream',
-        cancelToken: cancelToken,
-      );
+  }) => _api.openEventStream(
+    '/api/v1/teams/$teamId/delete-stream',
+    cancelToken: cancelToken,
+  );
 }

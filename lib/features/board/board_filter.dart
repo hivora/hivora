@@ -18,6 +18,7 @@ class BoardFilter {
     this.sprints = const {},
     this.authors = const {},
     this.labels = const {},
+    this.epics = const {},
   });
 
   final Set<String> states;
@@ -27,6 +28,11 @@ class BoardFilter {
   final Set<String> sprints;
   final Set<String> authors;
   final Set<String> labels;
+
+  /// Epic ids. An issue passes when its resolved epic (the epic it ultimately
+  /// rolls up to) is in this set — see [matchesEpic], driven by the board's
+  /// epic-resolution map since the issue alone can't resolve a grandparent.
+  final Set<String> epics;
 
   /// Sentinel value used in [sprints] to match issues with no sprint.
   static const noSprint = '__none__';
@@ -38,7 +44,8 @@ class BoardFilter {
       assignees.isEmpty &&
       sprints.isEmpty &&
       authors.isEmpty &&
-      labels.isEmpty;
+      labels.isEmpty &&
+      epics.isEmpty;
 
   int get activeCount =>
       states.length +
@@ -47,7 +54,8 @@ class BoardFilter {
       assignees.length +
       sprints.length +
       authors.length +
-      labels.length;
+      labels.length +
+      epics.length;
 
   Set<String> facet(BoardFilterFacet f) => switch (f) {
     BoardFilterFacet.state => states,
@@ -57,6 +65,7 @@ class BoardFilter {
     BoardFilterFacet.sprint => sprints,
     BoardFilterFacet.author => authors,
     BoardFilterFacet.label => labels,
+    BoardFilterFacet.epic => epics,
   };
 
   /// Whether [issue] passes every active facet (AND across facets, OR within).
@@ -91,6 +100,12 @@ class BoardFilter {
     return true;
   }
 
+  /// Epic-facet check, kept separate from [matches] because resolving an issue's
+  /// epic needs the board's parent graph (a sub-task's epic is its grandparent).
+  /// [epicId] is the issue's resolved epic id (null = belongs to no epic).
+  bool matchesEpic(String? epicId) =>
+      epics.isEmpty || (epicId != null && epics.contains(epicId));
+
   BoardFilter copyWith({
     Set<String>? states,
     Set<String>? types,
@@ -99,6 +114,7 @@ class BoardFilter {
     Set<String>? sprints,
     Set<String>? authors,
     Set<String>? labels,
+    Set<String>? epics,
   }) => BoardFilter(
     states: states ?? this.states,
     types: types ?? this.types,
@@ -107,6 +123,7 @@ class BoardFilter {
     sprints: sprints ?? this.sprints,
     authors: authors ?? this.authors,
     labels: labels ?? this.labels,
+    epics: epics ?? this.epics,
   );
 
   /// Returns a copy with [value] toggled in the facet named [facet].
@@ -125,13 +142,23 @@ class BoardFilter {
       BoardFilterFacet.sprint => copyWith(sprints: next(sprints)),
       BoardFilterFacet.author => copyWith(authors: next(authors)),
       BoardFilterFacet.label => copyWith(labels: next(labels)),
+      BoardFilterFacet.epic => copyWith(epics: next(epics)),
     };
   }
 
   static const empty = BoardFilter();
 }
 
-enum BoardFilterFacet { state, type, priority, assignee, sprint, author, label }
+enum BoardFilterFacet {
+  state,
+  type,
+  priority,
+  assignee,
+  sprint,
+  author,
+  label,
+  epic,
+}
 
 /// The distinct facet values available to filter on, derived from the issues
 /// currently loaded for a board (plus the board's sprints and project labels)
@@ -146,6 +173,7 @@ class BoardFilterOptions {
     required this.authors,
     required this.sprints,
     required this.labels,
+    required this.epics,
   });
 
   /// UPPER-CASE workflow-state codes.
@@ -169,6 +197,9 @@ class BoardFilterOptions {
   /// Label / tag names.
   final List<String> labels;
 
+  /// Epic issue ids available to filter on (supplied by the board).
+  final List<String> epics;
+
   bool get isEmpty =>
       states.isEmpty &&
       types.isEmpty &&
@@ -176,12 +207,14 @@ class BoardFilterOptions {
       assignees.isEmpty &&
       authors.isEmpty &&
       sprints.isEmpty &&
-      labels.isEmpty;
+      labels.isEmpty &&
+      epics.isEmpty;
 
   factory BoardFilterOptions.from({
     required Iterable<Issue> issues,
     required List<Sprint> boardSprints,
     required Iterable<String> projectLabels,
+    Iterable<String> epicIds = const [],
   }) {
     final states = <String>{};
     final types = <String>{};
@@ -212,6 +245,7 @@ class BoardFilterOptions {
       authors: authors.toList(),
       sprints: [for (final s in boardSprints) s.id],
       labels: labels.toList(),
+      epics: epicIds.toList(),
     );
   }
 }

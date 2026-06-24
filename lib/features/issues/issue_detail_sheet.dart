@@ -27,8 +27,15 @@ import '../knowledge/markdown/markdown_renderer.dart';
 import '../knowledge/markdown/mention_field.dart';
 import '../knowledge/markdown/smart_link_resolver.dart';
 import '../sprint/modals/estimate_dialog.dart' show showStoryPointsDialog;
-import '../sprint/modals/glass_modal.dart' show showGlassModal;
+import '../sprint/modals/glass_modal.dart'
+    show
+        glassWoltSurface,
+        showGlassBottomSheet,
+        showGlassDatePicker,
+        showGlassModal,
+        showGlassOptions;
 import 'attachments/attachments_section.dart';
+import 'issue_form.dart' show showIssueForm;
 import 'issue_description_editor.dart';
 import 'issue_labels.dart';
 import 'issue_link_resolver.dart';
@@ -84,12 +91,13 @@ Future<void> showIssueDetailSheet(
     useRootNavigator: true,
     useSafeArea: false,
     barrierDismissible: true,
+    pageContentDecorator: glassWoltSurface,
     modalTypeBuilder: (ctx) => MediaQuery.sizeOf(ctx).width >= 760
         ? const _WideDialogType()
         : WoltModalType.bottomSheet(),
     pageListBuilder: (modalContext) => [
       WoltModalSheetPage(
-        backgroundColor: AppColors.canvas,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         hasTopBarLayer: true,
         isTopBarLayerAlwaysVisible: true,
@@ -211,6 +219,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   // comment composer's `@`-menu and resolve `{{issue:…}}` chips; KB articles
   // that mention this issue are its "Documented in" backlinks.
   Map<String, Issue> _projectIssues = const {};
+  // Breadcrumb ancestors + direct children (epic→stories, story→sub-tasks).
+  IssueHierarchy _hierarchy = IssueHierarchy.empty;
   List<KbArticle> _documentedIn = const [];
   KnowledgeRepository get _knowledge => context.read<KnowledgeRepository>();
   // Labels deleted this session — guards against the stale _project list
@@ -291,6 +301,11 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
         _projectIssues = const {};
       }
       try {
+        _hierarchy = await _repo.issueHierarchy(widget.issueId);
+      } catch (_) {
+        _hierarchy = IssueHierarchy.empty;
+      }
+      try {
         await _knowledge.init();
         _documentedIn = _knowledge.articlesForIssue(issue.readableId);
       } catch (_) {
@@ -321,10 +336,23 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       } catch (_) {
         // Non-critical; the next full load reflects server truth.
       }
+      // A re-parent changes the breadcrumb ancestors — keep them in sync.
+      await _reloadHierarchy();
     } on ApiFailure catch (failure) {
       _toast(failure.message);
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Pulls the fresh ancestors + children so the breadcrumb and the child /
+  /// sub-task panels reflect a re-parent, an inline add, or a state toggle.
+  Future<void> _reloadHierarchy() async {
+    try {
+      final h = await _repo.issueHierarchy(widget.issueId);
+      if (mounted) setState(() => _hierarchy = h);
+    } catch (_) {
+      // Non-critical; the next full load reflects server truth.
     }
   }
 
@@ -450,8 +478,13 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
             padding: EdgeInsets.fromLTRB(20, inSheet ? 16 : 16, 20, 24),
             child: LayoutBuilder(
               builder: (context, c) {
+                final hierarchy = _hierarchyCard(issue);
                 final left = <Widget>[
                   _contentCard(issue),
+                  if (hierarchy != null) ...[
+                    const SizedBox(height: 14),
+                    hierarchy,
+                  ],
                   const SizedBox(height: 14),
                   _attachmentsSection(issue),
                   if (documented != null) ...[
@@ -493,6 +526,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _contentCard(issue),
+                    if (hierarchy != null) ...[
+                      const SizedBox(height: 14),
+                      hierarchy,
+                    ],
                     const SizedBox(height: 14),
                     _attachmentsSection(issue),
                     if (documented != null) ...[
@@ -550,6 +587,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       return;
     }
     await showIssueDetailSheet(context, issueId: match.id);
+    // The nested issue may have been re-parented, edited or deleted (e.g. a
+    // sub-task removed from here) — refresh so the breadcrumb and the child /
+    // sub-task panel reflect it instead of listing a stale row.
+    if (mounted) await _reloadHierarchy();
   }
 
   /// Opens a KB article (doc smart-link) on the `/knowledge/:id` route. When the
@@ -590,6 +631,9 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Jira-style hierarchy breadcrumb: Epic / Story / Sub-task. Ancestors
+          // are clickable; the current issue is the last, inert crumb.
+          _breadcrumb(issue),
           // Title — double-tap to edit inline.
           if (_editingTitle)
             _InlineTitleEditor(
@@ -687,6 +731,246 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     onChanged: widget.onChanged,
   );
 
+  /// Hierarchy breadcrumb above the title (`⚡ HIV-12 / ☑ HIV-48`). Hidden for
+  /// top-level issues with no ancestors. Ancestors open on tap; the trailing
+  /// crumb is the current issue and stays inert.
+  Widget _breadcrumb(Issue issue) {
+    final crumbs = [..._hierarchy.ancestors, issue];
+    if (crumbs.length < 2) return const SizedBox.shrink();
+    final row = <Widget>[];
+    for (var i = 0; i < crumbs.length; i++) {
+      final c = crumbs[i];
+      final current = i == crumbs.length - 1;
+      row.add(_breadcrumbCrumb(c, current: current));
+      if (!current) {
+        row.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5),
+            child: Text(
+              '/',
+              style: TextStyle(color: AppColors.inkFaint, fontSize: 13),
+            ),
+          ),
+        );
+      }
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        runSpacing: 4,
+        children: row,
+      ),
+    );
+  }
+
+  Widget _breadcrumbCrumb(Issue c, {required bool current}) {
+    final inner = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TypeGlyph(type: c.type, size: 17),
+        const SizedBox(width: 5),
+        IdMono(
+          c.readableId,
+          fontSize: 12.5,
+          color: current ? AppColors.ink : AppColors.stTodo,
+        ),
+      ],
+    );
+    if (current) return inner;
+    return InkWell(
+      onTap: () => _openLinkedIssue(c.readableId),
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+        child: inner,
+      ),
+    );
+  }
+
+  // ── child / sub-task panel ───────────────────────────────────────────────
+
+  /// "Child issues" on an epic, "Sub-tasks" on a standard issue, nothing on a
+  /// sub-task. Lists the direct children with a completion bar and an add
+  /// affordance (a full create form for epics, an inline quick-add for tasks).
+  Widget? _hierarchyCard(Issue issue) {
+    if (issue.isSubtask) return null;
+    final isEpic = issue.isEpic;
+    final children = _hierarchy.children;
+    final done = children.where((c) => c.resolved).length;
+    return SoftCard(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                context.t(isEpic ? 'issues.childIssues' : 'issues.subtasks'),
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              if (children.isNotEmpty)
+                Text(
+                  context.t(
+                    'issues.progressDone',
+                    variables: {'done': '$done', 'total': '${children.length}'},
+                  ),
+                  style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
+                ),
+            ],
+          ),
+          if (children.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            HiveProgress(value: done / children.length),
+          ],
+          const SizedBox(height: 6),
+          for (final c in children) _hierarchyRow(c, epic: isEpic),
+          if (children.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Text(
+                context.t(isEpic ? 'issues.noChildren' : 'issues.noSubtasks'),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.inkFaint,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+          if (isEpic)
+            _addChildButton(issue)
+          else
+            _SubtaskQuickAdd(onSubmit: (title) => _addSubtask(issue, title)),
+        ],
+      ),
+    );
+  }
+
+  Widget _hierarchyRow(Issue child, {required bool epic}) {
+    final assignee = child.assigneeId != null
+        ? _names[child.assigneeId!]
+        : null;
+    return InkWell(
+      onTap: () => _openLinkedIssue(child.readableId),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(
+          children: [
+            // Sub-tasks get a quick "done" toggle; epic children open to edit.
+            if (!epic)
+              GestureDetector(
+                onTap: () => _toggleChildState(child),
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Icon(
+                    child.resolved
+                        ? LucideIcons.checkCheck
+                        : LucideIcons.circle,
+                    size: 17,
+                    color: child.resolved
+                        ? AppColors.success
+                        : AppColors.inkFaint,
+                  ),
+                ),
+              )
+            else ...[
+              TypeGlyph(type: child.type, size: 18),
+              const SizedBox(width: 8),
+            ],
+            IdMono(child.readableId),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                child.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  decoration: child.resolved
+                      ? TextDecoration.lineThrough
+                      : null,
+                  color: child.resolved ? AppColors.inkFaint : AppColors.ink,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            StateDotBadge(
+              state: child.state,
+              color: _projStateColor(_project, child.state),
+            ),
+            if (assignee != null) ...[
+              const SizedBox(width: 10),
+              HiveAvatar(name: assignee, size: 20),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _addChildButton(Issue epic) => Align(
+    alignment: Alignment.centerLeft,
+    child: TextButton.icon(
+      onPressed: () => _addChild(epic),
+      style: TextButton.styleFrom(foregroundColor: AppColors.stTodo),
+      icon: const Icon(LucideIcons.plus, size: 16),
+      label: Text(context.t('issues.addChild')),
+    ),
+  );
+
+  Future<void> _addChild(Issue epic) async {
+    final created = await showIssueForm(
+      context,
+      projectId: epic.projectId,
+      parentId: epic.id,
+      forcedType: 'STORY',
+    );
+    if (created != null) await _reloadHierarchy();
+  }
+
+  Future<void> _addSubtask(Issue parent, String title) async {
+    if (title.trim().isEmpty) return;
+    try {
+      await _repo.createIssue({
+        'projectId': parent.projectId,
+        'title': title.trim(),
+        'type': 'SUBTASK',
+        'parentId': parent.id,
+      });
+      await _reloadHierarchy();
+    } on ApiFailure catch (failure) {
+      _toast(failure.message);
+    }
+  }
+
+  /// Flips a sub-task between its first resolved state and its first open state.
+  Future<void> _toggleChildState(Issue child) async {
+    final resolved = _project?.resolvedStates ?? const [];
+    final states = _project?.stateNames ?? const [];
+    final String target;
+    if (child.resolved) {
+      target = states.firstWhere(
+        (s) => !resolved.contains(s),
+        orElse: () => child.state,
+      );
+    } else {
+      target = resolved.isNotEmpty ? resolved.first : child.state;
+    }
+    if (target == child.state) return;
+    try {
+      await _repo.updateIssue(child.id, {'state': target});
+      await _reloadHierarchy();
+    } on ApiFailure catch (failure) {
+      _toast(failure.message);
+    }
+  }
+
   Widget _detailsCard(Issue issue) {
     final assigneeName = issue.assigneeId != null
         ? _names[issue.assigneeId!]
@@ -749,12 +1033,15 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
             onTap: _pickPriority,
             child: PriorityFlag(priority: issue.priority, withLabel: true),
           ),
-          // Type
+          // Type — a sub-task's type is fixed; everything else is switchable.
           _DetailRow(
             label: context.t('issues.type'),
-            onTap: _pickType,
+            onTap: issue.isSubtask ? null : _pickType,
             child: TypeBadge(type: issue.type),
           ),
+          // Parent link — epics have no parent; standard issues attach to an
+          // epic; sub-tasks attach to a standard issue.
+          if (!issue.isEpic) _parentRow(issue),
           // Story points (Scrum estimate)
           _DetailRow(
             label: context.t('issues.storyPoints'),
@@ -917,12 +1204,12 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           // Schedule (moved here from the Details panel).
           _DetailRow(
             label: context.t('issues.startDate'),
-            onTap: () => _pickDate(isStart: true),
+            onTap: (_) => _pickDate(isStart: true),
             child: _dateValue(issue.startDate, isStart: true),
           ),
           _DetailRow(
             label: context.t('issues.dueDate'),
-            onTap: () => _pickDate(isStart: false),
+            onTap: (_) => _pickDate(isStart: false),
             last: true,
             child: _dateValue(issue.dueDate, isStart: false),
           ),
@@ -1063,6 +1350,9 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   List<Widget> _activityItems(_ActivityFilter filter) {
     Widget commentTile(IssueComment c) =>
         _CommentTile(comment: c, authorName: _names[c.authorId] ?? c.authorId);
+    final issueIds = {
+      for (final i in _projectIssues.values) i.id: i.readableId,
+    };
     Widget activityTile(IssueActivity a) => _ActivityTile(
       activity: a,
       actorName: a.actorId != null
@@ -1070,6 +1360,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           : context.t('issues.systemActor'),
       names: _names,
       sprintNames: _sprintNames,
+      issueIds: issueIds,
     );
 
     switch (filter) {
@@ -1111,10 +1402,11 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
 
   // ── pickers ────────────────────────────────────────────────────────────
 
-  Future<void> _pickStatus() async {
+  Future<void> _pickStatus(Rect anchor) async {
     final states = _project?.stateNames ?? [_issue!.state];
     final chosen = await _showOptions<String>(
       title: context.t('issues.status'),
+      anchorRect: anchor,
       options: [
         for (final s in states)
           (
@@ -1126,10 +1418,11 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     if (chosen != null) await _patch({'state': chosen});
   }
 
-  Future<void> _pickPriority() async {
+  Future<void> _pickPriority(Rect anchor) async {
     const priorities = ['SHOWSTOPPER', 'CRITICAL', 'MAJOR', 'NORMAL', 'MINOR'];
     final chosen = await _showOptions<String>(
       title: context.t('issues.priority'),
+      anchorRect: anchor,
       options: [
         for (final p in priorities)
           (value: p, child: PriorityFlag(priority: p, withLabel: true)),
@@ -1138,16 +1431,89 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     if (chosen != null) await _patch({'priority': chosen});
   }
 
-  Future<void> _pickType() async {
-    const types = ['TASK', 'BUG', 'FEATURE', 'EPIC'];
+  Future<void> _pickType(Rect anchor) async {
+    // SUBTASK is never a free pick — it is created only via the sub-task panel.
+    const types = ['STORY', 'TASK', 'BUG', 'FEATURE', 'EPIC'];
     final chosen = await _showOptions<String>(
       title: context.t('issues.type'),
+      anchorRect: anchor,
       options: [for (final t in types) (value: t, child: TypeBadge(type: t))],
     );
     if (chosen != null) await _patch({'type': chosen});
   }
 
-  Future<void> _pickLabels() async {
+  static const _noParent = '__none__';
+
+  /// The "Epic" (standard issues) / "Parent" (sub-tasks) detail row. Value is
+  /// the immediate ancestor; tapping opens the parent picker.
+  Widget _parentRow(Issue issue) {
+    final parent = _hierarchy.ancestors.isNotEmpty
+        ? _hierarchy.ancestors.last
+        : null;
+    return _DetailRow(
+      label: issue.isSubtask
+          ? context.t('issues.parent')
+          : context.t('issues.epic'),
+      onTap: (anchor) => _pickParent(issue, anchor),
+      child: parent == null
+          ? Text(
+              issue.isSubtask ? '—' : context.t('issues.noEpic'),
+              style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
+            )
+          : _parentChip(parent),
+    );
+  }
+
+  Widget _parentChip(Issue parent) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      TypeGlyph(type: parent.type, size: 18),
+      const SizedBox(width: 7),
+      Flexible(
+        child: Text(
+          '${parent.readableId}  ${parent.title}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      ),
+    ],
+  );
+
+  Future<void> _pickParent(Issue issue, Rect anchor) async {
+    // Sub-tasks attach to a standard issue; standard issues attach to an epic.
+    final candidates =
+        _projectIssues.values
+            .where(
+              (i) =>
+                  i.id != issue.id &&
+                  (issue.isSubtask ? i.isStandard : i.isEpic),
+            )
+            .toList()
+          ..sort((a, b) => a.readableId.compareTo(b.readableId));
+    final chosen = await _showOptions<String>(
+      title: issue.isSubtask
+          ? context.t('issues.parent')
+          : context.t('issues.epic'),
+      anchorRect: anchor,
+      options: [
+        if (!issue.isSubtask)
+          (
+            value: _noParent,
+            child: Text(
+              context.t('issues.noEpic'),
+              style: TextStyle(color: AppColors.inkFaint),
+            ),
+          ),
+        for (final c in candidates) (value: c.id, child: _parentChip(c)),
+      ],
+    );
+    if (chosen != null) {
+      await _patch({'parentId': chosen == _noParent ? '' : chosen});
+    }
+  }
+
+  Future<void> _pickLabels(Rect anchor) async {
     final issue = _issue;
     if (issue == null) return;
     final available = <String>{
@@ -1181,9 +1547,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
 
   static const _noSprint = '__none__';
 
-  Future<void> _pickSprint() async {
+  Future<void> _pickSprint(Rect anchor) async {
     final chosen = await _showOptions<String>(
       title: context.t('issues.sprint'),
+      anchorRect: anchor,
       options: [
         (
           value: _noSprint,
@@ -1203,8 +1570,9 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
 
   Future<void> _pickDate({required bool isStart}) async {
     final current = isStart ? _issue!.startDate : _issue!.dueDate;
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await showGlassDatePicker(
+      context,
+      title: context.t(isStart ? 'issues.startDate' : 'issues.dueDate'),
       initialDate: current ?? DateTime.now(),
       firstDate: DateTime(2015),
       lastDate: DateTime(2100),
@@ -1215,7 +1583,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     }
   }
 
-  Future<void> _pickStoryPoints() async {
+  // Anchor unused: estimate opens as a centered glass dialog, not a popover.
+  Future<void> _pickStoryPoints(Rect anchor) async {
     final issue = _issue;
     if (issue == null) return;
     final result = await showStoryPointsDialog(
@@ -1232,16 +1601,13 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     }
   }
 
-  Future<void> _pickAssignee() async {
+  // Anchor unused: the people picker is a taller search list, kept as a sheet.
+  Future<void> _pickAssignee(Rect anchor) async {
     final me = context.read<AuthBloc>().state.user;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useRootNavigator: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+    // _PeoplePicker draws its own grab handle, so suppress the helper's.
+    await showGlassBottomSheet<void>(
+      context,
+      showHandle: false,
       builder: (sheetContext) => _PeoplePicker(
         users: _users,
         meId: me?.id,
@@ -1267,44 +1633,13 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   Future<T?> _showOptions<T>({
     required String title,
     required List<({T value, Widget child})> options,
+    Rect? anchorRect,
   }) {
-    return showModalBottomSheet<T>(
-      context: context,
-      useRootNavigator: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            for (final o in options)
-              InkWell(
-                onTap: () => Navigator.of(sheetContext).pop(o.value),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 14,
-                  ),
-                  child: Align(alignment: Alignment.centerLeft, child: o.child),
-                ),
-              ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+    return showGlassOptions<T>(
+      context,
+      title: title,
+      options: options,
+      anchorRect: anchorRect,
     );
   }
 
@@ -1461,13 +1796,25 @@ class _DetailRow extends StatelessWidget {
 
   final String label;
   final Widget child;
-  final VoidCallback? onTap;
+
+  /// Tapped to edit the field. Receives the row's global rect so the picker can
+  /// anchor a dropdown popover beside it on wide screens.
+  final void Function(Rect anchorRect)? onTap;
   final bool last;
 
   @override
   Widget build(BuildContext context) {
+    final tap = onTap;
     return InkWell(
-      onTap: onTap,
+      onTap: tap == null
+          ? null
+          : () {
+              final box = context.findRenderObject() as RenderBox?;
+              final rect = (box != null && box.hasSize)
+                  ? box.localToGlobal(Offset.zero) & box.size
+                  : Rect.zero;
+              tap(rect);
+            },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
@@ -1502,49 +1849,87 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
+// ─────────────────────────── Sub-task quick-add ────────────────────────────
+
+/// Inline "add a sub-task" field — type a title, press enter (or the +) to
+/// create it under the parent. Clears itself on submit, Jira-style.
+class _SubtaskQuickAdd extends StatefulWidget {
+  const _SubtaskQuickAdd({required this.onSubmit});
+
+  final Future<void> Function(String title) onSubmit;
+
+  @override
+  State<_SubtaskQuickAdd> createState() => _SubtaskQuickAddState();
+}
+
+class _SubtaskQuickAddState extends State<_SubtaskQuickAdd> {
+  final _ctrl = TextEditingController();
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final value = _ctrl.text.trim();
+    if (value.isEmpty || _busy) return;
+    setState(() => _busy = true);
+    await widget.onSubmit(value);
+    if (mounted) {
+      _ctrl.clear();
+      setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(LucideIcons.plus, size: 16, color: AppColors.inkFaint),
+        const SizedBox(width: 8),
+        Expanded(
+          child: TextField(
+            controller: _ctrl,
+            onSubmitted: (_) => _submit(),
+            textInputAction: TextInputAction.done,
+            style: const TextStyle(fontSize: 13.5),
+            decoration: InputDecoration(
+              isDense: true,
+              border: InputBorder.none,
+              hintText: context.t('issues.subtaskHint'),
+              hintStyle: TextStyle(fontSize: 13.5, color: AppColors.inkFaint),
+            ),
+          ),
+        ),
+        if (_busy)
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: HiveLoader(strokeWidth: 2),
+          ),
+      ],
+    );
+  }
+}
+
 // ─────────────────────────── Option picker ─────────────────────────────────
 
-/// Bottom-sheet single-choice picker (shared by the create body). Mirrors the
-/// detail sheet's inline `_showOptions`.
+/// Single-choice picker shared by the create body. Delegates to the responsive
+/// [showGlassOptions]: an anchored dropdown beside the field on wide screens, a
+/// bottom sheet on phones.
 Future<T?> _pickOption<T>(
   BuildContext context, {
   required String title,
   required List<({T value, Widget child})> options,
+  Rect? anchorRect,
 }) {
-  return showModalBottomSheet<T>(
-    context: context,
-    useRootNavigator: true,
-    backgroundColor: AppColors.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (sheetContext) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Text(
-              title,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-            ),
-          ),
-          for (final o in options)
-            InkWell(
-              onTap: () => Navigator.of(sheetContext).pop(o.value),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 14,
-                ),
-                child: Align(alignment: Alignment.centerLeft, child: o.child),
-              ),
-            ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    ),
+  return showGlassOptions<T>(
+    context,
+    title: title,
+    options: options,
+    anchorRect: anchorRect,
   );
 }
 
@@ -1583,6 +1968,8 @@ class IssueCreateBody extends StatefulWidget {
     this.projectId,
     this.initialState,
     this.initialSprintId,
+    this.parentId,
+    this.forcedType,
     required this.onCreated,
   });
 
@@ -1590,6 +1977,15 @@ class IssueCreateBody extends StatefulWidget {
   final String? projectId;
   final String? initialState;
   final String? initialSprintId;
+
+  /// Pre-selected parent issue (an epic for child issues, a standard issue for
+  /// sub-tasks). When set, the parent row is locked.
+  final String? parentId;
+
+  /// Forces and locks the issue type (e.g. `STORY` for an epic's child,
+  /// `SUBTASK` for a sub-task). When set, the Type row is locked.
+  final String? forcedType;
+
   final ValueChanged<Issue> onCreated;
 
   @override
@@ -1616,6 +2012,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
   String? _assigneeId;
   String _priority = 'NORMAL';
   String _type = 'TASK';
+  String? _parentId;
   String? _sprintId;
   int? _storyPoints;
   DateTime? _startDate;
@@ -1645,6 +2042,8 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     _projectId = widget.projectId;
     _state = widget.initialState;
     _sprintId = widget.initialSprintId;
+    _parentId = widget.parentId;
+    if (widget.forcedType != null) _type = widget.forcedType!;
     widget.controller.submit = _save;
     _load();
   }
@@ -1738,6 +2137,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
         'priority': _priority,
         if (_state != null) 'state': _state,
         if (_assigneeId != null) 'assigneeId': _assigneeId,
+        if (_parentId != null) 'parentId': _parentId,
         if (_sprintId != null) 'sprintId': _sprintId,
         if (_storyPoints != null) 'storyPoints': _storyPoints,
         if (_startDate != null)
@@ -1770,60 +2170,60 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     return SmartLinkScope(
       resolver: _buildResolver(),
       child: Form(
-      key: _formKey,
-      autovalidateMode: _autovalidate
-          ? AutovalidateMode.onUserInteraction
-          : AutovalidateMode.disabled,
-      child: Padding(
-        // Bottom clearance for the pinned save bar (which overlays the content):
-        // ~save button + its padding + the device safe-area inset.
-        padding: EdgeInsets.fromLTRB(
-          20,
-          16,
-          20,
-          88 + MediaQuery.viewPaddingOf(context).bottom,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            LayoutBuilder(
-              builder: (context, c) {
-                final left = _contentCard();
-                final right = Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _detailsCard(),
-                    const SizedBox(height: 14),
-                    _timelineCard(),
-                  ],
-                );
-                if (c.maxWidth >= 680) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        key: _formKey,
+        autovalidateMode: _autovalidate
+            ? AutovalidateMode.onUserInteraction
+            : AutovalidateMode.disabled,
+        child: Padding(
+          // Bottom clearance for the pinned save bar (which overlays the content):
+          // ~save button + its padding + the device safe-area inset.
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            88 + MediaQuery.viewPaddingOf(context).bottom,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              LayoutBuilder(
+                builder: (context, c) {
+                  final left = _contentCard();
+                  final right = Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(flex: 3, child: left),
-                      const SizedBox(width: 18),
-                      Expanded(flex: 2, child: right),
+                      _detailsCard(),
+                      const SizedBox(height: 14),
+                      _timelineCard(),
                     ],
                   );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [left, const SizedBox(height: 14), right],
-                );
-              },
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 14),
-              Text(
-                _error!,
-                style: const TextStyle(color: AppColors.danger),
-                textAlign: TextAlign.center,
+                  if (c.maxWidth >= 680) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 3, child: left),
+                        const SizedBox(width: 18),
+                        Expanded(flex: 2, child: right),
+                      ],
+                    );
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [left, const SizedBox(height: 14), right],
+                  );
+                },
               ),
+              if (_error != null) ...[
+                const SizedBox(height: 14),
+                Text(
+                  _error!,
+                  style: const TextStyle(color: AppColors.danger),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -1968,10 +2368,13 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
             child: PriorityFlag(priority: _priority, withLabel: true),
           ),
           _DetailRow(
+            // A forced type (epic child / sub-task) is locked.
             label: context.t('issues.type'),
-            onTap: _pickType,
+            onTap: widget.forcedType != null ? null : _pickType,
             child: TypeBadge(type: _type),
           ),
+          // Epic link for standard issues; sub-tasks arrive with a fixed parent.
+          if (_type.toUpperCase() != 'EPIC') _createParentRow(),
           _DetailRow(
             label: context.t('issues.storyPoints'),
             onTap: _pickStoryPoints,
@@ -2028,12 +2431,12 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
           const SizedBox(height: 6),
           _DetailRow(
             label: context.t('issues.startDate'),
-            onTap: () => _pickDate(isStart: true),
+            onTap: (_) => _pickDate(isStart: true),
             child: _dateValue(_startDate, isStart: true),
           ),
           _DetailRow(
             label: context.t('issues.dueDate'),
-            onTap: () => _pickDate(isStart: false),
+            onTap: (_) => _pickDate(isStart: false),
             last: true,
             child: _dateValue(_dueDate, isStart: false),
           ),
@@ -2117,10 +2520,11 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     );
   }
 
-  Future<void> _pickProject() async {
+  Future<void> _pickProject(Rect anchor) async {
     final chosen = await _pickOption<String>(
       context,
       title: context.t('issues.project'),
+      anchorRect: anchor,
       options: [
         for (final p in _projects)
           (
@@ -2135,11 +2539,12 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     if (chosen != null && chosen != _projectId) await _onProjectChanged(chosen);
   }
 
-  Future<void> _pickStatus() async {
+  Future<void> _pickStatus(Rect anchor) async {
     final states = _project?.stateNames ?? const <String>[];
     final chosen = await _pickOption<String>(
       context,
       title: context.t('issues.status'),
+      anchorRect: anchor,
       options: [
         for (final s in states)
           (
@@ -2151,11 +2556,12 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     if (chosen != null) setState(() => _state = chosen);
   }
 
-  Future<void> _pickPriority() async {
+  Future<void> _pickPriority(Rect anchor) async {
     const priorities = ['SHOWSTOPPER', 'CRITICAL', 'MAJOR', 'NORMAL', 'MINOR'];
     final chosen = await _pickOption<String>(
       context,
       title: context.t('issues.priority'),
+      anchorRect: anchor,
       options: [
         for (final p in priorities)
           (value: p, child: PriorityFlag(priority: p, withLabel: true)),
@@ -2164,17 +2570,84 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     if (chosen != null) setState(() => _priority = chosen);
   }
 
-  Future<void> _pickType() async {
-    const types = ['TASK', 'BUG', 'FEATURE', 'EPIC'];
+  Future<void> _pickType(Rect anchor) async {
+    const types = ['STORY', 'TASK', 'BUG', 'FEATURE', 'EPIC'];
     final chosen = await _pickOption<String>(
       context,
       title: context.t('issues.type'),
+      anchorRect: anchor,
       options: [for (final t in types) (value: t, child: TypeBadge(type: t))],
     );
-    if (chosen != null) setState(() => _type = chosen);
+    if (chosen != null) {
+      setState(() {
+        _type = chosen;
+        // Epics never have a parent — drop any epic link when switching to one.
+        if (chosen.toUpperCase() == 'EPIC') _parentId = null;
+      });
+    }
   }
 
-  Future<void> _pickLabels() async {
+  /// Epic (standard issue) / Parent (sub-task) row in the create form. Locked
+  /// when the parent was forced by the launching panel.
+  Widget _createParentRow() {
+    final isSubtask = _type.toUpperCase() == 'SUBTASK';
+    final pid = _parentId;
+    final parent = pid == null
+        ? null
+        : _projectIssues.values.where((i) => i.id == pid).firstOrNull;
+    final locked = widget.parentId != null;
+    return _DetailRow(
+      label: isSubtask ? context.t('issues.parent') : context.t('issues.epic'),
+      onTap: (locked || isSubtask) ? null : _pickParent,
+      child: parent == null
+          ? Text(
+              isSubtask ? '—' : context.t('issues.noEpic'),
+              style: TextStyle(fontSize: 13, color: AppColors.inkFaint),
+            )
+          : _createParentChip(parent),
+    );
+  }
+
+  Future<void> _pickParent(Rect anchor) async {
+    final epics = _projectIssues.values.where((i) => i.isEpic).toList()
+      ..sort((a, b) => a.readableId.compareTo(b.readableId));
+    final chosen = await _pickOption<String>(
+      context,
+      title: context.t('issues.epic'),
+      anchorRect: anchor,
+      options: [
+        (
+          value: _none,
+          child: Text(
+            context.t('issues.noEpic'),
+            style: TextStyle(color: AppColors.inkFaint),
+          ),
+        ),
+        for (final e in epics) (value: e.id, child: _createParentChip(e)),
+      ],
+    );
+    if (chosen != null) {
+      setState(() => _parentId = chosen == _none ? null : chosen);
+    }
+  }
+
+  Widget _createParentChip(Issue parent) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      TypeGlyph(type: parent.type, size: 18),
+      const SizedBox(width: 7),
+      Flexible(
+        child: Text(
+          '${parent.readableId}  ${parent.title}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      ),
+    ],
+  );
+
+  Future<void> _pickLabels(Rect anchor) async {
     final pid = _projectId;
     final available = <String>{
       ...?_project?.labelNames,
@@ -2197,10 +2670,11 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     if (result != null) setState(() => _labels = result);
   }
 
-  Future<void> _pickSprint() async {
+  Future<void> _pickSprint(Rect anchor) async {
     final chosen = await _pickOption<String>(
       context,
       title: context.t('issues.sprint'),
+      anchorRect: anchor,
       options: [
         (
           value: _none,
@@ -2217,10 +2691,11 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     }
   }
 
-  Future<void> _pickAssignee() async {
+  Future<void> _pickAssignee(Rect anchor) async {
     final chosen = await _pickOption<String>(
       context,
       title: context.t('issues.assignee'),
+      anchorRect: anchor,
       options: [
         (
           value: _none,
@@ -2240,8 +2715,9 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
 
   Future<void> _pickDate({required bool isStart}) async {
     final current = isStart ? _startDate : _dueDate;
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await showGlassDatePicker(
+      context,
+      title: context.t(isStart ? 'issues.startDate' : 'issues.dueDate'),
       initialDate: current ?? DateTime.now(),
       firstDate: DateTime(2015),
       lastDate: DateTime(2100),
@@ -2257,7 +2733,8 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     }
   }
 
-  Future<void> _pickStoryPoints() async {
+  // Anchor unused: estimate opens as a centered glass dialog, not a popover.
+  Future<void> _pickStoryPoints(Rect anchor) async {
     final title = _titleCtrl.text.trim();
     final result = await showStoryPointsDialog(
       context,
@@ -2560,12 +3037,16 @@ class _ActivityTile extends StatelessWidget {
     required this.actorName,
     required this.names,
     required this.sprintNames,
+    this.issueIds = const {},
   });
 
   final IssueActivity activity;
   final String actorName;
   final Map<String, String> names;
   final Map<String, String> sprintNames;
+
+  /// Issue id → readable id, so a PARENT change reads as `HIV-12`, not a raw id.
+  final Map<String, String> issueIds;
 
   // Fields where a before→after value pair is worth showing as chips.
   static const _chipFields = {
@@ -2574,6 +3055,7 @@ class _ActivityTile extends StatelessWidget {
     'PRIORITY',
     'TYPE',
     'SPRINT',
+    'PARENT',
     'START_DATE',
     'DUE_DATE',
     'ESTIMATE',
@@ -2670,12 +3152,14 @@ class _ActivityTile extends StatelessWidget {
       return switch (field) {
         'ASSIGNEE' => context.t('issues.unassigned'),
         'SPRINT' => context.t('issues.noSprint'),
+        'PARENT' => context.t('issues.noEpic'),
         _ => null,
       };
     }
     return switch (field) {
       'ASSIGNEE' => names[raw] ?? raw,
       'SPRINT' => sprintNames[raw] ?? raw,
+      'PARENT' => issueIds[raw] ?? raw,
       'STATE' => stateLabel(raw),
       'PRIORITY' => context.t('priority.${raw.toLowerCase()}'),
       'TYPE' => context.t('type.${raw.toLowerCase()}'),
@@ -2700,6 +3184,7 @@ class _ActivityTile extends StatelessWidget {
     'PRIORITY' => context.t('issues.field.priority'),
     'TYPE' => context.t('issues.field.type'),
     'SPRINT' => context.t('issues.field.sprint'),
+    'PARENT' => context.t('issues.field.parent'),
     'START_DATE' => context.t('issues.field.startDate'),
     'DUE_DATE' => context.t('issues.field.dueDate'),
     'ESTIMATE' => context.t('issues.field.estimate'),
@@ -2885,114 +3370,113 @@ class _PeoplePickerState extends State<_PeoplePicker> {
                     u.username.toLowerCase().contains(q),
               )
               .toList();
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.62,
-        child: Column(
-          children: [
-            const SizedBox(height: 10),
-            Container(
-              width: 38,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.hairline,
-                borderRadius: BorderRadius.circular(99),
-              ),
+    // The glass bottom-sheet wrapper already rides above the keyboard, so this
+    // picker only needs to size itself; no extra viewInsets padding.
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.62,
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          Container(
+            width: 38,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.hairline,
+              borderRadius: BorderRadius.circular(99),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-              child: TextField(
-                autofocus: true,
-                onChanged: (v) => setState(() => _query = v),
-                decoration: InputDecoration(
-                  isDense: true,
-                  prefixIcon: const Icon(LucideIcons.search, size: 18),
-                  hintText: context.t('issues.searchPeople'),
-                  filled: true,
-                  fillColor: AppColors.surfaceMuted,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                    borderSide: BorderSide(color: AppColors.hairline),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                    borderSide: BorderSide(color: AppColors.hairline),
-                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: TextField(
+              autofocus: true,
+              onChanged: (v) => setState(() => _query = v),
+              decoration: InputDecoration(
+                isDense: true,
+                prefixIcon: const Icon(LucideIcons.search, size: 18),
+                hintText: context.t('issues.searchPeople'),
+                filled: true,
+                fillColor: AppColors.surfaceMuted,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  borderSide: BorderSide(color: AppColors.hairline),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  borderSide: BorderSide(color: AppColors.hairline),
                 ),
               ),
             ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.only(bottom: 16),
-                children: [
-                  if (widget.onAssignMe != null && q.isEmpty)
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: AppColors.accentSoft,
-                        child: Icon(
-                          LucideIcons.user,
-                          color: AppColors.accentStrong,
-                          size: 18,
-                        ),
-                      ),
-                      title: Text(
-                        context.t('issues.assignToMe'),
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      onTap: widget.onAssignMe,
-                    ),
-                  if (q.isEmpty)
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: AppColors.canvas2,
-                        child: Icon(
-                          LucideIcons.ban,
-                          color: AppColors.inkSoft,
-                          size: 18,
-                        ),
-                      ),
-                      title: Text(context.t('issues.unassign')),
-                      onTap: widget.onUnassign,
-                    ),
-                  if (q.isEmpty) const Divider(height: 1),
-                  for (final u in filtered)
-                    ListTile(
-                      leading: HiveAvatar(name: u.displayName, size: 34),
-                      title: Text(
-                        u.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        '@${u.username}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: u.id == widget.meId
-                          ? const Icon(
-                              LucideIcons.star,
-                              size: 16,
-                              color: AppColors.accent,
-                            )
-                          : null,
-                      onTap: () => widget.onSelect(u.id),
-                    ),
-                  if (filtered.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Center(
-                        child: Text(
-                          context.t('issues.empty'),
-                          style: TextStyle(color: AppColors.inkFaint),
-                        ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 16),
+              children: [
+                if (widget.onAssignMe != null && q.isEmpty)
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.accentSoft,
+                      child: Icon(
+                        LucideIcons.user,
+                        color: AppColors.accentStrong,
+                        size: 18,
                       ),
                     ),
-                ],
-              ),
+                    title: Text(
+                      context.t('issues.assignToMe'),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    onTap: widget.onAssignMe,
+                  ),
+                if (q.isEmpty)
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.canvas2,
+                      child: Icon(
+                        LucideIcons.ban,
+                        color: AppColors.inkSoft,
+                        size: 18,
+                      ),
+                    ),
+                    title: Text(context.t('issues.unassign')),
+                    onTap: widget.onUnassign,
+                  ),
+                if (q.isEmpty) const Divider(height: 1),
+                for (final u in filtered)
+                  ListTile(
+                    leading: HiveAvatar(name: u.displayName, size: 34),
+                    title: Text(
+                      u.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '@${u.username}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: u.id == widget.meId
+                        ? const Icon(
+                            LucideIcons.star,
+                            size: 16,
+                            color: AppColors.accent,
+                          )
+                        : null,
+                    onTap: () => widget.onSelect(u.id),
+                  ),
+                if (filtered.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(
+                      child: Text(
+                        context.t('issues.empty'),
+                        style: TextStyle(color: AppColors.inkFaint),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

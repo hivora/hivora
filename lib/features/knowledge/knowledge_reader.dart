@@ -24,11 +24,13 @@ class KnowledgeReader extends StatefulWidget {
     required this.article,
     required this.asideMode,
     required this.onEdit,
+    required this.onDelete,
   });
 
   final KbArticle article;
   final AsideMode asideMode;
   final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   State<KnowledgeReader> createState() => _KnowledgeReaderState();
@@ -263,6 +265,21 @@ class _KnowledgeReaderState extends State<KnowledgeReader> {
                       ),
                     ),
                   ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: context.t('knowledge.delete'),
+                  child: OutlinedButton(
+                    onPressed: widget.onDelete,
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(38, 38),
+                      foregroundColor: AppColors.danger,
+                      side: BorderSide(color: AppColors.hairline),
+                    ),
+                    child: Icon(lucideIcon('trash-2'), size: 16),
+                  ),
+                ),
               ],
             );
           },

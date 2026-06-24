@@ -8,15 +8,19 @@ import '../../core/api/api_client.dart';
 import '../../core/api/hinata_repository.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
+import '../sprint/modals/glass_modal.dart'
+    show glassWoltSurface, showGlassDatePicker;
 
 /// Log work on an issue (YouTrack work item): duration, activity, note.
 Future<bool?> showWorkLogSheet(BuildContext context, String issueId) {
   final repository = context.read<HinataRepository>();
   return WoltModalSheet.show<bool?>(
     context: context,
+    pageContentDecorator: glassWoltSurface,
     pageListBuilder: (modalContext) => [
       WoltModalSheetPage(
-        backgroundColor: AppColors.surface,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         hasTopBarLayer: false,
         child: RepositoryProvider.value(
           value: repository,
@@ -125,8 +129,9 @@ class _WorkLogBodyState extends State<_WorkLogBody> {
                 MaterialLocalizations.of(context).formatShortDate(_date),
               ),
               onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
+                final picked = await showGlassDatePicker(
+                  context,
+                  title: context.t('time.date'),
                   initialDate: _date,
                   firstDate: DateTime.now().subtract(const Duration(days: 365)),
                   lastDate: DateTime.now(),

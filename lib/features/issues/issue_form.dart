@@ -11,6 +11,7 @@ import '../../core/i18n/i18n.dart';
 import '../../core/models/work_models.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../sprint/modals/glass_modal.dart' show glassWoltSurface;
 import 'issue_detail_sheet.dart';
 
 /// Centered create-issue dialog for wider screens — mirrors the issue detail
@@ -45,6 +46,8 @@ Future<Issue?> showIssueForm(
   String? projectId,
   String? initialState,
   String? initialSprintId,
+  String? parentId,
+  String? forcedType,
 }) async {
   final repository = context.read<HinataRepository>();
   final controller = IssueCreateController();
@@ -53,12 +56,13 @@ Future<Issue?> showIssueForm(
     context: context,
     useRootNavigator: true,
     barrierDismissible: true,
+    pageContentDecorator: glassWoltSurface,
     modalTypeBuilder: (ctx) => MediaQuery.sizeOf(ctx).width >= 760
         ? const _CreateDialogType()
         : WoltModalType.bottomSheet(),
     pageListBuilder: (modalContext) => [
       WoltModalSheetPage(
-        backgroundColor: AppColors.canvas,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         hasTopBarLayer: true,
         isTopBarLayerAlwaysVisible: true,
@@ -85,6 +89,8 @@ Future<Issue?> showIssueForm(
             projectId: projectId,
             initialState: initialState,
             initialSprintId: initialSprintId,
+            parentId: parentId,
+            forcedType: forcedType,
             onCreated: (issue) => Navigator.of(modalContext).pop(issue),
           ),
         ),
