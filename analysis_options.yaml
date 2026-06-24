@@ -9,6 +9,14 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  # Vendored path packages under packages/ (e.g. liquid_glass_widgets) carry
+  # their own tests/tooling and dependencies that aren't resolved from the app's
+  # pubspec — analysing them here produces spurious errors in CI. Exclude the
+  # whole folder from `flutter analyze`; the package's public API is still used.
+  exclude:
+    - packages/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`
