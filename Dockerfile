@@ -11,7 +11,9 @@ ARG HINATA_DEFAULT_SERVER=https://api.track.asta.hn
 # present. pubspec.lock is gitignored, so it isn't in the build context anyway.
 COPY . .
 RUN flutter pub get
-RUN flutter build web --release \
+# WasmGC build (ships a JS fallback bundle for browsers without WasmGC). Fixes a
+# class of canvas/UI rendering glitches vs. the CanvasKit JS build.
+RUN flutter build web --wasm --release \
     --dart-define=HINATA_DEFAULT_SERVER=${HINATA_DEFAULT_SERVER}
 
 # ---- Runtime stage: serve the static build via nginx ----
