@@ -415,22 +415,34 @@ class IssueComment extends Equatable {
     required this.authorId,
     required this.text,
     this.createdAt,
+    this.updatedAt,
   });
 
   final String id;
   final String authorId;
   final String text;
   final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  /// True once the comment has been edited after creation (server stamps
+  /// `updatedAt` via @LastModifiedDate on every save).
+  bool get isEdited {
+    final c = createdAt, u = updatedAt;
+    if (c == null || u == null) return false;
+    // Allow a second of slack so the initial create isn't flagged as edited.
+    return u.difference(c).inSeconds > 1;
+  }
 
   factory IssueComment.fromJson(Map<String, dynamic> json) => IssueComment(
     id: json['id'] as String,
     authorId: json['authorId'] as String? ?? '',
     text: json['text'] as String? ?? '',
     createdAt: _instant(json['createdAt']),
+    updatedAt: _instant(json['updatedAt']),
   );
 
   @override
-  List<Object?> get props => [id, authorId, text];
+  List<Object?> get props => [id, authorId, text, updatedAt];
 }
 
 /// One entry in an issue's change history ("Verlauf").

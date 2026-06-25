@@ -405,6 +405,24 @@ class HinataRepository {
             as Map<String, dynamic>,
       );
 
+  /// Edits the text of one of the caller's own comments. Server returns the
+  /// updated comment (with a fresh `updatedAt`).
+  Future<IssueComment> editComment(
+    String issueId,
+    String commentId,
+    String text,
+  ) async => IssueComment.fromJson(
+    await _api.patch(
+          '/api/v1/issues/$issueId/comments/$commentId',
+          body: {'text': text},
+        )
+        as Map<String, dynamic>,
+  );
+
+  /// Deletes one of the caller's own comments (admins may delete any).
+  Future<void> deleteComment(String issueId, String commentId) =>
+      _api.delete('/api/v1/issues/$issueId/comments/$commentId');
+
   /// Uploads one file to an issue, reporting fractional progress (0–1) as the
   /// bytes are sent so the tile's ring can fill. Returns the updated issue.
   Future<Issue> uploadAttachment(

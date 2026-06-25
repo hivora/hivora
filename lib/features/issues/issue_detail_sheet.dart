@@ -371,6 +371,50 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     }
   }
 
+  /// Saves an inline edit of the user's own [comment]. Returns true on success
+  /// so the tile can close its editor; a no-op (unchanged/empty) also succeeds.
+  Future<bool> _editComment(IssueComment comment, String text) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty || trimmed == comment.text) return true;
+    try {
+      final updated = await _repo.editComment(
+        widget.issueId,
+        comment.id,
+        trimmed,
+      );
+      if (mounted) {
+        setState(() {
+          _comments = [
+            for (final c in _comments) c.id == updated.id ? updated : c,
+          ];
+        });
+      }
+      return true;
+    } on ApiFailure catch (failure) {
+      _toast(failure.message);
+      return false;
+    }
+  }
+
+  Future<void> _deleteComment(IssueComment comment) async {
+    final confirmed = await showGlassModal<bool>(
+      context,
+      width: 420,
+      builder: (_) => const _DeleteCommentConfirm(),
+    );
+    if (confirmed != true) return;
+    try {
+      await _repo.deleteComment(widget.issueId, comment.id);
+      if (mounted) {
+        setState(() {
+          _comments = [for (final c in _comments) if (c.id != comment.id) c];
+        });
+      }
+    } on ApiFailure catch (failure) {
+      _toast(failure.message);
+    }
+  }
+
   void _toast(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -1350,8 +1394,14 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   ///  • history  → change events newest-first
   ///  • all      → both, merged newest-first
   List<Widget> _activityItems(_ActivityFilter filter) {
-    Widget commentTile(IssueComment c) =>
-        _CommentTile(comment: c, authorName: _names[c.authorId] ?? c.authorId);
+    final me = context.read<AuthBloc>().state.user;
+    Widget commentTile(IssueComment c) => _CommentTile(
+      comment: c,
+      authorName: _names[c.authorId] ?? c.authorId,
+      canManage: me != null && c.authorId == me.id,
+      onEdit: (text) => _editComment(c, text),
+      onDelete: () => _deleteComment(c),
+    );
     final issueIds = {
       for (final i in _projectIssues.values) i.id: i.readableId,
     };
@@ -1735,6 +1785,121 @@ class _DeleteIssueConfirm extends StatelessWidget {
                         'issues.deleteBody',
                         variables: {'id': issue.readableId},
                       ),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        height: 1.4,
+                        color: AppColors.inkSoft,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                visualDensity: VisualDensity.compact,
+                icon: Icon(LucideIcons.x, size: 20, color: AppColors.inkSoft),
+              ),
+            ],
+          ),
+        ),
+        Divider(height: 1, color: AppColors.hairline2),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          child: SafeArea(
+            top: false,
+            child: Row(
+              children: [
+                const Spacer(),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(
+                    context.t('common.cancel'),
+                    style: TextStyle(
+                      color: AppColors.inkSoft,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.danger,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 13,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.radiusControl,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(LucideIcons.trash2, size: 16),
+                  label: Text(context.t('common.delete')),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Destructive confirm for deleting one's own comment. Mirrors the issue
+/// delete confirm's Liquid-Glass language (danger chip, hairline footer).
+class _DeleteCommentConfirm extends StatelessWidget {
+  const _DeleteCommentConfirm();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 12, 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.dangerSoft,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(
+                  LucideIcons.trash2,
+                  size: 20,
+                  color: AppColors.danger,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      context.t('issues.deleteCommentTitle'),
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontBrand,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      context.t('issues.deleteCommentBody'),
                       style: TextStyle(
                         fontSize: 12.5,
                         height: 1.4,
@@ -3077,20 +3242,72 @@ class _ActivityTabs extends StatelessWidget {
 }
 
 /// Comment row: author avatar + name + relative date + body text.
-class _CommentTile extends StatelessWidget {
-  const _CommentTile({required this.comment, required this.authorName});
+class _CommentTile extends StatefulWidget {
+  const _CommentTile({
+    required this.comment,
+    required this.authorName,
+    this.canManage = false,
+    this.onEdit,
+    this.onDelete,
+  });
 
   final IssueComment comment;
   final String authorName;
 
+  /// Whether the current user owns this comment and may edit/delete it.
+  final bool canManage;
+
+  /// Saves an inline edit; returns true on success so the editor can close.
+  final Future<bool> Function(String text)? onEdit;
+  final VoidCallback? onDelete;
+
+  @override
+  State<_CommentTile> createState() => _CommentTileState();
+}
+
+class _CommentTileState extends State<_CommentTile> {
+  final _editController = TextEditingController();
+  final _editFocus = FocusNode();
+  bool _editing = false;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _editController.dispose();
+    _editFocus.dispose();
+    super.dispose();
+  }
+
+  void _startEdit() {
+    setState(() {
+      _editController.text = widget.comment.text;
+      _editing = true;
+    });
+    _editFocus.requestFocus();
+  }
+
+  void _cancelEdit() => setState(() => _editing = false);
+
+  Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    final ok = await widget.onEdit?.call(_editController.text) ?? true;
+    if (!mounted) return;
+    setState(() {
+      _saving = false;
+      if (ok) _editing = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final comment = widget.comment;
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          HiveAvatar(name: authorName, size: 30),
+          HiveAvatar(name: widget.authorName, size: 30),
           const SizedBox(width: 11),
           Expanded(
             child: Column(
@@ -3098,43 +3315,174 @@ class _CommentTile extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Flexible(
-                      child: Text(
-                        authorName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              widget.authorName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          if (comment.createdAt != null) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              MaterialLocalizations.of(
+                                context,
+                              ).formatShortDate(comment.createdAt!.toLocal()),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: AppColors.inkFaint,
+                              ),
+                            ),
+                          ],
+                          if (comment.isEdited) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              context.t('issues.commentEdited'),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: AppColors.inkFaint,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    if (comment.createdAt != null) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        MaterialLocalizations.of(
-                          context,
-                        ).formatShortDate(comment.createdAt!.toLocal()),
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: AppColors.inkFaint,
-                        ),
+                    if (widget.canManage && !_editing) ...[
+                      const SizedBox(width: 6),
+                      _CommentAction(
+                        icon: LucideIcons.pencil,
+                        tooltip: context.t('common.edit'),
+                        onTap: _startEdit,
+                      ),
+                      const SizedBox(width: 2),
+                      _CommentAction(
+                        icon: LucideIcons.trash2,
+                        tooltip: context.t('common.delete'),
+                        danger: true,
+                        onTap: widget.onDelete,
                       ),
                     ],
                   ],
                 ),
                 const SizedBox(height: 3),
-                // Render smart-link tokens ({{issue}}/{{doc}}/{{user}}) as chips.
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: KbMarkdownParser(
-                    fontSize: 13,
-                  ).parse(comment.text).nodes,
+                if (_editing)
+                  _buildEditor(context)
+                else
+                  // Render smart-link tokens ({{issue}}/{{doc}}/{{user}}) as chips.
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: KbMarkdownParser(
+                      fontSize: 13,
+                    ).parse(comment.text).nodes,
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditor(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(KbTokens.radiusControl),
+        border: Border.all(color: AppColors.hairline),
+      ),
+      child: Column(
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44, maxHeight: 160),
+            child: MentionField(
+              controller: _editController,
+              focusNode: _editFocus,
+              commentMode: true,
+              minLines: 1,
+              maxLines: 6,
+              hintText: context.t('issues.addComment'),
+              onSubmit: _save,
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: AppColors.hairline2)),
+            ),
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+            child: Row(
+              children: [
+                const Spacer(),
+                TextButton(
+                  onPressed: _saving ? null : _cancelEdit,
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    minimumSize: const Size(0, 34),
+                  ),
+                  child: Text(
+                    context.t('common.cancel'),
+                    style: TextStyle(
+                      color: AppColors.inkSoft,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                FilledButton(
+                  onPressed: _saving ? null : _save,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.navy,
+                    visualDensity: VisualDensity.compact,
+                    minimumSize: const Size(0, 34),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                  ),
+                  child: Text(context.t('common.save')),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Subtle icon button shown on the author's own comments to edit/delete.
+class _CommentAction extends StatelessWidget {
+  const _CommentAction({
+    required this.icon,
+    required this.tooltip,
+    this.onTap,
+    this.danger = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onTap;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(5),
+          child: Icon(
+            icon,
+            size: 15,
+            color: danger ? AppColors.danger : AppColors.inkFaint,
+          ),
+        ),
       ),
     );
   }
