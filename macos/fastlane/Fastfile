@@ -90,10 +90,22 @@ platform :mac do
             "--dart-define=HINATA_DEFAULT_SERVER=https://api.track.asta.hn",
             "--build-number=#{next_build_number}")
 
+    # The macOS Runner target has no DEVELOPMENT_TEAM, so the archive has no team
+    # ("exportArchive No Team Found in Archive"). Pin team + the match App Store
+    # profile before archiving.
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "Runner.xcodeproj",
+      team_id: "T852K29HWS",
+      targets: ["Runner"],
+      profile_name: "match AppStore com.ahmadre.hinata macos"
+    )
+
     build_app(
       workspace: WORKSPACE,
       scheme: SCHEME,
       export_method: "app-store",
+      export_team_id: "T852K29HWS",
       output_directory: PKG_DIR,
       output_name: PKG_NAME,
       export_options: {

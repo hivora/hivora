@@ -97,6 +97,11 @@ platform :ios do
   desc "Build a signed App Store IPA"
   lane :build do
     auth!
+    # The Xcode project pins the Runner target to the *development* profile for
+    # all configs, so the archive step needs it installed too — install it first,
+    # then appstore so MATCH_PROVISIONING_PROFILE_MAPPING (used by export_options)
+    # ends up pointing at the App Store profile. gym re-signs on export anyway.
+    match(type: "development", app_identifier: APP_IDENTIFIER, readonly: ci?)
     match(type: "appstore", app_identifier: APP_IDENTIFIER, readonly: ci?)
 
     # Bake the Dart/asset bundle + the resolved build number into the Xcode
