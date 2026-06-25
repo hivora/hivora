@@ -8,6 +8,7 @@ platform :android do
          "--dart-define=HINATA_DEFAULT_SERVER=https://api.track.asta.hn")
     end
     upload_to_play_store(
+      json_key_data: ENV["PLAY_JSON_KEY"], # Play service account JSON (secret)
       track: "internal",
       aab: "../build/app/outputs/bundle/release/app-release.aab",
       release_status: "draft",
@@ -20,6 +21,7 @@ platform :android do
   desc "Promote the latest internal build to production"
   lane :promote do
     upload_to_play_store(
+      json_key_data: ENV["PLAY_JSON_KEY"], # Play service account JSON (secret)
       track: "internal",
       track_promote_to: "production",
       skip_upload_aab: true,

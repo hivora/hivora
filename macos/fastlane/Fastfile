@@ -14,8 +14,12 @@ default_platform(:mac)
 APP_IDENTIFIER = "com.ahmadre.hinata".freeze
 WORKSPACE = "Runner.xcworkspace".freeze
 SCHEME = "Runner".freeze
+# gym appends the ".pkg" extension to output_name, so the base name must NOT
+# include it (else the artefact lands at hinata.pkg.pkg and the upload can't
+# find it). PKG_NAME is the resulting file; PKG_BASENAME is what gym is given.
 PKG_DIR = "../build/macos/pkg".freeze
-PKG_NAME = "hinata.pkg".freeze
+PKG_BASENAME = "hinata".freeze
+PKG_NAME = "#{PKG_BASENAME}.pkg".freeze
 
 def ci?
   ENV["CI"] == "true"
@@ -107,7 +111,7 @@ platform :mac do
       export_method: "app-store",
       export_team_id: "T852K29HWS",
       output_directory: PKG_DIR,
-      output_name: PKG_NAME,
+      output_name: PKG_BASENAME,
       export_options: {
         provisioningProfiles: lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING]
       }
