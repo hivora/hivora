@@ -1,6 +1,9 @@
 source "https://rubygems.org"
 
 gem "fastlane", "~> 2.227"
+# Provide a CocoaPods that runs under the CI Ruby (ruby/setup-ruby switches Ruby,
+# breaking the runner's preinstalled pod → `flutter build` pod install fails).
+gem "cocoapods"
 
 # Speeds up `match`/`pilot` plugin loading; harmless if unused.
 plugins_path = File.join(File.dirname(__FILE__), "fastlane", "Pluginfile")
