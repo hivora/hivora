@@ -15,6 +15,11 @@
 	</array>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
+		<!-- Export compliance: Hinata only uses standard, exempt encryption (HTTPS/TLS
+		     via the OS). Declaring this auto-clears every TestFlight/App Store build so
+		     reviewers aren't prompted for the encryption questionnaire each upload. -->
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
@@ -60,6 +65,11 @@
 		</dict>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
+		<!-- Allow FCM/APNs to wake the app for background data messages. -->
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>remote-notification</string>
+		</array>
 		<key>UIAppFonts</key>
 		<array>
 			<string>Sora-Variable.ttf</string>

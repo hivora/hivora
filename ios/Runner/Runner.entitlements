@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Push notifications (FCM/APNs). The value must match the signing profile's
+	     aps-environment. CI archives are signed with the App Store distribution
+	     profile (aps-environment = production), so this is "production". For local
+	     on-device debug push you'd temporarily switch this to "development". -->
+	<key>aps-environment</key>
+	<string>production</string>
 	<!-- Universal Links (Option B): lets verified https links from the production
 	     web domain open the app. Apple fetches
 	     https://track.asta.hn/.well-known/apple-app-site-association and matches
