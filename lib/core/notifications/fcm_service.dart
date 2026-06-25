@@ -84,6 +84,7 @@ class FcmService {
 
   Future<void> _register(String token) async {
     _currentToken = token;
+    if (kDebugMode) debugPrint('FCM token: $token');
     try {
       await _api.post('/api/v1/me/devices',
           body: {'token': token, 'platform': _platform()});

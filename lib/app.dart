@@ -69,8 +69,6 @@ class _HinataAppState extends State<HinataApp> {
       repository: widget.repository,
       onLogout: () => _auth.add(const LogoutRequested()),
     );
-    _syncAccountStream(_auth.state);
-    _authSub = _auth.stream.listen(_syncAccountStream);
     _router = buildRouter(
       appConfig: _appConfig,
       auth: _auth,
@@ -78,10 +76,14 @@ class _HinataAppState extends State<HinataApp> {
     );
     // Push: a tapped notification carries the in-app route in its data payload;
     // forward it straight to the router (same routes as the web deep links).
+    // Must exist before the first _syncAccountStream call below, which starts
+    // FCM when the persisted session is already authenticated.
     _fcm = FcmService(
       apiClient: widget.apiClient,
       onDeepLink: (link) => _router.go(link),
     );
+    _syncAccountStream(_auth.state);
+    _authSub = _auth.stream.listen(_syncAccountStream);
     _listenForDeepLinks();
   }
 
