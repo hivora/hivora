@@ -4,14 +4,12 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/hinata_repository.dart';
-import '../../core/blocs/app_config_bloc.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/work_models.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../deletion/delete_flows.dart';
 import '../sprint/modals/glass_modal.dart';
-import 'create_board_dialog.dart' show ProjectPickerField;
 
 /// Opens the board management menu (Rename · Delete) as an anchored popover at
 /// the trigger and runs the chosen action. Shared by the board overview and the
@@ -178,11 +176,7 @@ class _BoardMenuBody extends StatelessWidget {
       children: [
         _MenuRow(
           icon: LucideIcons.pencil,
-          label: context.t(
-              (context.read<AppConfigBloc>().state.meta?.multiProjectBoards ??
-                      false)
-                  ? 'board.boardSettings'
-                  : 'board.renameBoard'),
+          label: context.t('board.renameBoard'),
           onTap: () => Navigator.of(context).pop('rename'),
         ),
         _MenuRow(
@@ -264,25 +258,10 @@ class _RenameBoardBodyState extends State<_RenameBoardBody> {
   bool _busy = false;
   String? _error;
 
-  late final bool _multiProject =
-      context.read<AppConfigBloc>().state.meta?.multiProjectBoards ?? false;
-  List<Project>? _projects; // null while loading
-  late final List<String> _selected = [...widget.board.projectIds];
-
   @override
   void initState() {
     super.initState();
     _name.addListener(() => setState(() {}));
-    if (_multiProject) _loadProjects();
-  }
-
-  Future<void> _loadProjects() async {
-    try {
-      final projects = await context.read<HinataRepository>().projects();
-      if (mounted) setState(() => _projects = projects);
-    } on ApiFailure {
-      if (mounted) setState(() => _projects = const []);
-    }
   }
 
   @override
@@ -299,16 +278,7 @@ class _RenameBoardBodyState extends State<_RenameBoardBody> {
       _error = null;
     });
     try {
-      final repo = context.read<HinataRepository>();
-      if (_multiProject) {
-        await repo.updateBoard(
-          widget.board.id,
-          name: name,
-          projectIds: List<String>.from(_selected),
-        );
-      } else {
-        await repo.renameBoard(widget.board.id, name);
-      }
+      await context.read<HinataRepository>().renameBoard(widget.board.id, name);
       if (mounted) Navigator.of(context).pop(true);
     } on ApiFailure catch (failure) {
       setState(() {
@@ -325,10 +295,8 @@ class _RenameBoardBodyState extends State<_RenameBoardBody> {
       children: [
         GlassModalHeader(
           icon: LucideIcons.pencil,
-          title: context.t(
-              _multiProject ? 'board.settingsTitle' : 'board.renameTitle'),
-          subtitle: context.t(
-              _multiProject ? 'board.settingsSubtitle' : 'board.renameSubtitle'),
+          title: context.t('board.renameTitle'),
+          subtitle: context.t('board.renameSubtitle'),
         ),
         Flexible(
           child: SingleChildScrollView(
@@ -345,27 +313,6 @@ class _RenameBoardBodyState extends State<_RenameBoardBody> {
                     decoration: glassInputDecoration(),
                   ),
                 ),
-                if (_multiProject) ...[
-                  const SizedBox(height: 16),
-                  GlassField(
-                    label: context.t('board.linkedProjects'),
-                    child: _projects == null
-                        ? const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: Center(
-                                child: SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child:
-                                        CircularProgressIndicator(strokeWidth: 2))),
-                          )
-                        : ProjectPickerField(
-                            projects: _projects!,
-                            selected: _selected,
-                            onChanged: () => setState(() {}),
-                          ),
-                  ),
-                ],
                 if (_error != null) ...[
                   const SizedBox(height: 12),
                   Text(

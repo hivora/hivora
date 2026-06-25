@@ -8,9 +8,6 @@ class PlatformFlags {
 
   /// Allow assigning multiple people to an issue (off → single assignee).
   static const multiAssignee = 'multi_assignee';
-
-  /// Allow a board to span multiple projects (off → one project per board).
-  static const multiProjectBoards = 'multi_project_boards';
 }
 
 /// Server metadata from GET /api/v1/meta (version gate, branding, flags).
@@ -67,9 +64,6 @@ class ServerMeta extends Equatable {
 
   /// Multiple assignees per issue (default off → single-assignee, Jira-style).
   bool get multiAssignee => isFlagEnabled(PlatformFlags.multiAssignee);
-
-  /// A board may span multiple projects (default off → one project per board).
-  bool get multiProjectBoards => isFlagEnabled(PlatformFlags.multiProjectBoards);
 
   @override
   List<Object?> get props =>

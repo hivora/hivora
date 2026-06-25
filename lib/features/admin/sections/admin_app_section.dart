@@ -82,14 +82,6 @@ class _AdminAppSectionState extends State<AdminAppSection> {
               onChanged: (v) => setState(
                   () => _flags[PlatformFlags.multiAssignee] = v),
             ),
-            const Divider(height: 24),
-            _PlatformToggle(
-              title: context.t('admin.multiProjectBoardsTitle'),
-              description: context.t('admin.multiProjectBoardsHint'),
-              value: _flags[PlatformFlags.multiProjectBoards] == true,
-              onChanged: (v) => setState(
-                  () => _flags[PlatformFlags.multiProjectBoards] = v),
-            ),
           ],
         ),
         const SizedBox(height: 16),

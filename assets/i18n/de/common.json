@@ -439,13 +439,6 @@
     "renameBoard": "Board umbenennen",
     "renameTitle": "Board umbenennen",
     "renameSubtitle": "Gib diesem Board einen neuen Namen.",
-    "boardSettings": "Board-Einstellungen",
-    "settingsTitle": "Board-Einstellungen",
-    "settingsSubtitle": "Board umbenennen und festlegen, welche Projekte es umfasst.",
-    "linkedProjects": "Projekte",
-    "chooseProjects": "Projekte auswählen",
-    "projectsSelected": "{{count}} ausgewählt",
-    "searchProjects": "Projekte suchen",
     "manageBoard": "Board-Optionen"
   },
   "gantt": {
@@ -741,8 +734,6 @@
     "platformHint": "Plattform-konforme Voreinstellungen. Aktiviere diese, um die flexiblen Modi freizuschalten.",
     "multiAssigneeTitle": "Mehrere zugewiesene Personen pro Vorgang",
     "multiAssigneeHint": "Aus: eine Person pro Vorgang. An: mehrere Personen zuweisbar.",
-    "multiProjectBoardsTitle": "Mehrere Projekte pro Board",
-    "multiProjectBoardsHint": "Aus: ein Board gehört zu einem Projekt. An: ein Board kann mehrere Projekte umfassen.",
     "featureFlags": "Feature-Flags",
     "featureFlagsHint": "Optionale Client-Funktionen per Name schalten. Wird der App bei jedem Start übermittelt.",
     "featureFlagsEmpty": "Noch keine Feature-Flags definiert.",

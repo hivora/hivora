@@ -508,19 +508,6 @@ class HinataRepository {
             as Map<String, dynamic>,
       );
 
-  /// Updates a board's name and/or its linked projects (multi-project boards).
-  Future<AgileBoard> updateBoard(
-    String boardId, {
-    String? name,
-    List<String>? projectIds,
-  }) async =>
-      AgileBoard.fromJson(
-        await _api.patch('/api/v1/boards/$boardId', body: {
-          'name': ?name,
-          'projectIds': ?projectIds,
-        }) as Map<String, dynamic>,
-      );
-
   Future<BoardView> boardView(String boardId, {String? sprintId}) async =>
       BoardView.fromJson(
         await _api.get(
