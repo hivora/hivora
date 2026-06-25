@@ -93,7 +93,6 @@ platform :mac do
     build_app(
       workspace: WORKSPACE,
       scheme: SCHEME,
-      platform: "macOS",
       export_method: "app-store",
       output_directory: PKG_DIR,
       output_name: PKG_NAME,
