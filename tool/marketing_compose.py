@@ -26,8 +26,14 @@ FONT_DIR = os.path.join(ROOT, "assets", "fonts")
 ICON = os.path.join(ROOT, "assets", "branding", "app_icon.png")
 EMOJI_FONT = "/System/Library/Fonts/Apple Color Emoji.ttc"
 
-# App Store 6.9" portrait slot.
-CANVAS = (1290, 2796)
+# App Store 6.5" portrait slot (iPhone 6.5" Display: 1242x2688). Override via
+# env HINATA_SHOT_SIZE="WxH" for other slots (e.g. 1290x2796 for 6.9").
+def _canvas_size():
+    s = os.environ.get("HINATA_SHOT_SIZE", "1242x2688")
+    w, h = s.lower().split("x")
+    return (int(w), int(h))
+
+CANVAS = _canvas_size()
 
 PAPER = (244, 243, 239, 255)   # warm paper
 INK = (26, 23, 38, 255)        # navy ink
@@ -121,37 +127,34 @@ def _sticker(emoji_ch, label, accent):
     lum = 0.299 * accent[0] + 0.587 * accent[1] + 0.114 * accent[2]
     ink = INK if lum > 150 else (255, 255, 255, 255)
     d.text((x, cy), label, font=font, fill=ink, anchor="lm")
-    return pill.rotate(-4, expand=True, resample=Image.BICUBIC)
+    return pill
 
 
 def compose(key, raw_path):
     line1, line2, emoji_ch, pill_label, accent = MARKETING[key]
+    W, H = CANVAS
     canvas = _gradient_bg(accent)
     d = ImageDraw.Draw(canvas)
-    cx = CANVAS[0] // 2
+    cx = W // 2
 
-    # --- app icon (rounded) ---
-    icon = Image.open(ICON).convert("RGBA").resize((132, 132), Image.LANCZOS)
-    icon = _rounded(icon, 30)
-    canvas.alpha_composite(icon, (cx - icon.width // 2, 150))
-
-    # --- headline ---
-    hf = _font("Sora-Variable.ttf", 116)
-    y = 330
+    # --- headline (no app icon: more breathing room up top) ---
+    hf = _font("Sora-Variable.ttf", round(W * 0.090))
+    step = round(W * 0.102)
+    y = round(H * 0.072)
     for line in (line1, line2):
         d.text((cx, y), line, font=hf, fill=INK, anchor="ma")
-        y += 132
+        y += step
 
     # --- sticker pill ---
     pill = _sticker(emoji_ch, pill_label, accent)
-    canvas.alpha_composite(pill, (cx - pill.width // 2, y + 18))
+    canvas.alpha_composite(pill, (cx - pill.width // 2, y + round(H * 0.007)))
 
     # --- framed device, bleeding off the bottom ---
     framed = device_frames.frame_iphone(Image.open(raw_path))
-    target_w = 1080
+    target_w = round(W * 0.84)
     scale = target_w / framed.width
     framed = framed.resize((target_w, round(framed.height * scale)), Image.LANCZOS)
-    top = CANVAS[1] - framed.height + 150  # bleed ~150px past the bottom edge
+    top = H - framed.height + round(H * 0.055)  # bleed past the bottom edge
     canvas.alpha_composite(framed, (cx - framed.width // 2, top))
 
     return canvas.convert("RGB")
