@@ -9,9 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/util/file_download.dart';
 import '../../../core/api/hinata_repository.dart';
 import '../../../core/api/sse.dart';
 import '../../../core/blocs/app_config_bloc.dart';
@@ -396,12 +396,26 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
   });
 
   Future<void> _download(IssueAttachment a) async {
-    final url = await _resolveUrl(a.id);
-    if (url == null) {
+    // Stream the bytes through the authenticated server endpoint (the object
+    // store is internal-only; its presigned URLs aren't reachable from a
+    // client), then save them via the browser / file system.
+    try {
+      final res = await context.read<ApiClient>().getBytes(
+            '/api/v1/issues/${widget.issueId}/attachments/${a.id}/download',
+          );
+      if (res == null) {
+        if (mounted) _toast(context.t('errors.unexpected'));
+        return;
+      }
+      final saved = await downloadBytes(
+        a.fileName,
+        Uint8List.fromList(res.bytes),
+        res.contentType,
+      );
+      if (mounted && saved != null) _toast(saved);
+    } catch (_) {
       if (mounted) _toast(context.t('errors.unexpected'));
-      return;
     }
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 
   Future<void> _delete(IssueAttachment a) async {

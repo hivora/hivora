@@ -57,6 +57,8 @@ dependencies:
   url_launcher: ^6.3.0
   app_links: ^6.3.0
   package_info_plus: ^9.0.0
+  # Browser download (Blob + anchor) for authenticated file downloads on web.
+  web: ^1.1.0
 
   # Attachments: native file picker + desktop drag-and-drop + photo/video gallery
   # & camera capture (image_picker drives the gallery/camera source on mobile).

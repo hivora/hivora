@@ -314,7 +314,6 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
   String? _sprintId;
   BoardView? _view;
   bool _loading = true;
-  bool _canManage = false;
   String? _error;
 
   BoardViewMode _mode = BoardViewMode.board;
@@ -354,15 +353,12 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
       final view = results[0] as BoardView;
       final users = results[1] as List<DirectoryUser>;
       final projects = results[2] as List<Project>;
-      final teams = results[3] as List<Team>;
       final loaded = await _loadBacklog(repo, view.board.projectIds);
       final backlog = loaded.backlog;
       if (!mounted) return;
       final boardProjectIds = view.board.projectIds.toSet();
-      final canManage = _resolveCanManage(view.board, projects, teams);
       setState(() {
         _view = view;
-        _canManage = canManage;
         _names = {for (final u in users) u.id: u.displayName};
         _projectNames = {for (final p in projects) p.id: p.name};
         _projectLabels = [
@@ -582,57 +578,6 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
 
   /// Deletes the open board, then leaves for the boards overview (a fresh route
   /// so the list no longer shows it).
-  /// Owner / project-lead / team-lead / platform-admin may manage this board.
-  bool _resolveCanManage(
-    AgileBoard board,
-    List<Project> projects,
-    List<Team> teams,
-  ) {
-    final me = context.read<AuthBloc>().state.user;
-    if (me == null) return false;
-    if (me.isAdmin || board.ownerId == me.id) return true;
-    for (final pid in board.projectIds) {
-      final project = projects.where((p) => p.id == pid).firstOrNull;
-      if (project != null && project.leadIds.contains(me.id)) return true;
-      if (teams.any(
-        (t) =>
-            t.projectIds.contains(pid) &&
-            (t.membershipOf(me.id)?.isAdmin ?? false),
-      )) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  Future<void> _openManageMenu(BuildContext anchor) {
-    final view = _view;
-    if (view == null) return Future.value();
-    return openBoardManageMenu(
-      anchor,
-      board: view.board,
-      onChanged: _load,
-      onDeleted: () async {
-        if (mounted) context.go('/board');
-      },
-    );
-  }
-
-  Widget _manageButton() => Builder(
-    builder: (btnContext) => IconButton(
-      tooltip: context.t('board.manageBoard'),
-      padding: EdgeInsets.zero,
-      visualDensity: VisualDensity.compact,
-      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-      onPressed: () => _openManageMenu(btnContext),
-      icon: Icon(
-        LucideIcons.ellipsisVertical,
-        size: 16,
-        color: AppColors.inkSoft,
-      ),
-    ),
-  );
-
   Widget _header(BoardView view) {
     final projectLabel = view.board.projectIds
         .map((id) => _projectNames[id] ?? '')
@@ -649,7 +594,6 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
           PageHead(
             title: view.board.name,
             subtitle: subtitle,
-            actions: [if (_canManage) _manageButton()],
           ),
           const SizedBox(height: 12),
           // Right-aligned, collapsible, responsive-label switcher (mobile).
@@ -670,7 +614,6 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
           selected: _viewModes.indexOf(_mode).clamp(0, _viewModes.length - 1),
           onChanged: (i) => setState(() => _mode = _viewModes[i]),
         ),
-        if (_canManage) ...[const SizedBox(width: 8), _manageButton()],
       ],
     );
   }
