@@ -43,6 +43,8 @@ ios/Runner/GoogleService-Info.plist
 **/service-account*.json
 **/google-services.json
 **/GoogleService-Info.plist
+# firebase_options.dart carries the per-platform Firebase API keys → injected in CI, never committed
+lib/firebase_options.dart
 
 # Secret files
 *.p12
