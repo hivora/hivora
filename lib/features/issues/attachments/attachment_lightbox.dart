@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'dart:ui' as ui;
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart'
     show GlassContainer, GlassQuality, LiquidRoundedSuperellipse;
 import 'package:printing/printing.dart';
 
+import '../../../core/api/api_client.dart';
 import '../../../core/i18n/i18n.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
@@ -52,17 +53,13 @@ class LightboxItem {
       isTextPreviewable(name, mime);
 }
 
-/// Fetches an attachment's raw bytes from its presigned URL. A bare Dio client
-/// (no auth interceptors) — the URL is already signed for direct storage access,
-/// exactly like `Image.network` does for image previews.
-final Dio _previewHttp = Dio();
-
-Future<Uint8List> _fetchBytes(String url) async {
-  final res = await _previewHttp.get<List<int>>(
-    url,
-    options: Options(responseType: ResponseType.bytes),
-  );
-  return Uint8List.fromList(res.data ?? const []);
+/// Fetches an attachment's raw bytes through the authenticated [ApiClient] from
+/// the server's `/download` endpoint. The object store is internal-only, so the
+/// client never talks to it directly; [LightboxItem.url] holds the relative API
+/// download path, not a storage URL.
+Future<Uint8List> _fetchBytes(BuildContext context, String path) async {
+  final res = await context.read<ApiClient>().getBytes(path);
+  return Uint8List.fromList(res?.bytes ?? const []);
 }
 
 /// Opens the Liquid-Glass image lightbox (radius 22, blurred scrim, spring
@@ -381,30 +378,62 @@ class _StagePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (item.isImage) {
-      return Padding(
-        padding: const EdgeInsets.all(18),
-        child: Center(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Image.network(
-              item.url!,
-              fit: BoxFit.contain,
-              loadingBuilder: (_, child, progress) => progress == null
-                  ? child
-                  : const Padding(
-                      padding: EdgeInsets.all(40),
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-              errorBuilder: (_, _, _) => _FileCard(item: item),
-            ),
-          ),
-        ),
-      );
-    }
+    if (item.isImage) return _ImagePage(item: item);
     if (item.isPdf) return _PdfPage(item: item);
     if (item.isText) return _TextPage(item: item);
     return _FileCard(item: item);
+  }
+}
+
+/// Inline image preview — fetches the bytes once through the authenticated
+/// endpoint and renders them with [Image.memory].
+class _ImagePage extends StatefulWidget {
+  const _ImagePage({required this.item});
+  final LightboxItem item;
+
+  @override
+  State<_ImagePage> createState() => _ImagePageState();
+}
+
+class _ImagePageState extends State<_ImagePage> {
+  Future<Uint8List>? _bytes;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bytes ??= _fetchBytes(context, widget.item.url!);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(18),
+      child: Center(
+        child: FutureBuilder<Uint8List>(
+          future: _bytes,
+          builder: (context, snap) {
+            if (snap.connectionState != ConnectionState.done) {
+              return const Padding(
+                padding: EdgeInsets.all(40),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              );
+            }
+            final bytes = snap.data;
+            if (bytes == null || bytes.isEmpty) {
+              return _FileCard(item: widget.item);
+            }
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.memory(
+                bytes,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => _FileCard(item: widget.item),
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 }
 
@@ -421,14 +450,20 @@ class _PdfPage extends StatefulWidget {
 
 class _PdfPageState extends State<_PdfPage> {
   // Fetch once; PdfPreview's build callback can fire repeatedly on relayout.
-  late final Future<Uint8List> _bytes = _fetchBytes(widget.item.url!);
+  Future<Uint8List>? _bytes;
   bool _failed = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bytes ??= _fetchBytes(context, widget.item.url!);
+  }
 
   @override
   Widget build(BuildContext context) {
     if (_failed) return _FileCard(item: widget.item);
     return PdfPreview(
-      build: (_) => _bytes,
+      build: (_) => _bytes!,
       useActions: false,
       canChangePageFormat: false,
       canChangeOrientation: false,
@@ -471,8 +506,14 @@ class _TextPage extends StatefulWidget {
 }
 
 class _TextPageState extends State<_TextPage> {
-  late final Future<String> _text = _load();
+  Future<String>? _text;
   final _scroll = ScrollController();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _text ??= _load();
+  }
 
   @override
   void dispose() {
@@ -481,7 +522,7 @@ class _TextPageState extends State<_TextPage> {
   }
 
   Future<String> _load() async {
-    final bytes = await _fetchBytes(widget.item.url!);
+    final bytes = await _fetchBytes(context, widget.item.url!);
     // allowMalformed so a stray byte doesn't blow up the whole preview.
     final raw = utf8.decode(bytes, allowMalformed: true);
     return _maybePrettyJson(widget.item, raw);

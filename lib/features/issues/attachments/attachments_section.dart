@@ -12,6 +12,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/util/file_download.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/api/hinata_repository.dart';
 import '../../../core/api/sse.dart';
 import '../../../core/blocs/app_config_bloc.dart';
@@ -71,7 +72,6 @@ class AttachmentsSection extends StatefulWidget {
 class _AttachmentsSectionState extends State<AttachmentsSection> {
   late List<IssueAttachment> _server = List.of(widget.initial);
   final List<_Upload> _uploads = [];
-  final Map<String, Future<String?>> _urlCache = {};
 
   bool _dragging = false;
   bool _disposed = false;
@@ -158,7 +158,6 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
         if (id != null && _server.any((a) => a.id == id)) {
           setState(() {
             _server = _server.where((a) => a.id != id).toList();
-            _urlCache.remove(id);
           });
           widget.onChanged?.call();
         }
@@ -387,13 +386,11 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
   }
 
   // ── Actions ───────────────────────────────────────────────────────────────
-  Future<String?> _resolveUrl(String id) => _urlCache.putIfAbsent(id, () async {
-    try {
-      return await _repo.attachmentDownloadUrl(widget.issueId, id);
-    } catch (_) {
-      return null;
-    }
-  });
+  /// Relative API path that streams an attachment's bytes through the
+  /// authenticated server endpoint (used for download + inline previews). The
+  /// object store is internal-only, so the client never gets a storage URL.
+  String _downloadPath(String id) =>
+      '/api/v1/issues/${widget.issueId}/attachments/$id/download';
 
   Future<void> _download(IssueAttachment a) async {
     // Stream the bytes through the authenticated server endpoint (the object
@@ -434,7 +431,6 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
     widget.onChanged?.call();
     try {
       await _repo.deleteAttachment(widget.issueId, a.id);
-      _urlCache.remove(a.id);
     } on ApiFailure catch (e) {
       if (_disposed) return;
       setState(() => _server = prev);
@@ -448,11 +444,8 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
       final images = _server
           .where((a) => kindIsImage(kindFromName(a.fileName, a.contentType)))
           .toList();
-      final urls = await Future.wait(images.map((a) => _resolveUrl(a.id)));
-      if (!mounted) return;
       final items = [
-        for (var i = 0; i < images.length; i++)
-          _toLightboxItem(images[i], urls[i]),
+        for (final a in images) _toLightboxItem(a, _downloadPath(a.id)),
       ];
       final idx = images.indexWhere((a) => a.id == tapped.id);
       await showAttachmentLightbox(
@@ -462,13 +455,12 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
         onDownload: (it) => _downloadById(it.id, it.name),
       );
     } else {
-      // PDFs and text/JSON/CSV preview inline too — resolve the presigned URL
-      // so the lightbox can fetch the content. Other types just show a card.
+      // PDFs and text/JSON/CSV preview inline too — pass the download path so
+      // the lightbox can fetch the content. Other types just show a card.
       final previewable =
           kindIsPdf(kind) ||
           isTextPreviewable(tapped.fileName, tapped.contentType);
-      final url = previewable ? await _resolveUrl(tapped.id) : null;
-      if (!mounted) return;
+      final url = previewable ? _downloadPath(tapped.id) : null;
       await showAttachmentLightbox(
         context,
         items: [_toLightboxItem(tapped, url)],
@@ -672,7 +664,7 @@ class _AttachmentsSectionState extends State<AttachmentsSection> {
         return _AttachmentTile.done(
           attachment: a,
           subtitle: _subtitle(a),
-          resolveImageUrl: _resolveUrl,
+          imagePath: _downloadPath,
           onOpen: () => _open(a),
           onDownload: () => _download(a),
           onDelete: () => _delete(a),
@@ -690,7 +682,7 @@ class _AttachmentTile extends StatefulWidget {
     required this.onCancel,
   }) : attachment = null,
        subtitle = '',
-       resolveImageUrl = null,
+       imagePath = null,
        onOpen = null,
        onDownload = null,
        onDelete = null;
@@ -698,7 +690,7 @@ class _AttachmentTile extends StatefulWidget {
   const _AttachmentTile.done({
     required this.attachment,
     required this.subtitle,
-    required this.resolveImageUrl,
+    required this.imagePath,
     required this.onOpen,
     required this.onDownload,
     required this.onDelete,
@@ -709,7 +701,9 @@ class _AttachmentTile extends StatefulWidget {
   final _Upload? upload;
   final IssueAttachment? attachment;
   final String subtitle;
-  final Future<String?> Function(String id)? resolveImageUrl;
+  /// Relative API download path for [attachment]'s bytes (image thumbnails are
+  /// fetched authenticated from it). Null for the uploading tile.
+  final String Function(String id)? imagePath;
   final VoidCallback? onOpen;
   final VoidCallback? onDownload;
   final VoidCallback? onDelete;
@@ -854,23 +848,20 @@ class _AttachmentTileState extends State<_AttachmentTile> {
         ),
       ),
     );
-    if (att == null || !kindIsImage(kind) || widget.resolveImageUrl == null) {
+    if (att == null || !kindIsImage(kind) || widget.imagePath == null) {
       return glyph;
     }
-    return FutureBuilder<String?>(
-      future: widget.resolveImageUrl!(att.id),
-      builder: (context, snap) {
-        final url = snap.data;
-        if (url == null) return glyph;
-        return Image.network(
-          url,
-          fit: BoxFit.cover,
-          gaplessPlayback: true,
-          errorBuilder: (_, _, _) => glyph,
-          loadingBuilder: (_, child, progress) =>
-              progress == null ? child : glyph,
-        );
-      },
+    // Thumbnails are fetched authenticated from the server's /download endpoint
+    // (the object store is internal-only); falls back to the type glyph on
+    // load/decode failure.
+    final path = widget.imagePath!(att.id);
+    return ApiImageAvatar(
+      key: ValueKey(path),
+      path: path,
+      api: context.read<ApiClient>(),
+      placeholder: glyph,
+      builder: (img) =>
+          img == null ? glyph : Image(image: img, fit: BoxFit.cover),
     );
   }
 

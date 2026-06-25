@@ -30,6 +30,8 @@ import '../sprint/modals/estimate_dialog.dart' show showStoryPointsDialog;
 import '../sprint/modals/glass_modal.dart'
     show
         glassWoltSurface,
+        kGlassPopoverBreakpoint,
+        showGlassAnchoredPopover,
         showGlassBottomSheet,
         showGlassDatePicker,
         showGlassModal,
@@ -1604,29 +1606,45 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   // Anchor unused: the people picker is a taller search list, kept as a sheet.
   Future<void> _pickAssignee(Rect anchor) async {
     final me = context.read<AuthBloc>().state.user;
+    // Tablet/desktop: an anchored, searchable popover beside the field (like the
+    // board filter). Phone: the bottom sheet. Both reuse _PeoplePicker.
+    final wide = MediaQuery.sizeOf(context).width >= kGlassPopoverBreakpoint;
+    Widget picker(BuildContext sheetContext) => _PeoplePicker(
+      anchored: wide,
+      users: _users,
+      meId: me?.id,
+      onUnassign: () {
+        Navigator.of(sheetContext).pop();
+        // Empty string clears the assignee (PATCH ignores null).
+        _patch({'assigneeId': ''});
+      },
+      onAssignMe: me == null
+          ? null
+          : () {
+              Navigator.of(sheetContext).pop();
+              _patch({'assigneeId': me.id});
+            },
+      onSelect: (id) {
+        Navigator.of(sheetContext).pop();
+        _patch({'assigneeId': id});
+      },
+    );
+
+    if (wide) {
+      await showGlassAnchoredPopover<void>(
+        context,
+        anchorRect: anchor,
+        width: 340,
+        maxHeight: 520,
+        builder: picker,
+      );
+      return;
+    }
     // _PeoplePicker draws its own grab handle, so suppress the helper's.
     await showGlassBottomSheet<void>(
       context,
       showHandle: false,
-      builder: (sheetContext) => _PeoplePicker(
-        users: _users,
-        meId: me?.id,
-        onUnassign: () {
-          Navigator.of(sheetContext).pop();
-          // Empty string clears the assignee (PATCH ignores null).
-          _patch({'assigneeId': ''});
-        },
-        onAssignMe: me == null
-            ? null
-            : () {
-                Navigator.of(sheetContext).pop();
-                _patch({'assigneeId': me.id});
-              },
-        onSelect: (id) {
-          Navigator.of(sheetContext).pop();
-          _patch({'assigneeId': id});
-        },
-      ),
+      builder: picker,
     );
   }
 
@@ -2763,31 +2781,45 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
   }
 
   // Reuses the detail view's searchable people picker so assigning while
-  // creating an issue scales past a handful of users (anchor unused: it's a
-  // taller search sheet, not an anchored dropdown).
+  // creating an issue scales past a handful of users: an anchored popover beside
+  // the field on tablet/desktop, the bottom sheet on phones.
   Future<void> _pickAssignee(Rect anchor) async {
     final me = context.read<AuthBloc>().state.user;
+    final wide = MediaQuery.sizeOf(context).width >= kGlassPopoverBreakpoint;
+    Widget picker(BuildContext sheetContext) => _PeoplePicker(
+      anchored: wide,
+      users: _users,
+      meId: me?.id,
+      onUnassign: () {
+        Navigator.of(sheetContext).pop();
+        setState(() => _assigneeId = null);
+      },
+      onAssignMe: me == null
+          ? null
+          : () {
+              Navigator.of(sheetContext).pop();
+              setState(() => _assigneeId = me.id);
+            },
+      onSelect: (id) {
+        Navigator.of(sheetContext).pop();
+        setState(() => _assigneeId = id);
+      },
+    );
+
+    if (wide) {
+      await showGlassAnchoredPopover<void>(
+        context,
+        anchorRect: anchor,
+        width: 340,
+        maxHeight: 520,
+        builder: picker,
+      );
+      return;
+    }
     await showGlassBottomSheet<void>(
       context,
       showHandle: false,
-      builder: (sheetContext) => _PeoplePicker(
-        users: _users,
-        meId: me?.id,
-        onUnassign: () {
-          Navigator.of(sheetContext).pop();
-          setState(() => _assigneeId = null);
-        },
-        onAssignMe: me == null
-            ? null
-            : () {
-                Navigator.of(sheetContext).pop();
-                setState(() => _assigneeId = me.id);
-              },
-        onSelect: (id) {
-          Navigator.of(sheetContext).pop();
-          setState(() => _assigneeId = id);
-        },
-      ),
+      builder: picker,
     );
   }
 
@@ -3421,6 +3453,7 @@ class _PeoplePicker extends StatefulWidget {
     required this.onSelect,
     required this.onUnassign,
     required this.onAssignMe,
+    this.anchored = false,
   });
 
   final List<DirectoryUser> users;
@@ -3428,6 +3461,11 @@ class _PeoplePicker extends StatefulWidget {
   final ValueChanged<String> onSelect;
   final VoidCallback onUnassign;
   final VoidCallback? onAssignMe;
+
+  /// When `true`, the picker renders for a wide-screen anchored popover: no grab
+  /// handle and a height that flexes to its host's constraints instead of the
+  /// fixed tall sheet used on phones.
+  final bool anchored;
 
   @override
   State<_PeoplePicker> createState() => _PeoplePickerState();
@@ -3448,6 +3486,112 @@ class _PeoplePickerState extends State<_PeoplePicker> {
                     u.username.toLowerCase().contains(q),
               )
               .toList();
+    final searchField = Padding(
+      padding: widget.anchored
+          ? const EdgeInsets.fromLTRB(12, 12, 12, 8)
+          : const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      child: TextField(
+        autofocus: true,
+        onChanged: (v) => setState(() => _query = v),
+        decoration: InputDecoration(
+          isDense: true,
+          prefixIcon: const Icon(LucideIcons.search, size: 18),
+          hintText: context.t('issues.searchPeople'),
+          filled: true,
+          fillColor: AppColors.surfaceMuted,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            borderSide: BorderSide(color: AppColors.hairline),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            borderSide: BorderSide(color: AppColors.hairline),
+          ),
+        ),
+      ),
+    );
+
+    final list = ListView(
+      padding: EdgeInsets.only(bottom: widget.anchored ? 6 : 16),
+      shrinkWrap: widget.anchored,
+      children: [
+        if (widget.onAssignMe != null && q.isEmpty)
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: AppColors.accentSoft,
+              child: Icon(
+                LucideIcons.user,
+                color: AppColors.accentStrong,
+                size: 18,
+              ),
+            ),
+            title: Text(
+              context.t('issues.assignToMe'),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            onTap: widget.onAssignMe,
+          ),
+        if (q.isEmpty)
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: AppColors.canvas2,
+              child: Icon(LucideIcons.ban, color: AppColors.inkSoft, size: 18),
+            ),
+            title: Text(context.t('issues.unassign')),
+            onTap: widget.onUnassign,
+          ),
+        if (q.isEmpty) const Divider(height: 1),
+        for (final u in filtered)
+          ListTile(
+            leading: HiveAvatar(
+              name: u.displayName,
+              imageUrl: u.avatarUrl,
+              size: 34,
+            ),
+            title: Text(
+              u.displayName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text(
+              '@${u.username}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: u.id == widget.meId
+                ? const Icon(
+                    LucideIcons.star,
+                    size: 16,
+                    color: AppColors.accent,
+                  )
+                : null,
+            onTap: () => widget.onSelect(u.id),
+          ),
+        if (filtered.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Center(
+              child: Text(
+                context.t('issues.empty'),
+                style: TextStyle(color: AppColors.inkFaint),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    // Anchored popover: no grab handle, and the list flexes to the host panel's
+    // constraints (the popover already sizes/clamps itself on-screen).
+    if (widget.anchored) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          searchField,
+          Flexible(child: list),
+        ],
+      );
+    }
+
     // The glass bottom-sheet wrapper already rides above the keyboard, so this
     // picker only needs to size itself; no extra viewInsets padding.
     return SizedBox(
@@ -3463,101 +3607,8 @@ class _PeoplePickerState extends State<_PeoplePicker> {
               borderRadius: BorderRadius.circular(99),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: TextField(
-              autofocus: true,
-              onChanged: (v) => setState(() => _query = v),
-              decoration: InputDecoration(
-                isDense: true,
-                prefixIcon: const Icon(LucideIcons.search, size: 18),
-                hintText: context.t('issues.searchPeople'),
-                filled: true,
-                fillColor: AppColors.surfaceMuted,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                  borderSide: BorderSide(color: AppColors.hairline),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                  borderSide: BorderSide(color: AppColors.hairline),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 16),
-              children: [
-                if (widget.onAssignMe != null && q.isEmpty)
-                  ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: AppColors.accentSoft,
-                      child: Icon(
-                        LucideIcons.user,
-                        color: AppColors.accentStrong,
-                        size: 18,
-                      ),
-                    ),
-                    title: Text(
-                      context.t('issues.assignToMe'),
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    onTap: widget.onAssignMe,
-                  ),
-                if (q.isEmpty)
-                  ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: AppColors.canvas2,
-                      child: Icon(
-                        LucideIcons.ban,
-                        color: AppColors.inkSoft,
-                        size: 18,
-                      ),
-                    ),
-                    title: Text(context.t('issues.unassign')),
-                    onTap: widget.onUnassign,
-                  ),
-                if (q.isEmpty) const Divider(height: 1),
-                for (final u in filtered)
-                  ListTile(
-                    leading: HiveAvatar(
-                      name: u.displayName,
-                      imageUrl: u.avatarUrl,
-                      size: 34,
-                    ),
-                    title: Text(
-                      u.displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(
-                      '@${u.username}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: u.id == widget.meId
-                        ? const Icon(
-                            LucideIcons.star,
-                            size: 16,
-                            color: AppColors.accent,
-                          )
-                        : null,
-                    onTap: () => widget.onSelect(u.id),
-                  ),
-                if (filtered.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Center(
-                      child: Text(
-                        context.t('issues.empty'),
-                        style: TextStyle(color: AppColors.inkFaint),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          searchField,
+          Expanded(child: list),
         ],
       ),
     );

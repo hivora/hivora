@@ -257,9 +257,11 @@ class _GlassBottomSheet extends StatelessWidget {
   }
 }
 
-/// Width at/above which option pickers anchor as a dropdown popover instead of
-/// sliding up as a bottom sheet (matches the issue sheet's dialog breakpoint).
-const double _kOptionsPopoverBreakpoint = 760;
+/// Width at/above which glass pickers anchor as a dropdown popover (tablet /
+/// desktop) instead of sliding up as a bottom sheet (phone). Shared by
+/// [showGlassOptions] and callers of [showGlassAnchoredPopover] so the
+/// sheet-vs-popover decision stays consistent across field editors.
+const double kGlassPopoverBreakpoint = 760;
 
 /// A single choice for [showGlassOptions]: a [value] and the [child] widget that
 /// renders it (a status dot, a priority flag, a plain label…).
@@ -279,23 +281,69 @@ Future<T?> showGlassOptions<T>(
   required List<GlassOption<T>> options,
   Rect? anchorRect,
 }) {
-  final wide = MediaQuery.sizeOf(context).width >= _kOptionsPopoverBreakpoint;
+  final wide = MediaQuery.sizeOf(context).width >= kGlassPopoverBreakpoint;
   if (wide && anchorRect != null) {
-    return showGeneralDialog<T>(
-      context: context,
-      useRootNavigator: true,
-      barrierDismissible: true,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (_, _, _) =>
-          _AnchoredOptions<T>(anchorRect: anchorRect, options: options),
-      transitionBuilder: (_, _, _, child) => child,
+    return showGlassAnchoredPopover<T>(
+      context,
+      anchorRect: anchorRect,
+      builder: (popoverContext) => ListView(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        shrinkWrap: true,
+        children: [
+          for (final o in options)
+            InkWell(
+              onTap: () => Navigator.of(popoverContext).pop(o.value),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 11,
+                ),
+                child: Align(alignment: Alignment.centerLeft, child: o.child),
+              ),
+            ),
+        ],
+      ),
     );
   }
   return showGlassBottomSheet<T>(
     context,
     builder: (sheetContext) => _OptionsList<T>(title: title, options: options),
+  );
+}
+
+/// Opens [builder] as a Liquid-Glass dropdown popover anchored beside
+/// [anchorRect] — the wide-screen counterpart to [showGlassBottomSheet] for
+/// inline field editors that need richer content than [showGlassOptions]'s flat
+/// list (e.g. a searchable people picker). Placement mirrors [showGlassOptions]:
+/// below the anchor, flipping above when space is tight and clamped on-screen.
+///
+/// The popover sizes itself between [minHeight] and [maxHeight]; [builder]'s
+/// content should be self-scrolling (a `Column` with a `Flexible` list, or a
+/// `ListView`). Callers decide *when* to use this vs. the bottom sheet — it does
+/// not branch on width itself. Resolves to the value popped from the route.
+Future<T?> showGlassAnchoredPopover<T>(
+  BuildContext context, {
+  required Rect anchorRect,
+  required WidgetBuilder builder,
+  double width = 300,
+  double minHeight = 140,
+  double maxHeight = 460,
+}) {
+  return showGeneralDialog<T>(
+    context: context,
+    useRootNavigator: true,
+    barrierDismissible: true,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    barrierColor: Colors.transparent,
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (_, _, _) => _AnchoredPanel(
+      anchorRect: anchorRect,
+      width: width,
+      minHeight: minHeight,
+      maxHeightCap: maxHeight,
+      child: Builder(builder: builder),
+    ),
+    transitionBuilder: (_, _, _, child) => child,
   );
 }
 
@@ -334,19 +382,28 @@ class _OptionsList<T> extends StatelessWidget {
   }
 }
 
-/// Wide-screen body for [showGlassOptions]: a glass dropdown popover anchored to
-/// [anchorRect], placed below the field (flips above when space is tight) and
-/// clamped on-screen — mirrors the placement logic of `GlassPopupMenu`.
-class _AnchoredOptions<T> extends StatelessWidget {
-  const _AnchoredOptions({required this.anchorRect, required this.options});
+/// Wide-screen body for anchored glass popovers ([showGlassOptions] and
+/// [showGlassAnchoredPopover]): a glass panel anchored to [anchorRect], placed
+/// below the field (flips above when space is tight) and clamped on-screen —
+/// mirrors the placement logic of `GlassPopupMenu`. Hosts an arbitrary [child].
+class _AnchoredPanel extends StatelessWidget {
+  const _AnchoredPanel({
+    required this.anchorRect,
+    required this.child,
+    this.width = 300,
+    this.minHeight = 140,
+    this.maxHeightCap = 460,
+  });
 
   final Rect anchorRect;
-  final List<GlassOption<T>> options;
+  final Widget child;
+  final double width;
+  final double minHeight;
+  final double maxHeightCap;
 
   static const double _margin = 12;
   static const double _radius = 20;
   static const double _gap = 6;
-  static const double _width = 300;
 
   @override
   Widget build(BuildContext context) {
@@ -357,7 +414,7 @@ class _AnchoredOptions<T> extends StatelessWidget {
     final anim = ModalRoute.of(context)!.animation!;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
-    final panelWidth = math.min(_width, size.width - _margin * 2);
+    final panelWidth = math.min(width, size.width - _margin * 2);
     final double left = anchorRect.left
         .clamp(_margin, math.max(_margin, size.width - panelWidth - _margin))
         .toDouble();
@@ -365,7 +422,10 @@ class _AnchoredOptions<T> extends StatelessWidget {
     final roomBelow = size.height - belowTop - _margin - pad.bottom;
     final roomAbove = anchorRect.top - _gap - _margin - pad.top;
     final placeAbove = roomBelow < 220 && roomAbove > roomBelow;
-    final maxHeight = (placeAbove ? roomAbove : roomBelow).clamp(140.0, 460.0);
+    final maxHeight = (placeAbove ? roomAbove : roomBelow).clamp(
+      minHeight,
+      maxHeightCap,
+    );
     final top = placeAbove ? null : belowTop;
     final bottom = placeAbove ? (size.height - anchorRect.top + _gap) : null;
 
@@ -383,29 +443,7 @@ class _AnchoredOptions<T> extends StatelessWidget {
             glassFill: tokens.glassFill,
             dark: dark,
           ),
-          child: Material(
-            type: MaterialType.transparency,
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              shrinkWrap: true,
-              children: [
-                for (final o in options)
-                  InkWell(
-                    onTap: () => Navigator.of(context).pop(o.value),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 11,
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: o.child,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          child: Material(type: MaterialType.transparency, child: child),
         ),
       ),
     );
