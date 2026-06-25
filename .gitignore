@@ -67,3 +67,4 @@ docs/screenshots/raw/
 *.mobileprovision
 *.provisionprofile
 .env.fastlane
+docs/screenshots/ios/raw/**

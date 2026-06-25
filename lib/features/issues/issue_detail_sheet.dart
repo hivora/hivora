@@ -235,6 +235,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   Map<String, String> get _names => {
     for (final u in _users) u.id: u.displayName,
   };
+  Map<String, String> get _avatars => {
+    for (final u in _users)
+      if (u.avatarUrl != null && u.avatarUrl!.isNotEmpty) u.id: u.avatarUrl!,
+  };
   Map<String, String> get _sprintNames => {
     for (final s in _sprints) s.id: s.name,
   };
@@ -1447,6 +1451,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     Widget commentTile(IssueComment c) => _CommentTile(
       comment: c,
       authorName: _names[c.authorId] ?? c.authorId,
+      authorAvatarUrl: _avatars[c.authorId],
       canManage: me != null && c.authorId == me.id,
       onEdit: (text) => _editComment(c, text),
       onDelete: () => _deleteComment(c),
@@ -1624,6 +1629,7 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     var didDelete = false;
     final result = await showLabelPicker(
       context,
+      anchor: anchor,
       available: available,
       selected: issue.tags.where((l) => !_deletedLabels.contains(l)).toList(),
       onDelete: (l) async {
@@ -2972,6 +2978,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     }.where((l) => !_deletedLabels.contains(l)).toList();
     final result = await showLabelPicker(
       context,
+      anchor: anchor,
       available: available,
       selected: _labels.where((l) => !_deletedLabels.contains(l)).toList(),
       onDelete: pid == null
@@ -3322,6 +3329,7 @@ class _CommentTile extends StatefulWidget {
   const _CommentTile({
     required this.comment,
     required this.authorName,
+    this.authorAvatarUrl,
     this.canManage = false,
     this.onEdit,
     this.onDelete,
@@ -3329,6 +3337,7 @@ class _CommentTile extends StatefulWidget {
 
   final IssueComment comment;
   final String authorName;
+  final String? authorAvatarUrl;
 
   /// Whether the current user owns this comment and may edit/delete it.
   final bool canManage;
@@ -3383,7 +3392,11 @@ class _CommentTileState extends State<_CommentTile> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          HiveAvatar(name: widget.authorName, size: 30),
+          HiveAvatar(
+            name: widget.authorName,
+            imageUrl: widget.authorAvatarUrl,
+            size: 30,
+          ),
           const SizedBox(width: 11),
           Expanded(
             child: Column(

@@ -5,26 +5,41 @@ import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../sprint/modals/glass_modal.dart'
-    show showGlassBottomSheet, showGlassConfirm;
+    show
+        kGlassPopoverBreakpoint,
+        showGlassAnchoredPopover,
+        showGlassBottomSheet,
+        showGlassConfirm;
 
-/// Multi-select label ("Stichwort") picker shown as a bottom sheet. Lets the
-/// user toggle existing project labels, filter by typing, create a new label
-/// on the fly, and remove assigned ones. Returns the new selection (in
-/// vocabulary order), or null if dismissed without confirming.
+/// Multi-select label ("Stichwort") picker. On tablet/desktop it opens as an
+/// anchored popover beside the field (like the other detail pickers); on phone
+/// it falls back to a bottom sheet. Lets the user toggle existing project
+/// labels, filter by typing, create a new label on the fly, and remove assigned
+/// ones. Returns the new selection (in vocabulary order), or null if dismissed
+/// without confirming.
 Future<List<String>?> showLabelPicker(
   BuildContext context, {
   required List<String> available,
   required List<String> selected,
   Future<void> Function(String label)? onDelete,
+  Rect? anchor,
 }) {
-  return showGlassBottomSheet<List<String>>(
-    context,
-    builder: (sheetContext) => _LabelPickerSheet(
-      available: available,
-      selected: selected,
-      onDelete: onDelete,
-    ),
+  Widget builder(BuildContext sheetContext) => _LabelPickerSheet(
+    available: available,
+    selected: selected,
+    onDelete: onDelete,
   );
+  final wide = MediaQuery.sizeOf(context).width >= kGlassPopoverBreakpoint;
+  if (wide && anchor != null) {
+    return showGlassAnchoredPopover<List<String>>(
+      context,
+      anchorRect: anchor,
+      width: 340,
+      maxHeight: 520,
+      builder: builder,
+    );
+  }
+  return showGlassBottomSheet<List<String>>(context, builder: builder);
 }
 
 class _LabelPickerSheet extends StatefulWidget {
