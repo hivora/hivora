@@ -11,7 +11,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../deletion/delete_flows.dart';
 import '../sprint/modals/glass_modal.dart';
-import 'create_board_dialog.dart' show ProjectChecklist;
+import 'create_board_dialog.dart' show ProjectPickerField;
 
 /// Opens the board management menu (Rename · Delete) as an anchored popover at
 /// the trigger and runs the chosen action. Shared by the board overview and the
@@ -348,7 +348,7 @@ class _RenameBoardBodyState extends State<_RenameBoardBody> {
                 if (_multiProject) ...[
                   const SizedBox(height: 16),
                   GlassField(
-                    label: context.t('board.projects'),
+                    label: context.t('board.linkedProjects'),
                     child: _projects == null
                         ? const Padding(
                             padding: EdgeInsets.symmetric(vertical: 12),
@@ -359,7 +359,7 @@ class _RenameBoardBodyState extends State<_RenameBoardBody> {
                                     child:
                                         CircularProgressIndicator(strokeWidth: 2))),
                           )
-                        : ProjectChecklist(
+                        : ProjectPickerField(
                             projects: _projects!,
                             selected: _selected,
                             onChanged: () => setState(() {}),

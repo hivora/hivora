@@ -266,6 +266,7 @@
     "status": "Status",
     "assignee": "Zugewiesene Person",
     "assignToMe": "Mir zuweisen",
+    "assignees": "Zugewiesene Personen",
     "unassign": "Zuweisung entfernen",
     "clearAssignees": "Alle entfernen",
     "unassigned": "Nicht zugewiesen",
@@ -441,6 +442,10 @@
     "boardSettings": "Board-Einstellungen",
     "settingsTitle": "Board-Einstellungen",
     "settingsSubtitle": "Board umbenennen und festlegen, welche Projekte es umfasst.",
+    "linkedProjects": "Projekte",
+    "chooseProjects": "Projekte auswählen",
+    "projectsSelected": "{{count}} ausgewählt",
+    "searchProjects": "Projekte suchen",
     "manageBoard": "Board-Optionen"
   },
   "gantt": {

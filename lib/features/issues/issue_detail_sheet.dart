@@ -859,11 +859,22 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   /// "Child issues" on an epic, "Sub-tasks" on a standard issue, nothing on a
   /// sub-task. Lists the direct children with a completion bar and an add
   /// affordance (a full create form for epics, an inline quick-add for tasks).
+  /// Whether a child counts as "done". Authoritative on the project's resolved
+  /// states — the issue's `resolvedAt` flag can go stale after a workflow change,
+  /// which wrongly struck a still-open sub-task through.
+  bool _childDone(Issue child) {
+    final resolved = _project?.resolvedStates;
+    if (resolved != null && resolved.isNotEmpty) {
+      return resolved.contains(child.state);
+    }
+    return child.resolved;
+  }
+
   Widget? _hierarchyCard(Issue issue) {
     if (issue.isSubtask) return null;
     final isEpic = issue.isEpic;
     final children = _hierarchy.children;
-    final done = children.where((c) => c.resolved).length;
+    final done = children.where(_childDone).length;
     return SoftCard(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
       child: Column(
@@ -935,11 +946,11 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                 child: Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: Icon(
-                    child.resolved
+                    _childDone(child)
                         ? LucideIcons.checkCheck
                         : LucideIcons.circle,
                     size: 17,
-                    color: child.resolved
+                    color: _childDone(child)
                         ? AppColors.success
                         : AppColors.inkFaint,
                   ),
@@ -958,10 +969,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13,
-                  decoration: child.resolved
+                  decoration: _childDone(child)
                       ? TextDecoration.lineThrough
                       : null,
-                  color: child.resolved ? AppColors.inkFaint : AppColors.ink,
+                  color: _childDone(child) ? AppColors.inkFaint : AppColors.ink,
                 ),
               ),
             ),
@@ -1069,20 +1080,27 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           ),
           // Assignee(s) + "assign to me"
           _DetailRow(
-            label: context.t('issues.assignee'),
+            label: context.t(issue.assigneeIds.length > 1
+                ? 'issues.assignees'
+                : 'issues.assignee'),
             onTap: _pickAssignee,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (issue.assigneeIds.isEmpty)
                   _person(null, fallback: context.t('issues.unassigned'))
+                else if (issue.assigneeIds.length == 1)
+                  _person(_names[issue.assigneeIds.first],
+                      fallback: context.t('issues.unassigned'))
                 else
-                  for (final aid in issue.assigneeIds)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      child: _person(_names[aid],
-                          fallback: context.t('issues.unassigned')),
-                    ),
+                  // Multiple assignees: a compact stacked avatar group (matches
+                  // the board/cards); the full list is in the picker on tap.
+                  HiveAvatarStack(
+                    names: [
+                      for (final aid in issue.assigneeIds) _names[aid] ?? '?',
+                    ],
+                    size: 28,
+                  ),
                 if (me != null && !issue.assigneeIds.contains(me.id)) ...[
                   const SizedBox(height: 2),
                   GestureDetector(
@@ -2645,21 +2663,21 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
                   ),
           ),
           _DetailRow(
-            label: context.t('issues.assignee'),
+            label: context.t(_assigneeIds.length > 1
+                ? 'issues.assignees'
+                : 'issues.assignee'),
             onTap: _pickAssignee,
             child: _assigneeIds.isEmpty
                 ? _person(null, fallback: context.t('issues.unassigned'))
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (final aid in _assigneeIds)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 2),
-                          child: _person(_names[aid],
-                              fallback: context.t('issues.unassigned')),
-                        ),
-                    ],
-                  ),
+                : _assigneeIds.length == 1
+                    ? _person(_names[_assigneeIds.first],
+                        fallback: context.t('issues.unassigned'))
+                    : HiveAvatarStack(
+                        names: [
+                          for (final aid in _assigneeIds) _names[aid] ?? '?',
+                        ],
+                        size: 28,
+                      ),
           ),
           _DetailRow(
             label: context.t('issues.priority'),

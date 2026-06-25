@@ -266,6 +266,7 @@
     "status": "Status",
     "assignee": "Assignee",
     "assignToMe": "Assign to me",
+    "assignees": "Assignees",
     "unassign": "Unassign",
     "clearAssignees": "Clear all",
     "unassigned": "Unassigned",
@@ -441,6 +442,10 @@
     "boardSettings": "Board settings",
     "settingsTitle": "Board settings",
     "settingsSubtitle": "Rename the board and choose which projects it spans.",
+    "linkedProjects": "Projects",
+    "chooseProjects": "Select projects",
+    "projectsSelected": "{{count}} selected",
+    "searchProjects": "Search projects",
     "manageBoard": "Board options"
   },
   "gantt": {

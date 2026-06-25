@@ -137,9 +137,9 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
                 const SizedBox(height: 16),
                 GlassField(
                   label: context.t(
-                      _multiProject ? 'board.projects' : 'board.project'),
+                      _multiProject ? 'board.linkedProjects' : 'board.project'),
                   child: _multiProject
-                      ? ProjectChecklist(
+                      ? ProjectPickerField(
                           projects: widget.projects,
                           selected: _projectIds,
                           onChanged: () => setState(() {}),
@@ -200,10 +200,11 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
   }
 }
 
-/// Multi-select checklist of projects. Mutates [selected] in place (keeping at
-/// least one selected) and notifies via [onChanged].
-class ProjectChecklist extends StatelessWidget {
-  const ProjectChecklist({
+/// A tappable field that summarises the chosen projects and opens a searchable
+/// multi-select picker (consistent with the assignee people-picker). Mutates
+/// [selected] in place (always keeping at least one) and notifies [onChanged].
+class ProjectPickerField extends StatelessWidget {
+  const ProjectPickerField({
     super.key,
     required this.projects,
     required this.selected,
@@ -216,52 +217,187 @@ class ProjectChecklist extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
-        border: Border.all(color: AppColors.hairline),
+    final chosen = projects.where((p) => selected.contains(p.id)).toList();
+    final summary = chosen.isEmpty
+        ? context.t('board.chooseProjects')
+        : chosen.map((p) => p.key).join(', ');
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+      onTap: () => showProjectPicker(
+        context,
+        projects: projects,
+        selected: selected,
+        onChanged: onChanged,
       ),
-      child: Column(
-        children: [
-          for (final p in projects)
-            InkWell(
-              onTap: () {
-                final on = selected.contains(p.id);
-                // Keep at least one project selected.
-                if (on && selected.length == 1) return;
-                if (on) {
-                  selected.remove(p.id);
-                } else {
-                  selected.add(p.id);
-                }
-                onChanged();
-              },
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-                child: Row(
-                  children: [
-                    Icon(
-                      selected.contains(p.id)
-                          ? LucideIcons.checkSquare
-                          : LucideIcons.square,
-                      size: 20,
-                      color: selected.contains(p.id)
-                          ? AppColors.accent
-                          : AppColors.inkFaint,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text('${p.key} – ${p.name}',
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
-                  ],
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+          border: Border.all(color: AppColors.hairline),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                summary,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: chosen.isEmpty ? AppColors.inkFaint : AppColors.ink,
                 ),
               ),
             ),
-        ],
+            Icon(LucideIcons.chevronsUpDown, size: 18, color: AppColors.inkSoft),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+/// Shows the searchable multi-select project picker — anchored popover on wide
+/// screens, bottom sheet on phones — mirroring the assignee picker.
+Future<void> showProjectPicker(
+  BuildContext context, {
+  required List<Project> projects,
+  required List<String> selected,
+  required VoidCallback onChanged,
+}) async {
+  final wide = MediaQuery.sizeOf(context).width >= kGlassPopoverBreakpoint;
+  Widget picker(BuildContext _) => _ProjectSearchPicker(
+        projects: projects,
+        selected: selected,
+        onChanged: onChanged,
+        anchored: wide,
+      );
+  if (wide) {
+    final box = context.findRenderObject() as RenderBox?;
+    final overlay = Overlay.of(context, rootOverlay: true)
+        .context
+        .findRenderObject() as RenderBox?;
+    final anchor = (box != null && overlay != null)
+        ? (box.localToGlobal(Offset.zero, ancestor: overlay) & box.size)
+        : (Offset.zero & MediaQuery.sizeOf(context));
+    await showGlassAnchoredPopover<void>(
+      context,
+      anchorRect: anchor,
+      width: 340,
+      maxHeight: 460,
+      builder: picker,
+    );
+    return;
+  }
+  await showGlassBottomSheet<void>(context, showHandle: false, builder: picker);
+}
+
+/// Searchable, multi-select project list. Stays open and toggles selection
+/// (checkmarks); keeps at least one project selected.
+class _ProjectSearchPicker extends StatefulWidget {
+  const _ProjectSearchPicker({
+    required this.projects,
+    required this.selected,
+    required this.onChanged,
+    this.anchored = false,
+  });
+
+  final List<Project> projects;
+  final List<String> selected;
+  final VoidCallback onChanged;
+  final bool anchored;
+
+  @override
+  State<_ProjectSearchPicker> createState() => _ProjectSearchPickerState();
+}
+
+class _ProjectSearchPickerState extends State<_ProjectSearchPicker> {
+  String _query = '';
+
+  void _toggle(Project p) {
+    final on = widget.selected.contains(p.id);
+    if (on && widget.selected.length == 1) return; // keep at least one
+    setState(() {
+      if (on) {
+        widget.selected.remove(p.id);
+      } else {
+        widget.selected.add(p.id);
+      }
+    });
+    widget.onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _query.trim().toLowerCase();
+    final filtered = q.isEmpty
+        ? widget.projects
+        : widget.projects
+            .where((p) =>
+                p.name.toLowerCase().contains(q) ||
+                p.key.toLowerCase().contains(q))
+            .toList();
+    final searchField = Padding(
+      padding: widget.anchored
+          ? const EdgeInsets.fromLTRB(12, 12, 12, 8)
+          : const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      child: TextField(
+        autofocus: true,
+        onChanged: (v) => setState(() => _query = v),
+        decoration: InputDecoration(
+          isDense: true,
+          prefixIcon: const Icon(LucideIcons.search, size: 18),
+          hintText: context.t('board.searchProjects'),
+          filled: true,
+          fillColor: AppColors.surfaceMuted,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            borderSide: BorderSide(color: AppColors.hairline),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            borderSide: BorderSide(color: AppColors.hairline),
+          ),
+        ),
+      ),
+    );
+    final list = ListView(
+      padding: EdgeInsets.only(bottom: widget.anchored ? 6 : 16),
+      shrinkWrap: widget.anchored,
+      children: [
+        for (final p in filtered)
+          ListTile(
+            title: Text('${p.key} – ${p.name}',
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+            trailing: Icon(
+              widget.selected.contains(p.id)
+                  ? LucideIcons.checkSquare
+                  : LucideIcons.square,
+              size: 20,
+              color: widget.selected.contains(p.id)
+                  ? AppColors.accent
+                  : AppColors.inkFaint,
+            ),
+            onTap: () => _toggle(p),
+          ),
+        if (filtered.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Center(
+              child: Text(context.t('common.empty'),
+                  style: TextStyle(color: AppColors.inkFaint)),
+            ),
+          ),
+      ],
+    );
+    if (widget.anchored) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [searchField, Flexible(child: list)],
+      );
+    }
+    return Column(
+      children: [searchField, Expanded(child: list)],
     );
   }
 }
