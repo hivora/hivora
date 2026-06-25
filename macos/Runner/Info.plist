@@ -16,10 +16,28 @@
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<!-- Register the hinata:// custom scheme so Launch Services routes the SSO /
+	     invite / reset-password deep links to this app (handled by app_links). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.ahmadre.hinata</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>hinata</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleShortVersionString</key>
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- Let app_links be the single deep-link handler. Otherwise Flutter's
+	     built-in deep linking also routes the raw hinata://auth-callback URI
+	     into go_router, which can't match it ("Page Not Found"). -->
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSApplicationCategoryType</key>
