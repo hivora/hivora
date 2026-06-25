@@ -217,6 +217,7 @@ class Issue extends Equatable {
     this.type = 'TASK',
     this.priority = 'NORMAL',
     this.assigneeId,
+    this.assigneeIds = const [],
     this.reporterId,
     this.tags = const [],
     this.parentId,
@@ -241,7 +242,12 @@ class Issue extends Equatable {
   final String? description;
   final String type;
   final String priority;
+  /// Primary assignee (first of [assigneeIds]); the single-assignee read sites
+  /// (board swimlanes, avatars, filters) keep using this.
   final String? assigneeId;
+
+  /// All assignees. In single-assignee mode this holds 0 or 1 entries.
+  final List<String> assigneeIds;
   final String? reporterId;
   final List<String> tags;
   final String? parentId;
@@ -280,6 +286,7 @@ class Issue extends Equatable {
     type: json['type'] as String? ?? 'TASK',
     priority: json['priority'] as String? ?? 'NORMAL',
     assigneeId: json['assigneeId'] as String?,
+    assigneeIds: _assigneeIds(json),
     reporterId: json['reporterId'] as String?,
     tags: _stringList(json['tags']),
     parentId: json['parentId'] as String?,
@@ -303,6 +310,7 @@ class Issue extends Equatable {
   Issue copyWith({
     String? state,
     String? assigneeId,
+    List<String>? assigneeIds,
     Object? sprintId = _noChange,
     Object? storyPoints = _noChange,
     Object? parentId = _noChange,
@@ -317,6 +325,7 @@ class Issue extends Equatable {
     type: type,
     priority: priority,
     assigneeId: assigneeId ?? this.assigneeId,
+    assigneeIds: assigneeIds ?? this.assigneeIds,
     reporterId: reporterId,
     tags: tags,
     parentId: parentId == _noChange ? this.parentId : parentId as String?,
@@ -342,6 +351,7 @@ class Issue extends Equatable {
     title,
     state,
     assigneeId,
+    assigneeIds,
     priority,
     sprintId,
     storyPoints,
@@ -898,6 +908,15 @@ class AssigneeLoad extends Equatable {
 
 List<String> _stringList(dynamic value) =>
     ((value as List<dynamic>?) ?? const []).cast<String>();
+
+/// Reads the assignee list, falling back to the legacy single [assigneeId] so
+/// issues from an un-migrated server still surface their assignee.
+List<String> _assigneeIds(Map<String, dynamic> json) {
+  final list = _stringList(json['assigneeIds']);
+  if (list.isNotEmpty) return list;
+  final single = json['assigneeId'] as String?;
+  return (single != null && single.isNotEmpty) ? [single] : const [];
+}
 
 DateTime? _date(dynamic value) =>
     value is String && value.isNotEmpty ? DateTime.tryParse(value) : null;

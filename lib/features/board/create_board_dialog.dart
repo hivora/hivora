@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/hinata_repository.dart';
+import '../../core/blocs/app_config_bloc.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/work_models.dart';
 import '../../core/theme/app_colors.dart';
@@ -41,9 +42,14 @@ class _CreateBoardBody extends StatefulWidget {
 class _CreateBoardBodyState extends State<_CreateBoardBody> {
   final _name = TextEditingController();
   BoardType _type = BoardType.kanban;
-  late String _projectId = widget.initialProjectId ?? widget.projects.first.id;
+  late final List<String> _projectIds = [
+    widget.initialProjectId ?? widget.projects.first.id,
+  ];
   bool _saving = false;
   String? _error;
+
+  bool get _multiProject =>
+      context.read<AppConfigBloc>().state.meta?.multiProjectBoards ?? false;
 
   @override
   void initState() {
@@ -66,7 +72,7 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
     try {
       final board = await context.read<HinataRepository>().createBoard(
         _name.text.trim(),
-        [_projectId],
+        List<String>.from(_projectIds),
         type: _type,
       );
       if (mounted) Navigator.of(context).pop(board);
@@ -130,33 +136,45 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
                 ),
                 const SizedBox(height: 16),
                 GlassField(
-                  label: context.t('board.project'),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surface.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(
-                        AppTheme.radiusControl,
-                      ),
-                      border: Border.all(color: AppColors.hairline),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 13),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _projectId,
-                        isExpanded: true,
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.radiusControl,
+                  label: context.t(
+                      _multiProject ? 'board.projects' : 'board.project'),
+                  child: _multiProject
+                      ? ProjectChecklist(
+                          projects: widget.projects,
+                          selected: _projectIds,
+                          onChanged: () => setState(() {}),
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.surface.withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusControl,
+                            ),
+                            border: Border.all(color: AppColors.hairline),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 13),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _projectIds.first,
+                              isExpanded: true,
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.radiusControl,
+                              ),
+                              items: [
+                                for (final p in widget.projects)
+                                  DropdownMenuItem(
+                                      value: p.id, child: Text(p.name)),
+                              ],
+                              onChanged: (v) {
+                                if (v != null) {
+                                  setState(() => _projectIds
+                                    ..clear()
+                                    ..add(v));
+                                }
+                              },
+                            ),
+                          ),
                         ),
-                        items: [
-                          for (final p in widget.projects)
-                            DropdownMenuItem(value: p.id, child: Text(p.name)),
-                        ],
-                        onChanged: (v) {
-                          if (v != null) setState(() => _projectId = v);
-                        },
-                      ),
-                    ),
-                  ),
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
@@ -178,6 +196,72 @@ class _CreateBoardBodyState extends State<_CreateBoardBody> {
           onConfirm: _name.text.trim().isEmpty ? null : _save,
         ),
       ],
+    );
+  }
+}
+
+/// Multi-select checklist of projects. Mutates [selected] in place (keeping at
+/// least one selected) and notifies via [onChanged].
+class ProjectChecklist extends StatelessWidget {
+  const ProjectChecklist({
+    super.key,
+    required this.projects,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<Project> projects;
+  final List<String> selected;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(AppTheme.radiusControl),
+        border: Border.all(color: AppColors.hairline),
+      ),
+      child: Column(
+        children: [
+          for (final p in projects)
+            InkWell(
+              onTap: () {
+                final on = selected.contains(p.id);
+                // Keep at least one project selected.
+                if (on && selected.length == 1) return;
+                if (on) {
+                  selected.remove(p.id);
+                } else {
+                  selected.add(p.id);
+                }
+                onChanged();
+              },
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+                child: Row(
+                  children: [
+                    Icon(
+                      selected.contains(p.id)
+                          ? LucideIcons.checkSquare
+                          : LucideIcons.square,
+                      size: 20,
+                      color: selected.contains(p.id)
+                          ? AppColors.accent
+                          : AppColors.inkFaint,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text('${p.key} – ${p.name}',
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

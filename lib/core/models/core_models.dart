@@ -1,5 +1,18 @@
 import 'package:equatable/equatable.dart';
 
+/// Well-known platform feature-flag keys (admin-configurable in Adminbereich →
+/// App). All default to OFF when absent, keeping the platform Jira-conform until
+/// an admin opts in.
+class PlatformFlags {
+  PlatformFlags._();
+
+  /// Allow assigning multiple people to an issue (off → single assignee).
+  static const multiAssignee = 'multi_assignee';
+
+  /// Allow a board to span multiple projects (off → one project per board).
+  static const multiProjectBoards = 'multi_project_boards';
+}
+
 /// Server metadata from GET /api/v1/meta (version gate, branding, flags).
 class ServerMeta extends Equatable {
   const ServerMeta({
@@ -51,6 +64,12 @@ class ServerMeta extends Equatable {
       );
 
   bool isFlagEnabled(String flag) => featureFlags[flag] ?? false;
+
+  /// Multiple assignees per issue (default off → single-assignee, Jira-style).
+  bool get multiAssignee => isFlagEnabled(PlatformFlags.multiAssignee);
+
+  /// A board may span multiple projects (default off → one project per board).
+  bool get multiProjectBoards => isFlagEnabled(PlatformFlags.multiProjectBoards);
 
   @override
   List<Object?> get props =>

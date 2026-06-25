@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/i18n/i18n.dart';
+import '../../../core/models/core_models.dart' show PlatformFlags;
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/hive_widgets.dart';
 import '../admin_form_helpers.dart';
@@ -70,6 +71,29 @@ class _AdminAppSectionState extends State<AdminAppSection> {
         ),
         const SizedBox(height: 16),
         AdminSectionCard(
+          icon: LucideIcons.slidersHorizontal,
+          title: context.t('admin.platformTitle'),
+          subtitle: context.t('admin.platformHint'),
+          children: [
+            _PlatformToggle(
+              title: context.t('admin.multiAssigneeTitle'),
+              description: context.t('admin.multiAssigneeHint'),
+              value: _flags[PlatformFlags.multiAssignee] == true,
+              onChanged: (v) => setState(
+                  () => _flags[PlatformFlags.multiAssignee] = v),
+            ),
+            const Divider(height: 24),
+            _PlatformToggle(
+              title: context.t('admin.multiProjectBoardsTitle'),
+              description: context.t('admin.multiProjectBoardsHint'),
+              value: _flags[PlatformFlags.multiProjectBoards] == true,
+              onChanged: (v) => setState(
+                  () => _flags[PlatformFlags.multiProjectBoards] = v),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        AdminSectionCard(
           icon: LucideIcons.flag,
           title: context.t('admin.featureFlags'),
           subtitle: context.t('admin.featureFlagsHint'),
@@ -80,6 +104,47 @@ class _AdminAppSectionState extends State<AdminAppSection> {
             ),
           ],
         ),
+      ],
+    );
+  }
+}
+
+/// A labeled platform-behaviour switch (title + explanatory description).
+class _PlatformToggle extends StatelessWidget {
+  const _PlatformToggle({
+    required this.title,
+    required this.description,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String title;
+  final String description;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.ink)),
+              const SizedBox(height: 2),
+              Text(description,
+                  style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        HiveSwitch(value: value, onChanged: onChanged),
       ],
     );
   }

@@ -12,6 +12,7 @@ import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/hinata_repository.dart';
+import '../../core/blocs/app_config_bloc.dart';
 import '../../core/blocs/auth_bloc.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/core_models.dart';
@@ -1037,9 +1038,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   }
 
   Widget _detailsCard(Issue issue) {
-    final assigneeName = issue.assigneeId != null
-        ? _names[issue.assigneeId!]
-        : null;
+    final multiAssignee =
+        context.read<AppConfigBloc>().state.meta?.multiAssignee ?? false;
     final reporterName = issue.reporterId != null
         ? _names[issue.reporterId!]
         : null;
@@ -1067,18 +1067,30 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
               color: _projStateColor(_project, issue.state),
             ),
           ),
-          // Assignee + "assign to me"
+          // Assignee(s) + "assign to me"
           _DetailRow(
             label: context.t('issues.assignee'),
             onTap: _pickAssignee,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _person(assigneeName, fallback: context.t('issues.unassigned')),
-                if (me != null && issue.assigneeId != me.id) ...[
+                if (issue.assigneeIds.isEmpty)
+                  _person(null, fallback: context.t('issues.unassigned'))
+                else
+                  for (final aid in issue.assigneeIds)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: _person(_names[aid],
+                          fallback: context.t('issues.unassigned')),
+                    ),
+                if (me != null && !issue.assigneeIds.contains(me.id)) ...[
                   const SizedBox(height: 2),
                   GestureDetector(
-                    onTap: () => _patch({'assigneeId': me.id}),
+                    onTap: () => _patch(multiAssignee
+                        ? {
+                            'assigneeIds': [...issue.assigneeIds, me.id]
+                          }
+                        : {'assigneeId': me.id}),
                     child: Text(
                       context.t('issues.assignToMe'),
                       style: const TextStyle(
@@ -1675,6 +1687,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   // Anchor unused: the people picker is a taller search list, kept as a sheet.
   Future<void> _pickAssignee(Rect anchor) async {
     final me = context.read<AuthBloc>().state.user;
+    final multi =
+        context.read<AppConfigBloc>().state.meta?.multiAssignee ?? false;
     // Tablet/desktop: an anchored, searchable popover beside the field (like the
     // board filter). Phone: the bottom sheet. Both reuse _PeoplePicker.
     final wide = MediaQuery.sizeOf(context).width >= kGlassPopoverBreakpoint;
@@ -1682,6 +1696,10 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       anchored: wide,
       users: _users,
       meId: me?.id,
+      multiSelect: multi,
+      initialSelected: (_issue?.assigneeIds ?? const []).toSet(),
+      // Multi mode: stay open, persist the whole set on every toggle.
+      onSelectionChanged: (ids) => _patch({'assigneeIds': ids.toList()}),
       onUnassign: () {
         Navigator.of(sheetContext).pop();
         // Empty string clears the assignee (PATCH ignores null).
@@ -2282,7 +2300,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
 
   String? _projectId;
   String? _state;
-  String? _assigneeId;
+  final List<String> _assigneeIds = [];
   String _priority = 'NORMAL';
   String _type = 'TASK';
   String? _parentId;
@@ -2409,7 +2427,7 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
         'type': _type,
         'priority': _priority,
         if (_state != null) 'state': _state,
-        if (_assigneeId != null) 'assigneeId': _assigneeId,
+        if (_assigneeIds.isNotEmpty) 'assigneeIds': _assigneeIds,
         if (_parentId != null) 'parentId': _parentId,
         if (_sprintId != null) 'sprintId': _sprintId,
         if (_storyPoints != null) 'storyPoints': _storyPoints,
@@ -2585,7 +2603,6 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
   }
 
   Widget _detailsCard() {
-    final assigneeName = _assigneeId != null ? _names[_assigneeId] : null;
     final sprintName = _sprints
         .where((s) => s.id == _sprintId)
         .firstOrNull
@@ -2630,10 +2647,19 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
           _DetailRow(
             label: context.t('issues.assignee'),
             onTap: _pickAssignee,
-            child: _person(
-              assigneeName,
-              fallback: context.t('issues.unassigned'),
-            ),
+            child: _assigneeIds.isEmpty
+                ? _person(null, fallback: context.t('issues.unassigned'))
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final aid in _assigneeIds)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: _person(_names[aid],
+                              fallback: context.t('issues.unassigned')),
+                        ),
+                    ],
+                  ),
           ),
           _DetailRow(
             label: context.t('issues.priority'),
@@ -2969,24 +2995,37 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
   // the field on tablet/desktop, the bottom sheet on phones.
   Future<void> _pickAssignee(Rect anchor) async {
     final me = context.read<AuthBloc>().state.user;
+    final multi =
+        context.read<AppConfigBloc>().state.meta?.multiAssignee ?? false;
     final wide = MediaQuery.sizeOf(context).width >= kGlassPopoverBreakpoint;
     Widget picker(BuildContext sheetContext) => _PeoplePicker(
       anchored: wide,
       users: _users,
       meId: me?.id,
+      multiSelect: multi,
+      initialSelected: _assigneeIds.toSet(),
+      onSelectionChanged: (ids) => setState(() {
+        _assigneeIds
+          ..clear()
+          ..addAll(ids);
+      }),
       onUnassign: () {
         Navigator.of(sheetContext).pop();
-        setState(() => _assigneeId = null);
+        setState(_assigneeIds.clear);
       },
       onAssignMe: me == null
           ? null
           : () {
               Navigator.of(sheetContext).pop();
-              setState(() => _assigneeId = me.id);
+              setState(() => _assigneeIds
+                ..clear()
+                ..add(me.id));
             },
       onSelect: (id) {
         Navigator.of(sheetContext).pop();
-        setState(() => _assigneeId = id);
+        setState(() => _assigneeIds
+          ..clear()
+          ..add(id));
       },
     );
 
@@ -3821,6 +3860,9 @@ class _PeoplePicker extends StatefulWidget {
     required this.onUnassign,
     required this.onAssignMe,
     this.anchored = false,
+    this.multiSelect = false,
+    this.initialSelected = const {},
+    this.onSelectionChanged,
   });
 
   final List<DirectoryUser> users;
@@ -3828,6 +3870,13 @@ class _PeoplePicker extends StatefulWidget {
   final ValueChanged<String> onSelect;
   final VoidCallback onUnassign;
   final VoidCallback? onAssignMe;
+
+  /// When `true`, the picker stays open and toggles a set of people (checkmarks)
+  /// instead of selecting one and closing. [onSelectionChanged] fires with the
+  /// full updated set after every toggle / clear / assign-me.
+  final bool multiSelect;
+  final Set<String> initialSelected;
+  final ValueChanged<Set<String>>? onSelectionChanged;
 
   /// When `true`, the picker renders for a wide-screen anchored popover: no grab
   /// handle and a height that flexes to its host's constraints instead of the
@@ -3840,6 +3889,14 @@ class _PeoplePicker extends StatefulWidget {
 
 class _PeoplePickerState extends State<_PeoplePicker> {
   String _query = '';
+  late final Set<String> _selected = {...widget.initialSelected};
+
+  void _toggle(String id) {
+    setState(() {
+      if (!_selected.add(id)) _selected.remove(id);
+    });
+    widget.onSelectionChanged?.call(_selected);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -3896,7 +3953,11 @@ class _PeoplePickerState extends State<_PeoplePicker> {
               context.t('issues.assignToMe'),
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-            onTap: widget.onAssignMe,
+            onTap: widget.multiSelect && widget.meId != null
+                ? () {
+                    if (!_selected.contains(widget.meId)) _toggle(widget.meId!);
+                  }
+                : widget.onAssignMe,
           ),
         if (q.isEmpty)
           ListTile(
@@ -3904,8 +3965,14 @@ class _PeoplePickerState extends State<_PeoplePicker> {
               backgroundColor: AppColors.canvas2,
               child: Icon(LucideIcons.ban, color: AppColors.inkSoft, size: 18),
             ),
-            title: Text(context.t('issues.unassign')),
-            onTap: widget.onUnassign,
+            title: Text(context.t(
+                widget.multiSelect ? 'issues.clearAssignees' : 'issues.unassign')),
+            onTap: widget.multiSelect
+                ? () {
+                    setState(_selected.clear);
+                    widget.onSelectionChanged?.call(_selected);
+                  }
+                : widget.onUnassign,
           ),
         if (q.isEmpty) const Divider(height: 1),
         for (final u in filtered)
@@ -3925,14 +3992,26 @@ class _PeoplePickerState extends State<_PeoplePicker> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            trailing: u.id == widget.meId
-                ? const Icon(
-                    LucideIcons.star,
-                    size: 16,
-                    color: AppColors.accent,
+            trailing: widget.multiSelect
+                ? Icon(
+                    _selected.contains(u.id)
+                        ? LucideIcons.checkSquare
+                        : LucideIcons.square,
+                    size: 20,
+                    color: _selected.contains(u.id)
+                        ? AppColors.accent
+                        : AppColors.inkFaint,
                   )
-                : null,
-            onTap: () => widget.onSelect(u.id),
+                : (u.id == widget.meId
+                    ? const Icon(
+                        LucideIcons.star,
+                        size: 16,
+                        color: AppColors.accent,
+                      )
+                    : null),
+            onTap: widget.multiSelect
+                ? () => _toggle(u.id)
+                : () => widget.onSelect(u.id),
           ),
         if (filtered.isEmpty)
           Padding(
