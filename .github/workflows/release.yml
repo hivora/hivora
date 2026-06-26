@@ -1,10 +1,20 @@
 name: Store Release
 
-# Triggered by version tags (v1.2.3). Requires the secrets documented in
-# README.md (Play service account, Apple API key, match repo, signing keys).
+# Builds & uploads the native apps. Two entry points:
+#   1. Push a version tag (v1.2.3)  — the classic trigger.
+#   2. Called by the "Release" button workflow (release-button.yml), which bumps
+#      the version + creates the tag for you, then invokes this via workflow_call.
+# Requires the secrets documented in README.md (Play service account, Apple API
+# key, match repo, signing keys).
 on:
   push:
     tags: ['v*']
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref (tag) to build. Empty = the triggering tag.
+        type: string
+        required: false
 
 jobs:
   android:
@@ -12,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -54,6 +66,8 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -81,6 +95,8 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: subosito/flutter-action@v2
         with:
           channel: stable

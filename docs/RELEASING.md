@@ -29,7 +29,19 @@ does **NOT** release the native apps — that only happens on a `v*` tag (below)
 
 ## 2. Native app release (Android + iOS + macOS)
 
-### The easy way (recommended)
+### The easiest way — the "Release" button (no terminal)
+
+1. Open **[Actions → Release (button)](https://github.com/hinata-platform/hinata-app/actions/workflows/release-button.yml)**.
+2. Click **Run workflow**.
+3. Pick the bump — `patch` / `minor` / `major` — *or* type an exact version
+   (e.g. `1.4.0`) in the version field.
+4. **Run workflow.**
+
+That's it. The workflow bumps `pubspec.yaml` on `main`, commits, tags `vX.Y.Z`,
+then builds & uploads all three apps. Watch it in the Actions tab; the run
+summary shows the new version + Android versionCode.
+
+### From your machine — one command
 
 ```bash
 tool/release.sh patch     # 1.0.2 -> 1.0.3  (bug fixes)

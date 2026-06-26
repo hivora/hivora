@@ -1,0 +1,99 @@
+name: Release (button)
+
+# One-click native-app release from the GitHub UI — no terminal needed.
+#
+#   Actions tab → "Release (button)" → Run workflow → pick patch/minor/major
+#   (or type an exact version) → Run.
+#
+# It bumps pubspec.yaml on main, commits, creates the vX.Y.Z tag, then calls the
+# "Store Release" workflow (reusable) to build & upload Android + iOS + macOS.
+# The Android versionCode (build number after "+") is always incremented by 1 so
+# Play never rejects the upload.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump (ignored if "version" is set)'
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      version:
+        description: 'Exact version X.Y.Z (optional — overrides the bump above)'
+        type: string
+        default: ''
+
+jobs:
+  tag:
+    name: Bump version & tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.bump.outputs.tag }}
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Bump pubspec, commit & tag
+        id: bump
+        env:
+          BUMP: ${{ inputs.bump }}
+          EXPLICIT: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          line=$(grep '^version:' pubspec.yaml | head -1)
+          current=${line#version: }                # e.g. 1.0.2+12
+          name=${current%%+*}                       # 1.0.2
+          code=${current##*+}                        # 12
+          IFS='.' read -r MA MI PA <<<"$name"
+
+          if [ -n "$EXPLICIT" ]; then
+            echo "$EXPLICIT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' \
+              || { echo "✗ '$EXPLICIT' is not a valid X.Y.Z version"; exit 1; }
+            new_name="$EXPLICIT"
+          else
+            case "$BUMP" in
+              patch) new_name="$MA.$MI.$((PA+1))" ;;
+              minor) new_name="$MA.$((MI+1)).0" ;;
+              major) new_name="$((MA+1)).0.0" ;;
+              *) echo "✗ Unknown bump '$BUMP'"; exit 1 ;;
+            esac
+          fi
+
+          new_code=$((code+1))
+          new_version="$new_name+$new_code"
+          tag="v$new_name"
+
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "✗ Tag $tag already exists"; exit 1
+          fi
+
+          sed -i "s/^version: .*/version: $new_version/" pubspec.yaml
+          git add pubspec.yaml
+          git commit -m "release: $new_version"
+          git tag "$tag"
+          git push origin HEAD:main
+          git push origin "$tag"
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$new_version" >> "$GITHUB_OUTPUT"
+          {
+            echo "## 🚀 Release $new_version"
+            echo ""
+            echo "- **$current → $new_version** (tag \`$tag\`)"
+            echo "- Android versionCode: **$new_code**"
+            echo "- Building Android (Play internal, draft) + iOS + macOS (TestFlight)…"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: Build & upload
+    needs: tag
+    uses: ./.github/workflows/release.yml
+    secrets: inherit
+    with:
+      ref: ${{ needs.tag.outputs.tag }}
