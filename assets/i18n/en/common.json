@@ -324,7 +324,18 @@
     "subtaskHint": "What needs doing?",
     "noChildren": "No child issues yet.",
     "noSubtasks": "No sub-tasks yet.",
-    "progressDone": "{{done}} of {{total}} done"
+    "progressDone": "{{done}} of {{total}} done",
+    "links": {
+      "title": "Linked issues",
+      "add": "Add linked issue",
+      "create": "Create linked issue",
+      "confirm": "Link",
+      "remove": "Remove link",
+      "typeTitle": "Link type",
+      "fieldHint": "Enter URL, search or paste",
+      "suggestionsTitle": "Current issues",
+      "noMatches": "No matching issues"
+    }
   },
   "type": {
     "task": "Task",

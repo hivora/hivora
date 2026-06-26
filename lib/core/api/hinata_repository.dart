@@ -390,6 +390,51 @@ class HinataRepository {
 
   Future<void> deleteIssue(String id) => _api.delete('/api/v1/issues/$id');
 
+  // --- Issue links (Jira-style relationships) -------------------------------
+
+  /// All links touching the issue, oriented for it (perspective-correct verbs).
+  Future<List<IssueLink>> issueLinks(String issueId) async =>
+      ((await _api.get('/api/v1/issues/$issueId/links')) as List<dynamic>)
+          .map((l) => IssueLink.fromJson(l as Map<String, dynamic>))
+          .toList();
+
+  /// Links [issueId] to each of [targetIds] with the given [type]/direction;
+  /// returns the refreshed, oriented link list.
+  Future<List<IssueLink>> addIssueLinks(
+    String issueId, {
+    required String type,
+    required bool outward,
+    required List<String> targetIds,
+  }) async =>
+      ((await _api.post(
+                '/api/v1/issues/$issueId/links',
+                body: {
+                  'type': type,
+                  'outward': outward,
+                  'targetIds': targetIds,
+                },
+              ))
+              as List<dynamic>)
+          .map((l) => IssueLink.fromJson(l as Map<String, dynamic>))
+          .toList();
+
+  /// Removes one link; returns the refreshed, oriented link list.
+  Future<List<IssueLink>> deleteIssueLink(String issueId, String linkId) async =>
+      ((await _api.delete('/api/v1/issues/$issueId/links/$linkId'))
+              as List<dynamic>)
+          .map((l) => IssueLink.fromJson(l as Map<String, dynamic>))
+          .toList();
+
+  /// Raw SSE byte stream of link changes for an issue (parse with [parseSse]).
+  /// Carries a payload-free `changed` ping; the client re-fetches its links.
+  Future<Stream<List<int>>> issueLinkEventStream(
+    String issueId, {
+    CancelToken? cancelToken,
+  }) => _api.openEventStream(
+    '/api/v1/issues/$issueId/links/stream',
+    cancelToken: cancelToken,
+  );
+
   Future<List<IssueActivity>> issueActivity(String issueId) async =>
       ((await _api.get('/api/v1/issues/$issueId/activity')) as List<dynamic>)
           .map((a) => IssueActivity.fromJson(a as Map<String, dynamic>))

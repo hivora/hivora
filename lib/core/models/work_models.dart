@@ -388,6 +388,70 @@ class IssueHierarchy extends Equatable {
   List<Object?> get props => [ancestors, children];
 }
 
+/// One Jira-style link between issues, oriented for the issue it was fetched
+/// for: [verb] is the perspective-correct relationship ("blocks" vs "is blocked
+/// by"), [outward] tells which way it points, and [issue] is the other end.
+class IssueLink extends Equatable {
+  const IssueLink({
+    required this.id,
+    required this.type,
+    required this.outward,
+    required this.verb,
+    required this.issue,
+  });
+
+  /// Server enum name: `BLOCKS`, `CLONES`, `RELATES`, …
+  final String type;
+  final String id;
+  final bool outward;
+
+  /// The relationship verb to display, e.g. `blocks`, `is blocked by`.
+  final String verb;
+
+  /// The issue on the other end of the link.
+  final Issue issue;
+
+  factory IssueLink.fromJson(Map<String, dynamic> json) => IssueLink(
+    id: json['id'] as String,
+    type: json['type'] as String? ?? 'RELATES',
+    outward: json['outward'] as bool? ?? true,
+    verb: json['verb'] as String? ?? 'relates to',
+    issue: Issue.fromJson(json['issue'] as Map<String, dynamic>),
+  );
+
+  @override
+  List<Object?> get props => [id, type, outward, verb, issue];
+}
+
+/// A directional option in the "add link" dropdown — a (type, direction) pair
+/// with the verb shown for it. The order mirrors Jira's link-type list and the
+/// product spec; `outward` = this issue is the subject of the verb.
+class IssueLinkOption {
+  const IssueLinkOption(this.type, this.outward, this.verb);
+
+  final String type;
+  final bool outward;
+  final String verb;
+}
+
+/// Every directional link verb offered when creating a link. "is blocked by"
+/// leads (the default), matching the reference UI.
+const List<IssueLinkOption> kIssueLinkOptions = [
+  IssueLinkOption('BLOCKS', false, 'is blocked by'),
+  IssueLinkOption('BLOCKS', true, 'blocks'),
+  IssueLinkOption('CLONES', false, 'is cloned by'),
+  IssueLinkOption('CLONES', true, 'clones'),
+  IssueLinkOption('CREATES', false, 'created by'),
+  IssueLinkOption('CREATES', true, 'created'),
+  IssueLinkOption('DUPLICATES', false, 'is duplicated by'),
+  IssueLinkOption('DUPLICATES', true, 'duplicates'),
+  IssueLinkOption('RELATES', true, 'relates to'),
+  IssueLinkOption('TESTS', false, 'is tested by'),
+  IssueLinkOption('TESTS', true, 'tests'),
+  IssueLinkOption('SPLITS', false, 'split from'),
+  IssueLinkOption('SPLITS', true, 'split to'),
+];
+
 class IssueAttachment extends Equatable {
   const IssueAttachment({
     required this.id,

@@ -729,8 +729,12 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
       case BoardViewMode.backlog:
         return _backlogList();
       case BoardViewMode.timeline:
+        // The timeline is roadmap-like, so epics stay (they carry date ranges);
+        // sub-tasks are nested detail and don't belong on it.
         return BoardTimeline(
-          issues: _allBoardIssues.where(_passes).toList(),
+          issues: _allBoardIssues
+              .where((i) => _passes(i) && !i.isSubtask)
+              .toList(),
           onOpen: _openIssue,
           padding: EdgeInsets.fromLTRB(
             context.pageGutter,
@@ -765,7 +769,9 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
       separatorBuilder: (_, _) => const SizedBox(width: 16),
       itemBuilder: (context, index) {
         final column = columns[index];
-        final issues = column.issues.where(_passes).toList();
+        final issues = column.issues
+            .where((i) => _passes(i) && boardCardVisible(i, _grouping))
+            .toList();
         return _BoardColumn(
           column: column,
           issues: issues,
@@ -835,7 +841,9 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
       'MINOR' || 'LOW' => 1,
       _ => rank[i.priority.toUpperCase()] ?? 2,
     };
-    final items = _backlog.where(_passes).toList()
+    // The backlog lists the standard work items only — epics are containers and
+    // sub-tasks live inside their parent (mirrors Jira's backlog).
+    final items = _backlog.where((i) => _passes(i) && i.isStandard).toList()
       ..sort((a, b) => prio(b).compareTo(prio(a)));
 
     return RefreshIndicator(

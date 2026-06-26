@@ -324,7 +324,18 @@
     "subtaskHint": "Was ist zu tun?",
     "noChildren": "Noch keine untergeordneten Vorgänge.",
     "noSubtasks": "Noch keine Sub-Tasks.",
-    "progressDone": "{{done}} von {{total}} erledigt"
+    "progressDone": "{{done}} von {{total}} erledigt",
+    "links": {
+      "title": "Verknüpfte Vorgänge",
+      "add": "Verknüpften Vorgang hinzufügen",
+      "create": "Verknüpften Vorgang erstellen",
+      "confirm": "Verknüpfen",
+      "remove": "Verknüpfung entfernen",
+      "typeTitle": "Verknüpfungsart",
+      "fieldHint": "URL eingeben, suchen oder einfügen",
+      "suggestionsTitle": "Aktuelle Vorgänge",
+      "noMatches": "Keine passenden Vorgänge"
+    }
   },
   "type": {
     "task": "Aufgabe",

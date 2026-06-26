@@ -135,7 +135,10 @@ class SprintActiveSurface extends StatelessWidget {
                     final column = boardColumns[index];
                     final colIssues = issues
                         .where(
-                          (i) => column.states.contains(i.state) && _passes(i),
+                          (i) =>
+                              column.states.contains(i.state) &&
+                              _passes(i) &&
+                              boardCardVisible(i, grouping),
                         )
                         .toList();
                     return _SprintColumn(

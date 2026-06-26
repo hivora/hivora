@@ -40,6 +40,7 @@ import '../sprint/modals/glass_modal.dart'
         showGlassOptions;
 import 'attachments/attachments_section.dart';
 import 'issue_form.dart' show showIssueForm;
+import 'issue_links_section.dart';
 import 'issue_description_editor.dart';
 import 'issue_labels.dart';
 import 'issue_link_resolver.dart';
@@ -556,6 +557,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                     hierarchy,
                   ],
                   const SizedBox(height: 14),
+                  _linksSection(issue),
+                  const SizedBox(height: 14),
                   _attachmentsSection(issue),
                   if (documented != null) ...[
                     const SizedBox(height: 14),
@@ -600,6 +603,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                       const SizedBox(height: 14),
                       hierarchy,
                     ],
+                    const SizedBox(height: 14),
+                    _linksSection(issue),
                     const SizedBox(height: 14),
                     _attachmentsSection(issue),
                     if (documented != null) ...[
@@ -798,6 +803,18 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     issueId: widget.issueId,
     initial: issue.attachments,
     userNames: _names,
+    onChanged: widget.onChanged,
+  );
+
+  /// "Verknüpfte Vorgänge" — the Jira-style issue links (blocks / duplicates /
+  /// relates to …), shown for every issue directly under the sub-tasks card.
+  Widget _linksSection(Issue issue) => IssueLinksSection(
+    issueId: widget.issueId,
+    projectId: issue.projectId,
+    project: _project,
+    userNames: _names,
+    userAvatars: _avatars,
+    onOpenIssue: _openLinkedIssue,
     onChanged: widget.onChanged,
   );
 

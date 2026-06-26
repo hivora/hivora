@@ -112,6 +112,18 @@ String? boardEpicOf(Issue i, Map<String, Issue> byId) {
   return (gp != null && gp.isEpic) ? gp.id : null;
 }
 
+/// Jira-style board visibility — which issues surface as cards for the active
+/// [grouping]. An **epic** is a container: it drives the epic swimlanes and the
+/// epic filter, but never appears as a board card. A **sub-task** lives inside
+/// its parent and becomes a card only under the "Sub-task" grouping, where it
+/// sits beneath that parent's lane. Everything else — the Story / Task / Bug /
+/// Feature work items — is always a card.
+bool boardCardVisible(Issue i, BoardGrouping grouping) {
+  if (i.isEpic) return false;
+  if (i.isSubtask) return grouping == BoardGrouping.subtask;
+  return true;
+}
+
 /// Groups [issues] into ordered lanes for [grouping]. Shared by the Kanban
 /// board and the Scrum active surface so both behave identically.
 List<BoardLane> computeBoardLanes({
@@ -124,12 +136,18 @@ List<BoardLane> computeBoardLanes({
   required ProjectPalette palette,
   required void Function(Issue) onOpenIssue,
 }) {
+  // Drop issues that aren't board cards for this grouping (epics are always
+  // headers/filters; sub-tasks are cards only under the sub-task grouping).
+  final visible = [
+    for (final i in issues)
+      if (boardCardVisible(i, grouping)) i,
+  ];
   switch (grouping) {
     case BoardGrouping.none:
       return const [];
     case BoardGrouping.epic:
       final byEpic = <String?, List<Issue>>{};
-      for (final i in issues) {
+      for (final i in visible) {
         byEpic.putIfAbsent(boardEpicOf(i, issuesById), () => []).add(i);
       }
       final lanes = <BoardLane>[];
@@ -153,7 +171,7 @@ List<BoardLane> computeBoardLanes({
       return lanes;
     case BoardGrouping.assignee:
       final byUser = <String?, List<Issue>>{};
-      for (final i in issues) {
+      for (final i in visible) {
         final a = (i.assigneeId?.isNotEmpty ?? false) ? i.assigneeId : null;
         byUser.putIfAbsent(a, () => []).add(i);
       }
@@ -178,15 +196,28 @@ List<BoardLane> computeBoardLanes({
       );
       return lanes;
     case BoardGrouping.subtask:
-      // A sub-task's lane is its parent standard issue; everything else is its
-      // own "stand-alone" lane.
-      final byParent = <String?, List<Issue>>{};
-      for (final i in issues) {
+      // Jira "Group by sub-task": every standard issue that owns sub-tasks
+      // becomes a lane whose cards are those sub-tasks (the parent is the lane
+      // header, not a card). Standard issues without sub-tasks — plus any
+      // sub-task whose parent isn't on this board — gather in one "stand-alone"
+      // lane as their own cards.
+      final byParent = <String, List<Issue>>{};
+      final orphans = <Issue>[];
+      for (final i in visible) {
+        if (!i.isSubtask) continue;
         final parent = i.parentId != null ? issuesById[i.parentId!] : null;
-        final key = (parent != null && parent.isStandard) ? parent.id : null;
-        byParent.putIfAbsent(key, () => []).add(i);
+        if (parent != null && parent.isStandard) {
+          byParent.putIfAbsent(parent.id, () => []).add(i);
+        } else {
+          orphans.add(i);
+        }
       }
-      final parentIds = byParent.keys.whereType<String>().toList()
+      final standalone = <Issue>[
+        for (final i in visible)
+          if (i.isStandard && !byParent.containsKey(i.id)) i,
+        ...orphans,
+      ];
+      final parentIds = byParent.keys.toList()
         ..sort(
           (a, b) => (issuesById[a]?.readableId ?? a).compareTo(
             issuesById[b]?.readableId ?? b,
@@ -209,7 +240,7 @@ List<BoardLane> computeBoardLanes({
       }
       _appendNone(
         lanes,
-        byParent[null],
+        standalone,
         context.t('board.standalone'),
         LucideIcons.minus,
       );
