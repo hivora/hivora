@@ -1,10 +1,12 @@
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../api/hinata_repository.dart';
 import '../models/core_models.dart';
+import '../models/server_profile.dart';
 import '../storage/app_storage.dart';
 
 /// Connection lifecycle: pick server -> verify -> (setup) -> ready.
@@ -83,22 +85,32 @@ class AppConfigBloc extends Bloc<AppConfigEvent, AppConfigState> {
   final HinataRepository repository;
   final AppStorage storage;
 
-  /// Compile-time default backend, baked in via
-  /// `--dart-define=HINATA_DEFAULT_SERVER=https://api.track.asta.hn`. Used when no
-  /// server URL has been chosen yet (e.g. the hosted web build), so users land
-  /// straight in the app instead of the connect screen. Empty ⇒ show /connect.
+  /// Compile-time default backend, only ever consulted for the hosted **web**
+  /// build (see [_effectiveDefaultServer]). Baked in via
+  /// `--build-arg HINATA_DEFAULT_SERVER=…` in the web Dockerfile, so users of a
+  /// specific hosted deployment land straight in the app. Empty ⇒ show /connect.
   static const String _defaultServer =
       String.fromEnvironment('HINATA_DEFAULT_SERVER');
+
+  /// The default server URL that actually applies on this platform.
+  ///
+  /// White-label rule: the native store apps (iOS/Android/macOS) must **never**
+  /// pin a backend — a fresh install always asks for the server URL on first
+  /// launch. We gate the compile-time default to the web build here as
+  /// defense-in-depth, so even a build that mistakenly passes
+  /// `--dart-define=HINATA_DEFAULT_SERVER=…` to a native target is ignored and
+  /// the connect screen still shows.
+  static String get _effectiveDefaultServer => kIsWeb ? _defaultServer : '';
 
   Future<void> _onStarted(AppConfigStarted event, Emitter<AppConfigState> emit) async {
     final info = await PackageInfo.fromPlatform();
     final version = info.version;
     if (storage.serverUrl == null) {
-      if (_defaultServer.isEmpty) {
+      if (_effectiveDefaultServer.isEmpty) {
         emit(state.copyWith(status: AppConfigStatus.needsServerUrl, appVersion: version));
         return;
       }
-      await storage.setServerUrl(_defaultServer);
+      await storage.setServerUrl(_effectiveDefaultServer);
     }
     emit(state.copyWith(status: AppConfigStatus.connecting, appVersion: version));
     await _verify(emit);
@@ -125,6 +137,14 @@ class AppConfigBloc extends Bloc<AppConfigEvent, AppConfigState> {
   Future<void> _verify(Emitter<AppConfigState> emit) async {
     try {
       final meta = await repository.meta();
+      // Remember a friendly label for this server (its organization name) so the
+      // multi-server switcher can show "Acme" rather than a bare host.
+      final url = storage.serverUrl;
+      if (url != null) {
+        await storage.upsertServer(
+          ServerProfile(url: url, label: meta.organizationName),
+        );
+      }
       if (isVersionBelow(state.appVersion, meta.minAppVersion)) {
         emit(state.copyWith(status: AppConfigStatus.updateRequired, meta: meta));
       } else if (!meta.setupCompleted) {

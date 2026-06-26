@@ -14,6 +14,7 @@ import '../../core/models/core_models.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/soft_card.dart';
 import '../account/twofa_modals.dart' show OtpInput;
+import '../connect/server_switcher.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -111,6 +112,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          // Let the user re-target a different backend before
+                          // signing in (or add a new one).
+                          const Align(
+                            alignment: Alignment.center,
+                            child: ServerSwitcher(),
+                          ),
+                          const SizedBox(height: 20),
                           Text(
                             organization ?? 'Hinata',
                             textAlign: TextAlign.center,

@@ -78,7 +78,18 @@
     "serverUrl": "Server-URL",
     "invalidUrl": "Bitte eine gültige http(s)-URL eingeben",
     "action": "Verbinden",
+    "connecting": "Verbinde …",
     "failed": "Verbindung zu diesem Server fehlgeschlagen. Bitte URL prüfen."
+  },
+  "server": {
+    "current": "Server",
+    "switchHint": "Wechsle den Server, mit dem sich die App verbindet.",
+    "saved": "Gespeicherte Server",
+    "addAnother": "Weiteren Server hinzufügen",
+    "addTitle": "Server hinzufügen",
+    "addSubtitle": "Gib die URL eines weiteren Hinata-Servers ein, mit dem du dich verbinden möchtest.",
+    "addConfirm": "Hinzufügen & verbinden",
+    "remove": "Server entfernen"
   },
   "setup": {
     "title": "Server einrichten",

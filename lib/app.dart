@@ -43,6 +43,15 @@ class _HinataAppState extends State<HinataApp> {
   late final AccountEventStream _accountEvents;
   late final FcmService _fcm;
   StreamSubscription<AuthState>? _authSub;
+  StreamSubscription<AppConfigState>? _configSub;
+  // The server the auth session was last (re)checked against. When the user
+  // switches servers, AppConfig re-verifies the new backend and reaches `ready`
+  // with a different URL than this — that's our cue to re-check auth so the
+  // session reflects the new server (its own token, or a sign-in prompt).
+  String? _authServer;
+  // The server the realtime streams (SSE sign-out + FCM) are currently bound to,
+  // so a switch tears them down and reopens them against the new backend.
+  String? _streamServer;
   // Shared backend-backed Knowledge Base store: the KB screen and the real
   // issue detail both resolve smart-links / "Documented in" against this single
   // instance. Loaded lazily on first use (post-auth), not at startup.
@@ -82,18 +91,46 @@ class _HinataAppState extends State<HinataApp> {
       apiClient: widget.apiClient,
       onDeepLink: (link) => _router.go(link),
     );
+    // Record the server the boot-time AuthChecked above runs against, so the
+    // listener below doesn't redundantly re-check it on the first `ready`.
+    _authServer = widget.storage.serverUrl;
     _syncAccountStream(_auth.state);
     _authSub = _auth.stream.listen(_syncAccountStream);
+    _configSub = _appConfig.stream.listen(_onAppConfig);
     _listenForDeepLinks();
+  }
+
+  /// Re-checks the auth session whenever AppConfig settles on a *different*
+  /// server than the one auth was last validated against. This is the single
+  /// place that reacts to a server switch (from the switcher, the connect
+  /// screen, or a deep link), regardless of who triggered it: the new backend
+  /// either has a stored token (→ straight back in) or doesn't (→ sign-in).
+  void _onAppConfig(AppConfigState state) {
+    if (state.status != AppConfigStatus.ready) return;
+    final server = widget.storage.serverUrl;
+    if (_authServer == server) return;
+    _authServer = server;
+    _auth.add(const AuthChecked());
   }
 
   /// Opens the account event stream once authenticated and closes it otherwise,
   /// so the real-time sign-out channel is only live for a signed-in user.
   void _syncAccountStream(AuthState state) {
     if (state.status == AuthStatus.authenticated) {
+      final server = widget.storage.serverUrl;
+      // Switched backends while signed in (same `authenticated` status, new
+      // server): tear the streams down so they reopen against the new host
+      // below — start() is a no-op while already running and would otherwise
+      // keep streaming from the old server.
+      if (_streamServer != server) {
+        _accountEvents.stop();
+        _fcm.stop();
+        _streamServer = server;
+      }
       _accountEvents.start();
       _fcm.start();
     } else {
+      _streamServer = null;
       _accountEvents.stop();
       _fcm.stop();
     }
@@ -165,6 +202,7 @@ class _HinataAppState extends State<HinataApp> {
   void dispose() {
     _linkSubscription?.cancel();
     _authSub?.cancel();
+    _configSub?.cancel();
     _accountEvents.stop();
     _router.dispose();
     _appConfig.close();

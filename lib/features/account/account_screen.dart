@@ -17,12 +17,14 @@ import '../../core/blocs/theme_cubit.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/account_models.dart';
 import '../../core/responsive/responsive.dart';
+import '../../core/storage/app_storage.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/hex_mark.dart';
 import '../../core/widgets/hive_loader.dart';
 import '../../core/widgets/honeycomb_background.dart';
+import '../connect/server_switcher.dart';
 import '../shell/page_chrome.dart';
 import 'account_modals.dart';
 import 'account_widgets.dart';
@@ -1402,6 +1404,15 @@ class _AccountScreenState extends State<AccountScreen> {
       subtitle: context.t('account.appearance.subtitle'),
       children: [
         SettingRow(
+          label: context.t('server.current'),
+          icon: LucideIcons.server,
+          description: context.t('server.switchHint'),
+          stack: context.isCompact,
+          trailing: const ServerSwitcher(),
+        ),
+        ..._otherServersRows(),
+        Divider(height: 1, color: AppColors.hairline2),
+        SettingRow(
           label: context.t('settings.language'),
           icon: LucideIcons.globe,
           stack: context.isCompact,
@@ -1461,6 +1472,32 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
       ],
     );
+  }
+
+  /// Rows for the saved servers other than the current one: tap to switch,
+  /// trash to forget. Empty when only the current server is known.
+  List<Widget> _otherServersRows() {
+    final storage = context.read<AppStorage>();
+    final current = storage.serverUrl;
+    final others = storage.servers.where((s) => s.url != current).toList();
+    return [
+      for (final server in others)
+        SettingRow(
+          label: server.displayName,
+          description: server.host,
+          icon: LucideIcons.server,
+          stack: context.isCompact,
+          onTap: () => switchToServer(context, server.url),
+          trailing: IconButton(
+            icon: const Icon(LucideIcons.trash2, size: 17),
+            tooltip: context.t('server.remove'),
+            onPressed: () async {
+              await storage.removeServer(server.url);
+              if (mounted) setState(() {});
+            },
+          ),
+        ),
+    ];
   }
 
   Widget _aboutRow(String label, String value) => Padding(

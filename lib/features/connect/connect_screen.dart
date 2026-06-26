@@ -5,9 +5,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/blocs/app_config_bloc.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/storage/app_storage.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/hex_mark.dart';
 import '../../core/widgets/soft_card.dart';
+import 'server_switcher.dart';
 
 /// First screen: the app cannot run without a server, so we ask for its URL
 /// and only continue once /api/v1/meta answers.
@@ -105,6 +107,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                                   )
                                 : Text(context.t('connect.action')),
                           ),
+                          ..._savedServers(context, connecting),
                         ],
                       ),
                     ),
@@ -124,6 +127,45 @@ class _ConnectScreenState extends State<ConnectScreen> {
           .read<AppConfigBloc>()
           .add(ServerUrlSubmitted(_controller.text.trim()));
     }
+  }
+
+  /// Previously connected servers, offered as one-tap shortcuts below the URL
+  /// field — handy when re-connecting (e.g. after a server was unreachable) or
+  /// hopping between several backends. Empty on a truly first launch.
+  List<Widget> _savedServers(BuildContext context, bool connecting) {
+    final servers = context.read<AppStorage>().servers;
+    if (servers.isEmpty) return const [];
+    return [
+      const SizedBox(height: 24),
+      Row(
+        children: [
+          const Expanded(child: Divider()),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              context.t('server.saved'),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+          ),
+          const Expanded(child: Divider()),
+        ],
+      ),
+      const SizedBox(height: 8),
+      for (final server in servers)
+        ListTile(
+          dense: true,
+          enabled: !connecting,
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(LucideIcons.server,
+              size: 18, color: AppColors.accentStrong),
+          title: Text(server.displayName,
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: Text(server.host,
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          trailing: const Icon(LucideIcons.chevronRight, size: 18),
+          onTap: connecting ? null : () => switchToServer(context, server.url),
+        ),
+    ];
   }
 }
 

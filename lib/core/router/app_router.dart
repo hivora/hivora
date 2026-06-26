@@ -14,6 +14,7 @@ import '../../features/auth/sso_callback_screen.dart';
 import '../../features/board/board_screen.dart';
 import '../../features/board/project_boards_screen.dart';
 import '../../features/connect/connect_screen.dart';
+import '../../features/connect/connecting_screen.dart';
 import '../../features/connect/update_required_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/gantt/gantt_screen.dart';
@@ -63,7 +64,8 @@ GoRouter buildRouter({
   // app is ready gets parked here so it can be restored afterwards instead of
   // being lost to the default /dashboard.
   const gates = {
-    '/connect', '/setup', '/onboarding', '/login', '/update', '/auth-callback',
+    '/connect', '/connecting', '/setup', '/onboarding', '/login', '/update',
+    '/auth-callback',
   };
   String? pendingDeepLink;
 
@@ -101,6 +103,15 @@ GoRouter buildRouter({
       switch (config) {
         case AppConfigStatus.initial:
         case AppConfigStatus.connecting:
+          // No server chosen yet → URL-entry screen. Otherwise (boot with a
+          // saved server, or a deliberate server switch) show a brief branded
+          // splash rather than flashing the connect form.
+          if (storage.serverUrl == null) {
+            if (location == '/connect') return null;
+            parkIfDeepLink();
+            return '/connect';
+          }
+          return location == '/connecting' ? null : '/connecting';
         case AppConfigStatus.needsServerUrl:
           if (location == '/connect') return null;
           parkIfDeepLink();
@@ -135,6 +146,10 @@ GoRouter buildRouter({
     },
     routes: [
       GoRoute(path: '/connect', builder: (_, _) => const ConnectScreen()),
+      GoRoute(
+        path: '/connecting',
+        builder: (_, _) => const ConnectingScreen(),
+      ),
       GoRoute(path: '/setup', builder: (_, _) => const SetupScreen()),
       GoRoute(
         path: '/update',

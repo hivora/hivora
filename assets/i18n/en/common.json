@@ -78,7 +78,18 @@
     "serverUrl": "Server URL",
     "invalidUrl": "Please enter a valid http(s) URL",
     "action": "Connect",
+    "connecting": "Connecting…",
     "failed": "Could not connect to this server. Please verify the URL."
+  },
+  "server": {
+    "current": "Server",
+    "switchHint": "Switch the server this app connects to.",
+    "saved": "Saved servers",
+    "addAnother": "Add another server",
+    "addTitle": "Add a server",
+    "addSubtitle": "Enter the URL of another Hinata server to connect to.",
+    "addConfirm": "Add & connect",
+    "remove": "Remove server"
   },
   "setup": {
     "title": "Set up your server",
