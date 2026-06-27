@@ -23,7 +23,6 @@ import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/hex_mark.dart';
 import '../../core/widgets/hive_loader.dart';
 import '../../core/widgets/honeycomb_background.dart';
-import '../connect/server_manager.dart';
 import '../connect/server_switcher.dart';
 import '../shell/page_chrome.dart';
 import 'account_modals.dart';
