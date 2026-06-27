@@ -648,13 +648,17 @@ class _AddServerPageState extends State<_AddServerPage> {
     });
   }
 
-  void _resetToInput() {
-    if (_phase != _Phase.input) {
-      setState(() {
+  void _onUrlChanged() {
+    // Always rebuild so the "test connection" button's enabled state tracks the
+    // field (a no-op `if` would leave it greyed out on the first keystroke,
+    // since the phase is already `input`). Also drop any stale probe result once
+    // the URL is edited after a test.
+    setState(() {
+      if (_phase != _Phase.input) {
         _phase = _Phase.input;
         _probe = null;
-      });
-    }
+      }
+    });
   }
 
   @override
@@ -726,7 +730,7 @@ class _AddServerPageState extends State<_AddServerPage> {
                     .copyWith(
                       prefixIcon: const Icon(LucideIcons.server, size: 18),
                     ),
-                onChanged: (_) => _resetToInput(),
+                onChanged: (_) => _onUrlChanged(),
                 onSubmitted: (_) => _test(),
               ),
               const SizedBox(height: 14),
