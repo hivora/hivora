@@ -58,6 +58,17 @@
                 <data android:pathPrefix="/invite"/>
                 <data android:pathPrefix="/reset-password"/>
             </intent-filter>
+            <!-- Hinata Connect relay: the ONE verified domain for the white-label
+                 app, so invite/reset links from ANY self-hosted server open the
+                 app. Verified against
+                 https://connect.track.asta.hn/.well-known/assetlinks.json. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="connect.track.asta.hn"/>
+                <data android:pathPrefix="/l/"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

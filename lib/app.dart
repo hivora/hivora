@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
@@ -174,13 +175,42 @@ class _HinataAppState extends State<HinataApp> {
     // forward the path straight to the router. The token flows still need their
     // server-URL handoff, so they keep going through _openTokenFlow.
     if (uri.scheme == 'https' || uri.scheme == 'http') {
-      if (uri.path.startsWith('/invite')) {
+      if (uri.path.startsWith('/l/')) {
+        await _openRelayLink(uri);
+      } else if (uri.path.startsWith('/invite')) {
         await _openTokenFlow(uri, '/invite');
       } else if (uri.path.startsWith('/reset-password')) {
         await _openTokenFlow(uri, '/reset-password');
       } else if (uri.path.isNotEmpty && uri.path != '/') {
         _router.go(uri.hasQuery ? '${uri.path}?${uri.query}' : uri.path);
       }
+    }
+  }
+
+  /// Hinata Connect relay links: `https://connect…/l/<base64url(payload)>.<sig>`.
+  /// The payload carries the originating server's API URL (`a`), the in-app path
+  /// (`p`) and the token (`t`). We decode it locally (the gateway's signature is
+  /// only for its own web-fallback redirect; the token is validated server-side
+  /// anyway), point the app at that server, and open the flow.
+  Future<void> _openRelayLink(Uri uri) async {
+    final seg = uri.pathSegments.length > 1 ? uri.pathSegments[1] : '';
+    final dot = seg.indexOf('.');
+    final b64 = dot > 0 ? seg.substring(0, dot) : seg;
+    if (b64.isEmpty) return;
+    try {
+      final padded = b64.padRight((b64.length + 3) ~/ 4 * 4, '=');
+      final payload = jsonDecode(utf8.decode(base64Url.decode(padded))) as Map<String, dynamic>;
+      final token = payload['t'] as String?;
+      final route = payload['p'] as String?;
+      final server = payload['a'] as String?;
+      if (token == null || token.isEmpty || route == null || route.isEmpty) return;
+      if (server != null && server.isNotEmpty) {
+        await widget.storage.setServerUrl(server);
+        _appConfig.add(ServerUrlSubmitted(server));
+      }
+      _router.go('$route?token=${Uri.encodeQueryComponent(token)}');
+    } catch (_) {
+      // Malformed/garbage relay link — ignore silently.
     }
   }
 

@@ -16,6 +16,11 @@
 	     capability enabled (Apple Developer portal / fastlane match). -->
 	<key>com.apple.developer.associated-domains</key>
 	<array>
+		<!-- Hinata Connect relay: the ONE verified domain for the white-label app,
+		     so invite/reset links from ANY self-hosted server open this app
+		     (https://connect.track.asta.hn/.well-known/apple-app-site-association). -->
+		<string>applinks:connect.track.asta.hn</string>
+		<!-- Direct links for the AStA instance's own web domain. -->
 		<string>applinks:track.asta.hn</string>
 	</array>
 </dict>
