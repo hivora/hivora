@@ -799,6 +799,7 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
       issuesById: _issuesById,
       epics: _epics,
       names: _names,
+      avatars: _avatars,
       palette: _palette,
       onOpenIssue: _openIssue,
     );

@@ -653,22 +653,29 @@ class _LinkEditorState extends State<_LinkEditor> {
             },
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              TextButton.icon(
+          LayoutBuilder(
+            builder: (context, c) {
+              // On narrow widths the three actions can't share one row without
+              // the long "create" label pushing the confirm button off-screen.
+              // Stack them: primary confirm on top, then create + cancel.
+              final narrow = c.maxWidth < 440;
+              final create = TextButton.icon(
                 onPressed: _createLinked,
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.inkSoft,
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 ),
                 icon: const Icon(LucideIcons.plus, size: 15),
-                label: Text(context.t('issues.links.create')),
-              ),
-              const Spacer(),
-              FilledButton(
+                label: Text(
+                  context.t('issues.links.create'),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+              final confirm = FilledButton(
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.navy,
                   disabledBackgroundColor: AppColors.surfaceMuted,
+                  minimumSize: narrow ? const Size.fromHeight(44) : null,
                 ),
                 onPressed: _selected.isEmpty || _submitting ? null : _submit,
                 child: _submitting
@@ -681,16 +688,45 @@ class _LinkEditorState extends State<_LinkEditor> {
                         ),
                       )
                     : Text(context.t('issues.links.confirm')),
-              ),
-              const SizedBox(width: 6),
-              TextButton(
+              );
+              final cancel = TextButton(
                 onPressed: _submitting ? null : widget.onCancel,
                 child: Text(
                   context.t('common.cancel'),
                   style: TextStyle(color: AppColors.inkSoft),
                 ),
-              ),
-            ],
+              );
+              if (narrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    confirm,
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(child: create),
+                        cancel,
+                      ],
+                    ),
+                  ],
+                );
+              }
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(child: create),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      confirm,
+                      const SizedBox(width: 6),
+                      cancel,
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

@@ -42,23 +42,24 @@ class ServerMeta extends Equatable {
   final UploadLimits uploadLimits;
 
   factory ServerMeta.fromJson(Map<String, dynamic> json) => ServerMeta(
-        serverVersion: json['serverVersion'] as String? ?? '0.0.0',
-        minAppVersion: json['minAppVersion'] as String? ?? '0.0.0',
-        setupCompleted: json['setupCompleted'] as bool? ?? false,
-        organizationName: json['organizationName'] as String?,
-        logoUrl: (json['logoUrl'] as String?)?.trim().isEmpty ?? true
-            ? null
-            : (json['logoUrl'] as String).trim(),
-        privacyPolicyUrl: json['privacyPolicyUrl'] as String? ?? '',
-        iosStoreUrl: json['iosStoreUrl'] as String? ?? '',
-        androidStoreUrl: json['androidStoreUrl'] as String? ?? '',
-        macosStoreUrl: json['macosStoreUrl'] as String? ?? '',
-        featureFlags: (json['featureFlags'] as Map<String, dynamic>? ?? {})
-            .map((k, v) => MapEntry(k, v == true)),
-        uploadLimits: json['uploadLimits'] is Map<String, dynamic>
-            ? UploadLimits.fromJson(json['uploadLimits'] as Map<String, dynamic>)
-            : const UploadLimits(),
-      );
+    serverVersion: json['serverVersion'] as String? ?? '0.0.0',
+    minAppVersion: json['minAppVersion'] as String? ?? '0.0.0',
+    setupCompleted: json['setupCompleted'] as bool? ?? false,
+    organizationName: json['organizationName'] as String?,
+    logoUrl: (json['logoUrl'] as String?)?.trim().isEmpty ?? true
+        ? null
+        : (json['logoUrl'] as String).trim(),
+    privacyPolicyUrl: json['privacyPolicyUrl'] as String? ?? '',
+    iosStoreUrl: json['iosStoreUrl'] as String? ?? '',
+    androidStoreUrl: json['androidStoreUrl'] as String? ?? '',
+    macosStoreUrl: json['macosStoreUrl'] as String? ?? '',
+    featureFlags: (json['featureFlags'] as Map<String, dynamic>? ?? {}).map(
+      (k, v) => MapEntry(k, v == true),
+    ),
+    uploadLimits: json['uploadLimits'] is Map<String, dynamic>
+        ? UploadLimits.fromJson(json['uploadLimits'] as Map<String, dynamic>)
+        : const UploadLimits(),
+  );
 
   bool isFlagEnabled(String flag) => featureFlags[flag] ?? false;
 
@@ -66,9 +67,46 @@ class ServerMeta extends Equatable {
   bool get multiAssignee => isFlagEnabled(PlatformFlags.multiAssignee);
 
   @override
-  List<Object?> get props =>
-      [serverVersion, minAppVersion, setupCompleted, organizationName, logoUrl,
-        privacyPolicyUrl, iosStoreUrl, androidStoreUrl, macosStoreUrl];
+  List<Object?> get props => [
+    serverVersion,
+    minAppVersion,
+    setupCompleted,
+    organizationName,
+    logoUrl,
+    privacyPolicyUrl,
+    iosStoreUrl,
+    androidStoreUrl,
+    macosStoreUrl,
+  ];
+}
+
+/// Outcome of a one-off reachability probe of a *candidate* server — a timed
+/// `GET /api/v1/meta` against a URL the app is not yet connected to. Powers the
+/// "add server" connection test (latency, TLS, version) before committing to a
+/// switch. See [HinataRepository.probeServer].
+class ServerProbe {
+  const ServerProbe({
+    required this.ms,
+    required this.version,
+    required this.tls,
+    required this.setupCompleted,
+    this.org,
+  });
+
+  /// Round-trip latency to the meta endpoint, in milliseconds.
+  final int ms;
+
+  /// The server's reported version (e.g. `2.8.0`).
+  final String version;
+
+  /// Whether the probe reached the server over HTTPS.
+  final bool tls;
+
+  /// Whether first-run setup has been completed on this server.
+  final bool setupCompleted;
+
+  /// The organization name, when the server advertises one.
+  final String? org;
 }
 
 /// Attachment upload constraints supplied by the server so the client can
@@ -97,18 +135,22 @@ class UploadLimits extends Equatable {
   int get maxRequestBytes => maxRequestMb * 1024 * 1024;
 
   factory UploadLimits.fromJson(Map<String, dynamic> json) => UploadLimits(
-        maxFileMb: json['maxFileMb'] as int? ?? 25,
-        maxFiles: json['maxFiles'] as int? ?? 10,
-        maxRequestMb: json['maxRequestMb'] as int? ?? 100,
-        allowedContentTypes:
-            ((json['allowedContentTypes'] as List<dynamic>?) ?? const [])
-                .map((e) => e.toString())
-                .toList(growable: false),
-      );
+    maxFileMb: json['maxFileMb'] as int? ?? 25,
+    maxFiles: json['maxFiles'] as int? ?? 10,
+    maxRequestMb: json['maxRequestMb'] as int? ?? 100,
+    allowedContentTypes:
+        ((json['allowedContentTypes'] as List<dynamic>?) ?? const [])
+            .map((e) => e.toString())
+            .toList(growable: false),
+  );
 
   @override
-  List<Object?> get props =>
-      [maxFileMb, maxFiles, maxRequestMb, allowedContentTypes];
+  List<Object?> get props => [
+    maxFileMb,
+    maxFiles,
+    maxRequestMb,
+    allowedContentTypes,
+  ];
 }
 
 class AuthUser extends Equatable {
@@ -135,15 +177,15 @@ class AuthUser extends Equatable {
   bool get isAdmin => roles.contains('ADMIN');
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
-        id: json['id'] as String,
-        email: json['email'] as String,
-        username: json['username'] as String,
-        displayName: json['displayName'] as String? ?? json['username'] as String,
-        roles: ((json['roles'] as List<dynamic>?) ?? []).cast<String>().toSet(),
-        avatarUrl: json['avatarUrl'] as String?,
-        title: json['title'] as String?,
-        locale: json['locale'] as String? ?? 'en',
-      );
+    id: json['id'] as String,
+    email: json['email'] as String,
+    username: json['username'] as String,
+    displayName: json['displayName'] as String? ?? json['username'] as String,
+    roles: ((json['roles'] as List<dynamic>?) ?? []).cast<String>().toSet(),
+    avatarUrl: json['avatarUrl'] as String?,
+    title: json['title'] as String?,
+    locale: json['locale'] as String? ?? 'en',
+  );
 
   @override
   List<Object?> get props => [id, email, username, displayName, roles, title];
@@ -165,8 +207,12 @@ class LoginResult {
     required String access,
     required String refresh,
     required AuthUser user,
-  }) =>
-      LoginResult._(mfaRequired: false, access: access, refresh: refresh, user: user);
+  }) => LoginResult._(
+    mfaRequired: false,
+    access: access,
+    refresh: refresh,
+    user: user,
+  );
 
   factory LoginResult.twoFactor(String mfaToken) =>
       LoginResult._(mfaRequired: true, mfaToken: mfaToken);
@@ -194,29 +240,33 @@ class DirectoryUser extends Equatable {
   final String? title;
 
   factory DirectoryUser.fromJson(Map<String, dynamic> json) => DirectoryUser(
-        id: json['id'] as String,
-        username: json['username'] as String? ?? '',
-        displayName: json['displayName'] as String? ?? '',
-        avatarUrl: json['avatarUrl'] as String?,
-        title: json['title'] as String?,
-      );
+    id: json['id'] as String,
+    username: json['username'] as String? ?? '',
+    displayName: json['displayName'] as String? ?? '',
+    avatarUrl: json['avatarUrl'] as String?,
+    title: json['title'] as String?,
+  );
 
   @override
   List<Object?> get props => [id, username, displayName];
 }
 
 class SsoProvider extends Equatable {
-  const SsoProvider({required this.id, required this.displayName, required this.loginUrl});
+  const SsoProvider({
+    required this.id,
+    required this.displayName,
+    required this.loginUrl,
+  });
 
   final String id;
   final String displayName;
   final String loginUrl;
 
   factory SsoProvider.fromJson(Map<String, dynamic> json) => SsoProvider(
-        id: json['id'] as String,
-        displayName: json['displayName'] as String? ?? json['id'] as String,
-        loginUrl: json['loginUrl'] as String,
-      );
+    id: json['id'] as String,
+    displayName: json['displayName'] as String? ?? json['id'] as String,
+    loginUrl: json['loginUrl'] as String,
+  );
 
   @override
   List<Object?> get props => [id, displayName, loginUrl];
@@ -224,8 +274,10 @@ class SsoProvider extends Equatable {
 
 /// Compares dotted semantic versions; returns true when [current] < [minimum].
 bool isVersionBelow(String current, String minimum) {
-  List<int> parse(String v) =>
-      v.split('.').map((p) => int.tryParse(p.replaceAll(RegExp(r'[^0-9].*'), '')) ?? 0).toList();
+  List<int> parse(String v) => v
+      .split('.')
+      .map((p) => int.tryParse(p.replaceAll(RegExp(r'[^0-9].*'), '')) ?? 0)
+      .toList();
   final a = parse(current);
   final b = parse(minimum);
   for (var i = 0; i < 3; i++) {

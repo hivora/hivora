@@ -48,8 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showSsoErrorIfPresent() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final error =
-          GoRouterState.of(context).uri.queryParameters['ssoError'];
+      final error = GoRouterState.of(context).uri.queryParameters['ssoError'];
       if (error != null && error.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${context.t('auth.ssoFailed')}: $error')),
@@ -76,8 +75,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final organization =
-        context.select((AppConfigBloc bloc) => bloc.state.meta?.organizationName);
+    final organization = context.select(
+      (AppConfigBloc bloc) => bloc.state.meta?.organizationName,
+    );
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -114,17 +114,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           // Let the user re-target a different backend before
                           // signing in (or add a new one).
-                          const Align(
-                            alignment: Alignment.center,
-                            child: ServerSwitcher(),
-                          ),
+                          const ServerSelectorButton(),
                           const SizedBox(height: 20),
                           Text(
                             organization ?? 'Hinata',
                             textAlign: TextAlign.center,
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
+                            style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 8),
@@ -172,12 +167,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                       width: 22,
                                       height: 22,
                                       child: HiveLoader(
-                                          size: 22,
-                                          strokeWidth: 2,
-                                          color: Colors.white),
+                                        size: 22,
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
                                     )
-                                  : Text(context.t('auth.signIn'),
-                                      key: const ValueKey('label')),
+                                  : Text(
+                                      context.t('auth.signIn'),
+                                      key: const ValueKey('label'),
+                                    ),
                             ),
                           ),
                           if (_providers.isNotEmpty) ...[
@@ -186,12 +184,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               children: [
                                 const Expanded(child: Divider()),
                                 Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
                                   child: Text(
                                     context.t('auth.or'),
                                     style: TextStyle(
-                                        color: AppColors.textSecondary),
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
                                 ),
                                 const Expanded(child: Divider()),
@@ -202,8 +202,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 10),
                                 child: OutlinedButton.icon(
-                                  onPressed:
-                                      busy ? null : () => _launchSso(provider),
+                                  onPressed: busy
+                                      ? null
+                                      : () => _launchSso(provider),
                                   icon: AnimatedSwitcher(
                                     duration: const Duration(milliseconds: 200),
                                     child: _launchingSsoId == provider.id
@@ -212,22 +213,33 @@ class _LoginScreenState extends State<LoginScreen> {
                                             width: 18,
                                             height: 18,
                                             child: HiveLoader(
-                                                size: 18, strokeWidth: 2),
+                                              size: 18,
+                                              strokeWidth: 2,
+                                            ),
                                           )
-                                        : const Icon(LucideIcons.shield,
-                                            size: 18, key: ValueKey('icon')),
+                                        : const Icon(
+                                            LucideIcons.shield,
+                                            size: 18,
+                                            key: ValueKey('icon'),
+                                          ),
                                   ),
                                   label: AnimatedSwitcher(
                                     duration: const Duration(milliseconds: 200),
                                     child: _launchingSsoId == provider.id
-                                        ? Text(context.t('auth.signingIn'),
-                                            key: const ValueKey('signing'))
+                                        ? Text(
+                                            context.t('auth.signingIn'),
+                                            key: const ValueKey('signing'),
+                                          )
                                         : Text(
-                                            context.t('auth.continueWith',
-                                                variables: {
-                                                  'provider': provider.displayName
-                                                }),
-                                            key: const ValueKey('continue')),
+                                            context.t(
+                                              'auth.continueWith',
+                                              variables: {
+                                                'provider':
+                                                    provider.displayName,
+                                              },
+                                            ),
+                                            key: const ValueKey('continue'),
+                                          ),
                                   ),
                                 ),
                               ),
@@ -247,9 +259,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _submit() {
     if (_formKey.currentState?.validate() ?? false) {
-      context
-          .read<AuthBloc>()
-          .add(LoginSubmitted(_identifier.text.trim(), _password.text));
+      context.read<AuthBloc>().add(
+        LoginSubmitted(_identifier.text.trim(), _password.text),
+      );
     }
   }
 
@@ -262,15 +274,18 @@ class _LoginScreenState extends State<LoginScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(LucideIcons.shieldCheck, size: 30, color: AppColors.accentStrong),
+          const Icon(
+            LucideIcons.shieldCheck,
+            size: 30,
+            color: AppColors.accentStrong,
+          ),
           const SizedBox(height: 14),
           Text(
             context.t('auth.twoFactorTitle'),
             textAlign: TextAlign.center,
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(
@@ -287,7 +302,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 ? const SizedBox(
                     width: 22,
                     height: 22,
-                    child: HiveLoader(size: 22, strokeWidth: 2, color: Colors.white),
+                    child: HiveLoader(
+                      size: 22,
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : Text(context.t('auth.verify')),
           ),
@@ -325,10 +344,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (kIsWeb) {
         // Web: tell the server where to return; the whole flow stays in this
         // tab and ends at <origin>/#/auth-callback with the token pair.
-        uri = uri.replace(queryParameters: {
-          ...uri.queryParameters,
-          'return': Uri.base.origin,
-        });
+        uri = uri.replace(
+          queryParameters: {...uri.queryParameters, 'return': Uri.base.origin},
+        );
         await launchUrl(uri, webOnlyWindowName: '_self');
         // The tab is on its way to the SSO provider and the flow finishes by
         // redirecting back. Keep the buttons disabled — re-enabling them lets

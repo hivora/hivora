@@ -28,6 +28,7 @@ class SprintActiveSurface extends StatelessWidget {
     this.issuesById = const {},
     this.epics = const [],
     this.names = const {},
+    this.avatars = const {},
   });
 
   final Sprint sprint;
@@ -42,6 +43,7 @@ class SprintActiveSurface extends StatelessWidget {
   final Map<String, Issue> issuesById;
   final List<Issue> epics;
   final Map<String, String> names;
+  final Map<String, String> avatars;
 
   /// Every active facet plus the epic facet (resolved per issue).
   bool _passes(Issue i) =>
@@ -65,6 +67,7 @@ class SprintActiveSurface extends StatelessWidget {
       issuesById: issuesById,
       epics: epics,
       names: names,
+      avatars: avatars,
       palette: ProjectPalette.empty,
       onOpenIssue: onOpenIssue,
     );

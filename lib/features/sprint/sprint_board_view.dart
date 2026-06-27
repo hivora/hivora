@@ -696,6 +696,7 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
           issuesById: _issuesById,
           epics: _epics,
           names: widget.names,
+          avatars: widget.avatars,
           onOpenIssue: widget.onOpenIssue,
           onMoveState: _moveIssueState,
         );

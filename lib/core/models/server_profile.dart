@@ -21,15 +21,19 @@ class ServerProfile extends Equatable {
   String get displayName =>
       (label != null && label!.trim().isNotEmpty) ? label!.trim() : host;
 
+  /// Whether this is a managed hinata Cloud backend (vs. a self-hosted server),
+  /// inferred from the host. Drives the Self/Cloud badge in the server manager.
+  bool get isCloud => host.toLowerCase().contains('cloud.hinata');
+
   Map<String, dynamic> toJson() => {
-        'url': url,
-        if (label != null) 'label': label,
-      };
+    'url': url,
+    if (label != null) 'label': label,
+  };
 
   factory ServerProfile.fromJson(Map<String, dynamic> json) => ServerProfile(
-        url: json['url'] as String,
-        label: json['label'] as String?,
-      );
+    url: json['url'] as String,
+    label: json['label'] as String?,
+  );
 
   @override
   List<Object?> get props => [url, label];

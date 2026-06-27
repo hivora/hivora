@@ -17,13 +17,13 @@ import '../../core/blocs/theme_cubit.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/account_models.dart';
 import '../../core/responsive/responsive.dart';
-import '../../core/storage/app_storage.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/hex_mark.dart';
 import '../../core/widgets/hive_loader.dart';
 import '../../core/widgets/honeycomb_background.dart';
+import '../connect/server_manager.dart';
 import '../connect/server_switcher.dart';
 import '../shell/page_chrome.dart';
 import 'account_modals.dart';
@@ -390,10 +390,7 @@ class _AccountScreenState extends State<AccountScreen> {
       const SizedBox(height: 16),
       _appearanceSection(),
       // Admin area is its own top-level entry here, not buried in Appearance.
-      if (isAdmin) ...[
-        const SizedBox(height: 16),
-        _adminSection(),
-      ],
+      if (isAdmin) ...[const SizedBox(height: 16), _adminSection()],
       const SizedBox(height: 16),
       _dataSection(),
       const SizedBox(height: 16),
@@ -479,20 +476,24 @@ class _AccountScreenState extends State<AccountScreen> {
     final isAdmin = context.read<AuthBloc>().state.user?.isAdmin ?? false;
     final tiles = <Widget>[];
     for (final item in _settingsMenu) {
-      tiles.add(_navTile(
-        icon: item.icon,
-        title: _sectionTitle(item.section),
-        subtitle: _sectionSubtitle(item.section),
-        danger: item.section == _SettingsSection.danger,
-        onTap: () => setState(() => _section = item.section),
-      ));
+      tiles.add(
+        _navTile(
+          icon: item.icon,
+          title: _sectionTitle(item.section),
+          subtitle: _sectionSubtitle(item.section),
+          danger: item.section == _SettingsSection.danger,
+          onTap: () => setState(() => _section = item.section),
+        ),
+      );
       if (item.section == _SettingsSection.appearance && isAdmin) {
-        tiles.add(_navTile(
-          icon: LucideIcons.shieldUser,
-          title: context.t('settings.adminArea'),
-          subtitle: context.t('settings.adminAreaDesc'),
-          onTap: () => context.go('/admin'),
-        ));
+        tiles.add(
+          _navTile(
+            icon: LucideIcons.shieldUser,
+            title: context.t('settings.adminArea'),
+            subtitle: context.t('settings.adminAreaDesc'),
+            onTap: () => context.go('/admin'),
+          ),
+        );
       }
     }
     return Container(
@@ -505,7 +506,8 @@ class _AccountScreenState extends State<AccountScreen> {
       child: Column(
         children: [
           for (var i = 0; i < tiles.length; i++) ...[
-            if (i > 0) Divider(height: 1, indent: 62, color: AppColors.hairline2),
+            if (i > 0)
+              Divider(height: 1, indent: 62, color: AppColors.hairline2),
             tiles[i],
           ],
         ],
@@ -573,7 +575,11 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(LucideIcons.chevronRight, size: 18, color: AppColors.inkFaint),
+              Icon(
+                LucideIcons.chevronRight,
+                size: 18,
+                color: AppColors.inkFaint,
+              ),
             ],
           ),
         ),
@@ -1403,14 +1409,10 @@ class _AccountScreenState extends State<AccountScreen> {
       title: context.t('account.appearance.title'),
       subtitle: context.t('account.appearance.subtitle'),
       children: [
-        SettingRow(
-          label: context.t('server.current'),
-          icon: LucideIcons.server,
-          description: context.t('server.switchHint'),
-          stack: context.isCompact,
-          trailing: const ServerSwitcher(),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: ServerCard(),
         ),
-        ..._otherServersRows(),
         Divider(height: 1, color: AppColors.hairline2),
         SettingRow(
           label: context.t('settings.language'),
@@ -1472,32 +1474,6 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
       ],
     );
-  }
-
-  /// Rows for the saved servers other than the current one: tap to switch,
-  /// trash to forget. Empty when only the current server is known.
-  List<Widget> _otherServersRows() {
-    final storage = context.read<AppStorage>();
-    final current = storage.serverUrl;
-    final others = storage.servers.where((s) => s.url != current).toList();
-    return [
-      for (final server in others)
-        SettingRow(
-          label: server.displayName,
-          description: server.host,
-          icon: LucideIcons.server,
-          stack: context.isCompact,
-          onTap: () => switchToServer(context, server.url),
-          trailing: IconButton(
-            icon: const Icon(LucideIcons.trash2, size: 17),
-            tooltip: context.t('server.remove'),
-            onPressed: () async {
-              await storage.removeServer(server.url);
-              if (mounted) setState(() {});
-            },
-          ),
-        ),
-    ];
   }
 
   Widget _aboutRow(String label, String value) => Padding(

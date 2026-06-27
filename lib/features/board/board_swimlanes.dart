@@ -135,6 +135,7 @@ List<BoardLane> computeBoardLanes({
   required Map<String, String> names,
   required ProjectPalette palette,
   required void Function(Issue) onOpenIssue,
+  Map<String, String> avatars = const {},
 }) {
   // Drop issues that aren't board cards for this grouping (epics are always
   // headers/filters; sub-tasks are cards only under the sub-task grouping).
@@ -183,7 +184,11 @@ List<BoardLane> computeBoardLanes({
         lanes.add(
           BoardLane(
             key: id,
-            header: _avatarLaneHeader(name, byUser[id]!.length),
+            header: _avatarLaneHeader(
+              name,
+              byUser[id]!.length,
+              imageUrl: avatars[id],
+            ),
             issues: byUser[id]!,
           ),
         );
@@ -314,11 +319,11 @@ Widget _issueLaneHeader(
   ),
 );
 
-Widget _avatarLaneHeader(String name, int count) => Padding(
+Widget _avatarLaneHeader(String name, int count, {String? imageUrl}) => Padding(
   padding: const EdgeInsets.only(bottom: 8, top: 4),
   child: Row(
     children: [
-      HiveAvatar(name: name, size: 24),
+      HiveAvatar(name: name, imageUrl: imageUrl, size: 24),
       const SizedBox(width: 9),
       Text(
         name,

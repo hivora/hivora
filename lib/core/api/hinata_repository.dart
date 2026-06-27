@@ -27,6 +27,11 @@ class HinataRepository {
     await _api.get('/api/v1/meta') as Map<String, dynamic>,
   );
 
+  /// Reachability test for a *candidate* server [url] the app is not yet bound
+  /// to — powers the "add server" connection test and the live status dots in
+  /// the server manager. Returns null when the server is unreachable.
+  Future<ServerProbe?> probeServer(String url) => _api.probe(url);
+
   Future<void> completeSetup({
     required String organizationName,
     required String adminEmail,
@@ -419,7 +424,10 @@ class HinataRepository {
           .toList();
 
   /// Removes one link; returns the refreshed, oriented link list.
-  Future<List<IssueLink>> deleteIssueLink(String issueId, String linkId) async =>
+  Future<List<IssueLink>> deleteIssueLink(
+    String issueId,
+    String linkId,
+  ) async =>
       ((await _api.delete('/api/v1/issues/$issueId/links/$linkId'))
               as List<dynamic>)
           .map((l) => IssueLink.fromJson(l as Map<String, dynamic>))

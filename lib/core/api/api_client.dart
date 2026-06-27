@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../models/core_models.dart';
 import '../storage/app_storage.dart';
 
 /// Exception with a user-presentable message key.
@@ -17,48 +18,53 @@ class ApiFailure implements Exception {
 /// attaches the bearer token and refreshes it once on 401.
 class ApiClient {
   ApiClient(this._storage) {
-    _dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 20),
-      headers: {
-        'Accept': 'application/json',
-        // Bypass the ngrok free-tier browser interstitial: without this header
-        // ngrok answers API calls with an HTML warning page instead of JSON.
-        // Harmless against any other host, so it is sent unconditionally.
-        'ngrok-skip-browser-warning': 'true',
-      },
-    ));
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) {
-        final token = _storage.accessToken;
-        if (token != null && !options.path.contains('/auth/refresh')) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        // Tell the server which language to localize error messages in.
-        options.headers['Accept-Language'] = localeCode;
-        handler.next(options);
-      },
-      onError: (error, handler) async {
-        if (error.response?.statusCode == 401 &&
-            _storage.refreshToken != null &&
-            error.requestOptions.extra['retried'] != true) {
-          final refreshed = await _tryRefresh();
-          if (refreshed) {
-            final options = error.requestOptions;
-            options.extra['retried'] = true;
-            options.headers['Authorization'] = 'Bearer ${_storage.accessToken}';
-            try {
-              final response = await _dio.fetch<dynamic>(options);
-              return handler.resolve(response);
-            } on DioException catch (retryError) {
-              return handler.next(retryError);
-            }
+    _dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 20),
+        headers: {
+          'Accept': 'application/json',
+          // Bypass the ngrok free-tier browser interstitial: without this header
+          // ngrok answers API calls with an HTML warning page instead of JSON.
+          // Harmless against any other host, so it is sent unconditionally.
+          'ngrok-skip-browser-warning': 'true',
+        },
+      ),
+    );
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          final token = _storage.accessToken;
+          if (token != null && !options.path.contains('/auth/refresh')) {
+            options.headers['Authorization'] = 'Bearer $token';
           }
-          onSessionExpired?.call();
-        }
-        handler.next(error);
-      },
-    ));
+          // Tell the server which language to localize error messages in.
+          options.headers['Accept-Language'] = localeCode;
+          handler.next(options);
+        },
+        onError: (error, handler) async {
+          if (error.response?.statusCode == 401 &&
+              _storage.refreshToken != null &&
+              error.requestOptions.extra['retried'] != true) {
+            final refreshed = await _tryRefresh();
+            if (refreshed) {
+              final options = error.requestOptions;
+              options.extra['retried'] = true;
+              options.headers['Authorization'] =
+                  'Bearer ${_storage.accessToken}';
+              try {
+                final response = await _dio.fetch<dynamic>(options);
+                return handler.resolve(response);
+              } on DioException catch (retryError) {
+                return handler.next(retryError);
+              }
+            }
+            onSessionExpired?.call();
+          }
+          handler.next(error);
+        },
+      ),
+    );
   }
 
   final AppStorage _storage;
@@ -74,6 +80,52 @@ class ApiClient {
   String get baseUrl => _storage.serverUrl ?? '';
 
   Uri resolve(String path) => Uri.parse('$baseUrl$path');
+
+  /// One-off reachability probe of a *candidate* server [url] — not the bound
+  /// one. Times a `GET <url>/api/v1/meta` over a throwaway Dio that carries **no
+  /// bearer** (the current server's token must never reach another host) with a
+  /// short timeout. Returns the [ServerProbe], or null on a malformed URL or any
+  /// transport / non-2xx error. Used by the "add server" connection test.
+  Future<ServerProbe?> probe(String url) async {
+    var base = url.trim();
+    if (base.endsWith('/')) base = base.substring(0, base.length - 1);
+    final uri = Uri.tryParse(base);
+    if (uri == null ||
+        !(uri.isScheme('http') || uri.isScheme('https')) ||
+        uri.host.isEmpty) {
+      return null;
+    }
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 6),
+        receiveTimeout: const Duration(seconds: 6),
+        headers: {
+          'Accept': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+          'Accept-Language': localeCode,
+        },
+      ),
+    );
+    final stopwatch = Stopwatch()..start();
+    try {
+      final response = await dio.get<dynamic>('$base/api/v1/meta');
+      stopwatch.stop();
+      final data = response.data;
+      if (data is! Map<String, dynamic>) return null;
+      final meta = ServerMeta.fromJson(data);
+      return ServerProbe(
+        ms: stopwatch.elapsedMilliseconds,
+        version: meta.serverVersion,
+        tls: uri.isScheme('https'),
+        setupCompleted: meta.setupCompleted,
+        org: meta.organizationName,
+      );
+    } catch (_) {
+      return null;
+    } finally {
+      dio.close();
+    }
+  }
 
   Future<bool> _tryRefresh() async {
     try {
@@ -108,8 +160,8 @@ class ApiClient {
       if (bytes == null || bytes.isEmpty) return null;
       return (
         bytes: bytes,
-        contentType:
-            (response.headers.value('content-type') ?? '').toLowerCase(),
+        contentType: (response.headers.value('content-type') ?? '')
+            .toLowerCase(),
       );
     } catch (_) {
       return null;
@@ -133,13 +185,14 @@ class ApiClient {
     MultipartFile file, {
     void Function(int sent, int total)? onSendProgress,
     CancelToken? cancelToken,
-  }) =>
-      _run(() => _dio.post<dynamic>(
-            '$baseUrl$path',
-            data: FormData.fromMap({'file': file}),
-            onSendProgress: onSendProgress,
-            cancelToken: cancelToken,
-          ));
+  }) => _run(
+    () => _dio.post<dynamic>(
+      '$baseUrl$path',
+      data: FormData.fromMap({'file': file}),
+      onSendProgress: onSendProgress,
+      cancelToken: cancelToken,
+    ),
+  );
 
   /// Opens a long-lived Server-Sent Events stream and returns the raw byte
   /// stream (callers parse SSE frames). The bearer token is attached as usual;
@@ -183,8 +236,10 @@ class ApiClient {
     return switch (error.type) {
       DioExceptionType.connectionTimeout ||
       DioExceptionType.receiveTimeout ||
-      DioExceptionType.connectionError =>
-        ApiFailure('errors.connection', statusCode: status),
+      DioExceptionType.connectionError => ApiFailure(
+        'errors.connection',
+        statusCode: status,
+      ),
       _ => ApiFailure('errors.unexpected', statusCode: status),
     };
   }
