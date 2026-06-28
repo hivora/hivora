@@ -8,12 +8,12 @@
 	<true/>
 	<!-- Hinata Connect relay: the ONE verified domain for the white-label app, so
 	     invite/reset links from ANY self-hosted server open the macOS app. Apple
-	     fetches https://connect.track.asta.hn/.well-known/apple-app-site-association
+	     fetches https://connect.hinata.ahmadre.com/.well-known/apple-app-site-association
 	     and matches it against this app's appID. The matching provisioning profile
 	     must have the Associated Domains capability enabled (fastlane match). -->
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>applinks:connect.track.asta.hn</string>
+		<string>applinks:connect.hinata.ahmadre.com</string>
 	</array>
 </dict>
 </plist>

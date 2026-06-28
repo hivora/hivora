@@ -47,13 +47,13 @@
             <!-- Android App Links (Option B): Hinata Connect is the ONE verified
                  domain for the white-label app, so invite/reset links from ANY
                  self-hosted server open the app directly. autoVerify checks
-                 https://connect.track.asta.hn/.well-known/assetlinks.json against
+                 https://connect.hinata.ahmadre.com/.well-known/assetlinks.json against
                  this app's signing certificate. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="connect.track.asta.hn"/>
+                <data android:scheme="https" android:host="connect.hinata.ahmadre.com"/>
                 <data android:pathPrefix="/l/"/>
             </intent-filter>
         </activity>
