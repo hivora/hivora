@@ -8,20 +8,14 @@
 	     on-device debug push you'd temporarily switch this to "development". -->
 	<key>aps-environment</key>
 	<string>production</string>
-	<!-- Universal Links (Option B): lets verified https links from the production
-	     web domain open the app. Apple fetches
-	     https://track.asta.hn/.well-known/apple-app-site-association and matches
-	     it against this app's appID (T852K29HWS.com.ahmadre.hinata).
-	     NOTE: the matching provisioning profile must have the Associated Domains
-	     capability enabled (Apple Developer portal / fastlane match). -->
+	<!-- Hinata Connect relay: the ONE verified domain for the white-label app, so
+	     invite/reset links from ANY self-hosted server open this app. Apple fetches
+	     https://connect.track.asta.hn/.well-known/apple-app-site-association and
+	     matches it against this app's appID. The matching provisioning profile must
+	     have the Associated Domains capability enabled (fastlane match). -->
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<!-- Hinata Connect relay: the ONE verified domain for the white-label app,
-		     so invite/reset links from ANY self-hosted server open this app
-		     (https://connect.track.asta.hn/.well-known/apple-app-site-association). -->
 		<string>applinks:connect.track.asta.hn</string>
-		<!-- Direct links for the AStA instance's own web domain. -->
-		<string>applinks:track.asta.hn</string>
 	</array>
 </dict>
 </plist>

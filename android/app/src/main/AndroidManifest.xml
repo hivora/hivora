@@ -44,24 +44,11 @@
                 <data android:scheme="hinata" android:host="invite"/>
                 <data android:scheme="hinata" android:host="reset-password"/>
             </intent-filter>
-            <!-- Android App Links (Option B): verified https deep links from the
-                 production web domain open the app directly. autoVerify checks
-                 https://track.asta.hn/.well-known/assetlinks.json against this
-                 app's signing certificate. Scoped to the routes the app handles
-                 (issue detail + the token email flows). -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="track.asta.hn"/>
-                <data android:pathPrefix="/issues"/>
-                <data android:pathPrefix="/invite"/>
-                <data android:pathPrefix="/reset-password"/>
-            </intent-filter>
-            <!-- Hinata Connect relay: the ONE verified domain for the white-label
-                 app, so invite/reset links from ANY self-hosted server open the
-                 app. Verified against
-                 https://connect.track.asta.hn/.well-known/assetlinks.json. -->
+            <!-- Android App Links (Option B): Hinata Connect is the ONE verified
+                 domain for the white-label app, so invite/reset links from ANY
+                 self-hosted server open the app directly. autoVerify checks
+                 https://connect.track.asta.hn/.well-known/assetlinks.json against
+                 this app's signing certificate. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>

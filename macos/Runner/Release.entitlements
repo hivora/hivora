@@ -6,14 +6,14 @@
 	<true/>
 	<key>com.apple.security.network.client</key>
 	<true/>
-	<!-- Universal Links (Option B): lets verified https links from the
-	     production web domain open the macOS app. Apple fetches
-	     https://track.asta.hn/.well-known/apple-app-site-association and matches
-	     it against this app's appID. The matching provisioning profile must have
-	     the Associated Domains capability enabled (fastlane match). -->
+	<!-- Hinata Connect relay: the ONE verified domain for the white-label app, so
+	     invite/reset links from ANY self-hosted server open the macOS app. Apple
+	     fetches https://connect.track.asta.hn/.well-known/apple-app-site-association
+	     and matches it against this app's appID. The matching provisioning profile
+	     must have the Associated Domains capability enabled (fastlane match). -->
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>applinks:track.asta.hn</string>
+		<string>applinks:connect.track.asta.hn</string>
 	</array>
 </dict>
 </plist>
