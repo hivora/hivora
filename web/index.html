@@ -173,6 +173,45 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <!-- ===== Service-Worker Auto-Update =========================================
+    Flutters generierter SW promotet neue Builds erst, wenn alle Tabs geschlossen
+    sind → man sieht den alten Stand sonst noch einen Reload lang. Wir fordern den
+    wartenden Worker per 'skipWaiting' sofort an und laden nach der Übernahme einmal
+    neu. Beim Erst-Install (kein vorheriger Controller) wird NICHT neu geladen.
+  -->
+  <script>
+    (function () {
+      if (!("serviceWorker" in navigator)) return;
+      var hadController = !!navigator.serviceWorker.controller;
+      var refreshing = false;
+
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        if (refreshing || !hadController) return;
+        refreshing = true;
+        globalThis.location.reload();
+      });
+
+      function track(worker) {
+        if (!worker) return;
+        worker.addEventListener("statechange", function () {
+          if (worker.state === "installed" && navigator.serviceWorker.controller) {
+            worker.postMessage("skipWaiting");
+          }
+        });
+      }
+
+      navigator.serviceWorker.ready.then(function (reg) {
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          reg.waiting.postMessage("skipWaiting");
+        }
+        track(reg.installing);
+        reg.addEventListener("updatefound", function () {
+          track(reg.installing);
+        });
+      });
+    })();
+  </script>
+
   <script src="flutter_bootstrap.js" async=""></script>
 
 
