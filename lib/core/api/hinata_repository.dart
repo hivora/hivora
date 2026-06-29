@@ -277,6 +277,28 @@ class HinataRepository {
           .map((u) => DirectoryUser.fromJson(u as Map<String, dynamic>))
           .toList();
 
+  /// Server-side type-ahead over the directory, for assignee/member pickers in
+  /// large orgs where loading every user is wasteful. Returns one page plus the
+  /// backend total. An empty [query] returns the first page of all active users.
+  Future<({List<DirectoryUser> items, int total})> searchUsers(
+    String query, {
+    int page = 0,
+    int size = 25,
+  }) async {
+    final data =
+        await _api.get(
+              '/api/v1/users/search',
+              query: {'q': query, 'page': page, 'size': size},
+            )
+            as Map<String, dynamic>;
+    return (
+      items: ((data['content'] as List<dynamic>?) ?? [])
+          .map((u) => DirectoryUser.fromJson(u as Map<String, dynamic>))
+          .toList(),
+      total: data['totalElements'] as int? ?? 0,
+    );
+  }
+
   // --- Projects -------------------------------------------------------------
 
   Future<List<Project>> projects({bool archived = false}) async =>
@@ -373,6 +395,46 @@ class HinataRepository {
     );
   }
 
+  /// Fetches **every** matching issue by paging through the server-clamped
+  /// result set (the search endpoint caps `size` at 100), so callers that need
+  /// the complete collection — exports, board swimlane indexes, smart-link
+  /// `@`-menus — never silently miss issues beyond the first page.
+  ///
+  /// Pages are de-duplicated by id: the backend orders by `updatedAt`, so a row
+  /// can shift across a page boundary while we page. Stops at the last partial
+  /// page or once the accumulated count reaches the backend total.
+  Future<List<Issue>> allIssues({
+    String? projectId,
+    String? state,
+    String? assigneeId,
+    String? sprintId,
+    String? query,
+    bool noSprint = false,
+  }) async {
+    const size = 100;
+    final out = <Issue>[];
+    final seen = <String>{};
+    var page = 0;
+    while (true) {
+      final result = await issues(
+        projectId: projectId,
+        state: state,
+        assigneeId: assigneeId,
+        sprintId: sprintId,
+        query: query,
+        noSprint: noSprint,
+        page: page,
+        size: size,
+      );
+      for (final issue in result.issues) {
+        if (seen.add(issue.id)) out.add(issue);
+      }
+      if (result.issues.length < size || out.length >= result.total) break;
+      page++;
+    }
+    return out;
+  }
+
   Future<Issue> issue(String id) async => Issue.fromJson(
     await _api.get('/api/v1/issues/$id') as Map<String, dynamic>,
   );
@@ -443,15 +505,46 @@ class HinataRepository {
     cancelToken: cancelToken,
   );
 
-  Future<List<IssueActivity>> issueActivity(String issueId) async =>
-      ((await _api.get('/api/v1/issues/$issueId/activity')) as List<dynamic>)
+  /// One newest-first page of an issue's change history, plus the backend total.
+  Future<({List<IssueActivity> items, int total})> issueActivity(
+    String issueId, {
+    int page = 0,
+    int size = 30,
+  }) async {
+    final data =
+        await _api.get(
+              '/api/v1/issues/$issueId/activity',
+              query: {'page': page, 'size': size},
+            )
+            as Map<String, dynamic>;
+    return (
+      items: ((data['content'] as List<dynamic>?) ?? [])
           .map((a) => IssueActivity.fromJson(a as Map<String, dynamic>))
-          .toList();
+          .toList(),
+      total: data['totalElements'] as int? ?? 0,
+    );
+  }
 
-  Future<List<IssueComment>> comments(String issueId) async =>
-      ((await _api.get('/api/v1/issues/$issueId/comments')) as List<dynamic>)
+  /// One newest-first page of an issue's comment thread, plus the backend total.
+  /// Callers that show comments chat-style (oldest-first) reverse each page.
+  Future<({List<IssueComment> items, int total})> comments(
+    String issueId, {
+    int page = 0,
+    int size = 30,
+  }) async {
+    final data =
+        await _api.get(
+              '/api/v1/issues/$issueId/comments',
+              query: {'page': page, 'size': size},
+            )
+            as Map<String, dynamic>;
+    return (
+      items: ((data['content'] as List<dynamic>?) ?? [])
           .map((c) => IssueComment.fromJson(c as Map<String, dynamic>))
-          .toList();
+          .toList(),
+      total: data['totalElements'] as int? ?? 0,
+    );
+  }
 
   Future<IssueComment> addComment(String issueId, String text) async =>
       IssueComment.fromJson(
@@ -875,6 +968,25 @@ class HinataRepository {
         .toList();
   }
 
+  /// One page of notifications plus the backend total, for infinite scroll.
+  Future<({List<AppNotification> items, int total})> notificationsPage({
+    int page = 0,
+    int size = 25,
+  }) async {
+    final data =
+        await _api.get(
+              '/api/v1/notifications',
+              query: {'page': page, 'size': size},
+            )
+            as Map<String, dynamic>;
+    return (
+      items: ((data['content'] as List<dynamic>?) ?? [])
+          .map((n) => AppNotification.fromJson(n as Map<String, dynamic>))
+          .toList(),
+      total: data['totalElements'] as int? ?? 0,
+    );
+  }
+
   Future<int> unreadNotifications() async =>
       ((await _api.get('/api/v1/notifications/unread-count'))
               as Map<String, dynamic>)['count']
@@ -1145,6 +1257,26 @@ class HinataRepository {
     return ((data['content'] as List<dynamic>?) ?? const [])
         .map((a) => TeamActivity.fromJson(a as Map<String, dynamic>))
         .toList();
+  }
+
+  /// One newest-first page of a team's activity feed, plus the backend total.
+  Future<({List<TeamActivity> items, int total})> teamActivityPage(
+    String teamId, {
+    int page = 0,
+    int size = 20,
+  }) async {
+    final data =
+        await _api.get(
+              '/api/v1/teams/$teamId/activity',
+              query: {'page': page, 'size': size},
+            )
+            as Map<String, dynamic>;
+    return (
+      items: ((data['content'] as List<dynamic>?) ?? const [])
+          .map((a) => TeamActivity.fromJson(a as Map<String, dynamic>))
+          .toList(),
+      total: data['totalElements'] as int? ?? 0,
+    );
   }
 
   // --- Cascading deletion ---------------------------------------------------

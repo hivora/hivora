@@ -396,14 +396,17 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
     if (projectIds.isEmpty) {
       return (backlog: const <Issue>[], byId: const <String, Issue>{});
     }
+    // allIssues pages through the whole backend result set (the search endpoint
+    // clamps size to 100), so the by-id index and backlog never silently miss
+    // issues beyond the first page.
     final pages = await Future.wait(
-      projectIds.map((p) => repo.issues(projectId: p, size: 500)),
+      projectIds.map((p) => repo.allIssues(projectId: p)),
     );
     final seen = <String>{};
     final out = <Issue>[];
     final byId = <String, Issue>{};
     for (final page in pages) {
-      for (final issue in page.issues) {
+      for (final issue in page) {
         byId[issue.id] = issue;
         if (issue.sprintId == null && seen.add(issue.id)) out.add(issue);
       }
@@ -599,10 +602,7 @@ class _KanbanBoardScreenState extends State<KanbanBoardScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PageHead(
-            title: view.board.name,
-            subtitle: subtitle,
-          ),
+          PageHead(title: view.board.name, subtitle: subtitle),
           const SizedBox(height: 12),
           // Right-aligned, collapsible, responsive-label switcher (mobile).
           _CompactViewSwitcher(
@@ -1751,7 +1751,8 @@ class _BoardColumnState extends State<_BoardColumn> {
                                   child: _BoardCard(
                                     issue: issue,
                                     palette: widget.palette,
-                                    assigneeName: widget.names[issue.assigneeId],
+                                    assigneeName:
+                                        widget.names[issue.assigneeId],
                                     assigneeAvatar:
                                         widget.avatars[issue.assigneeId],
                                   ),

@@ -90,11 +90,13 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
   Future<void> _loadBackendIssues() async {
     final repository = context.read<HinataRepository>();
     try {
-      final res = await repository.issues(size: 500);
+      // allIssues pages through the whole backend result set so smart links and
+      // the `@`-mention menu resolve against every issue, not just the first 100.
+      final issues = await repository.allIssues();
       final users = await repository.users();
       if (!mounted) return;
       setState(() {
-        _issuesByReadable = {for (final i in res.issues) i.readableId: i};
+        _issuesByReadable = {for (final i in issues) i.readableId: i};
         _userNames = {for (final u in users) u.id: u.displayName};
       });
     } catch (_) {
@@ -193,8 +195,10 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
       context,
       icon: lucideIcon('trash-2'),
       title: context.t('knowledge.deleteArticleTitle'),
-      message: context.t('knowledge.deleteArticleConfirm',
-          variables: {'title': article?.title ?? ''}),
+      message: context.t(
+        'knowledge.deleteArticleConfirm',
+        variables: {'title': article?.title ?? ''},
+      ),
       confirmLabel: context.t('knowledge.delete'),
       destructive: true,
       confirmIcon: lucideIcon('trash-2'),
@@ -223,25 +227,26 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
   Future<void> _createSpace() async {
     final created = await showCreateSpaceDialog(
       context,
-      onCreate: ({
-        required String name,
-        required String icon,
-        required int hue,
-        required String description,
-      }) async {
-        try {
-          final space = await _repo.createSpace(
-            name: name,
-            icon: icon,
-            hue: hue,
-            description: description,
-          );
-          if (mounted) _spaceId = space.id;
-          return null;
-        } on ApiFailure catch (failure) {
-          return failure.message;
-        }
-      },
+      onCreate:
+          ({
+            required String name,
+            required String icon,
+            required int hue,
+            required String description,
+          }) async {
+            try {
+              final space = await _repo.createSpace(
+                name: name,
+                icon: icon,
+                hue: hue,
+                description: description,
+              );
+              if (mounted) _spaceId = space.id;
+              return null;
+            } on ApiFailure catch (failure) {
+              return failure.message;
+            }
+          },
     );
     if (created != null && mounted) {
       setState(() {});
@@ -254,7 +259,10 @@ class _KnowledgeScreenState extends State<KnowledgeScreen> {
       context,
       icon: lucideIcon('trash-2'),
       title: context.t('knowledge.deleteSpaceTitle'),
-      message: context.t('knowledge.deleteSpaceConfirm', variables: {'name': id}),
+      message: context.t(
+        'knowledge.deleteSpaceConfirm',
+        variables: {'name': id},
+      ),
       confirmLabel: context.t('knowledge.delete'),
       destructive: true,
       confirmIcon: lucideIcon('trash-2'),

@@ -25,6 +25,7 @@ typedef TeamDetailData = ({
   Map<String, DirectoryUser> usersById,
   Map<String, Project> projectsById,
   List<TeamActivity> activity,
+  int activityTotal,
 });
 
 class TeamDetailScreen extends StatefulWidget {
@@ -48,17 +49,18 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
         repo.team(widget.teamId),
         repo.users(),
         repo.projects(),
-        repo.teamActivity(widget.teamId),
+        repo.teamActivityPage(widget.teamId),
       ]);
       final team = results[0] as Team;
       final users = results[1] as List<DirectoryUser>;
       final projects = results[2] as List<Project>;
-      final activity = results[3] as List<TeamActivity>;
+      final activity = results[3] as ({List<TeamActivity> items, int total});
       return (
         team: team,
         usersById: {for (final u in users) u.id: u},
         projectsById: {for (final p in projects) p.id: p},
-        activity: activity,
+        activity: activity.items,
+        activityTotal: activity.total,
       );
     })..load();
   }
@@ -129,6 +131,53 @@ class _TeamDetailContent extends StatefulWidget {
 class _TeamDetailContentState extends State<_TeamDetailContent> {
   int _tab = 0;
 
+  // Activity is paginated: the bundle provides page 0; older pages load on
+  // demand and append here. Re-synced whenever a reload replaces the bundle.
+  late List<TeamActivity> _activity = widget.data.activity;
+  late int _activityTotal = widget.data.activityTotal;
+  int _activityPage = 0;
+  bool _loadingMoreActivity = false;
+
+  @override
+  void didUpdateWidget(_TeamDetailContent old) {
+    super.didUpdateWidget(old);
+    // A reload emits a fresh bundle (new maps/instances) — reset to its page 0.
+    if (!identical(old.data, widget.data)) {
+      _activity = widget.data.activity;
+      _activityTotal = widget.data.activityTotal;
+      _activityPage = 0;
+    }
+  }
+
+  bool get _hasMoreActivity => _activity.length < _activityTotal;
+
+  Future<void> _loadMoreActivity() async {
+    if (_loadingMoreActivity || !_hasMoreActivity) return;
+    setState(() => _loadingMoreActivity = true);
+    try {
+      final next = _activityPage + 1;
+      final p = await context.read<HinataRepository>().teamActivityPage(
+        widget.data.team.id,
+        page: next,
+      );
+      if (!mounted) return;
+      final existing = {for (final a in _activity) a.id};
+      final older = [
+        for (final a in p.items)
+          if (!existing.contains(a.id)) a,
+      ];
+      setState(() {
+        _activity = [..._activity, ...older];
+        _activityTotal = p.total;
+        _activityPage = next;
+      });
+    } catch (_) {
+      // Keep what we have; the user can retry.
+    } finally {
+      if (mounted) setState(() => _loadingMoreActivity = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final team = widget.data.team;
@@ -186,6 +235,10 @@ class _TeamDetailContentState extends State<_TeamDetailContent> {
               manage: widget.manage,
               onReload: widget.onReload,
               onGotoProjects: () => setState(() => _tab = 2),
+              activity: _activity,
+              activityHasMore: _hasMoreActivity,
+              activityLoadingMore: _loadingMoreActivity,
+              onLoadMoreActivity: _loadMoreActivity,
             ),
             1 => TeamMembersTab(
               data: widget.data,

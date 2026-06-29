@@ -7,7 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/hinata_repository.dart';
 import '../../core/blocs/app_config_bloc.dart';
-import '../../core/blocs/fetch_cubit.dart';
+import '../../core/blocs/paged_cubit.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/models/core_models.dart';
 import '../../core/models/work_models.dart';
@@ -17,6 +17,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/project_palette.dart';
 import '../../core/widgets/glass_popup_menu.dart';
 import '../../core/widgets/hive_empty_state.dart';
+import '../../core/widgets/hive_loader.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
 import '../../core/widgets/status_widgets.dart';
@@ -27,9 +28,10 @@ import 'issue_filter.dart';
 import 'issue_filter_popup.dart';
 import 'issue_form.dart';
 
-typedef _IssuesData = ({
-  List<Issue> issues,
-  int total,
+/// Shared lookup data for rendering issue rows — loaded once alongside the
+/// paginated issue stream (users → names/avatars, projects → names/palette and
+/// the unioned workflow-state order for status grouping).
+typedef _RefData = ({
   Map<String, String> names,
   Map<String, String> avatars,
   Map<String, String> projectNames,
@@ -47,7 +49,29 @@ class IssuesScreen extends StatefulWidget {
 }
 
 class _IssuesScreenState extends State<IssuesScreen> {
-  late FetchCubit<_IssuesData> _cubit;
+  /// Empty lookups so rows can still render if reference data fails to load
+  /// (names fall back to ids) without blocking the issue list.
+  static final _RefData _emptyRef = (
+    names: const {},
+    avatars: const {},
+    projectNames: const {},
+    stateOrder: const [],
+    palette: ProjectPalette.empty,
+  );
+
+  static const int _pageSize = 100;
+
+  late final HinataRepository _repo;
+  late final PagedCubit<Issue> _issues;
+  final ScrollController _scroll = ScrollController();
+
+  // Reference data (users + projects), loaded once in parallel with page 0.
+  _RefData? _ref;
+  bool _refLoading = true;
+  bool _refError = false;
+
+  // Guards the "export everything" flow so the menu can't fire twice.
+  bool _exporting = false;
 
   IssueFilter _filter = IssueFilter.empty;
   IssueGrouping _grouping = IssueGrouping.none;
@@ -62,21 +86,43 @@ class _IssuesScreenState extends State<IssuesScreen> {
   @override
   void initState() {
     super.initState();
-    _cubit = FetchCubit<_IssuesData>(() async {
-      final repo = context.read<HinataRepository>();
-      final results = await Future.wait([
-        repo.issues(projectId: widget.projectId, size: 500),
-        repo.users(),
-        repo.projects(),
-      ]);
-      final page = results[0] as ({List<Issue> issues, int total});
-      final users = results[1] as List<DirectoryUser>;
-      final projects = results[2] as List<Project>;
-      final names = {for (final u in users) u.id: u.displayName};
-      final avatars = {
-        for (final u in users)
-          if (u.avatarUrl != null && u.avatarUrl!.isNotEmpty) u.id: u.avatarUrl!,
-      };
+    _repo = context.read<HinataRepository>();
+    _issues = PagedCubit<Issue>(
+      (page, size) async {
+        final result = await _repo.issues(
+          projectId: widget.projectId,
+          page: page,
+          size: size,
+        );
+        return (items: result.issues, total: result.total);
+      },
+      pageSize: _pageSize,
+      keyOf: (i) => i.id,
+    )..load();
+    _scroll.addListener(_onScroll);
+    _loadRef();
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    _issues.close();
+    super.dispose();
+  }
+
+  /// Loads users + projects into [_ref]. Best-effort: a failure leaves rows to
+  /// render with id fallbacks rather than blocking the whole screen.
+  Future<void> _loadRef() async {
+    if (mounted) {
+      setState(() {
+        _refLoading = true;
+        _refError = false;
+      });
+    }
+    try {
+      final results = await Future.wait([_repo.users(), _repo.projects()]);
+      final users = results[0] as List<DirectoryUser>;
+      final projects = results[1] as List<Project>;
       // Workflow-state order (UPPER-CASE), unioned across projects in first-seen
       // order, so status grouping lists columns the way the projects define them.
       final stateOrder = <String>[];
@@ -87,22 +133,41 @@ class _IssuesScreenState extends State<IssuesScreen> {
           if (seenStates.add(code)) stateOrder.add(code);
         }
       }
-      return (
-        issues: page.issues,
-        total: page.total,
-        names: names,
-        avatars: avatars,
-        projectNames: {for (final p in projects) p.id: p.name},
-        stateOrder: stateOrder,
-        palette: ProjectPalette.fromProjects(projects),
-      );
-    })..load();
+      if (!mounted) return;
+      setState(() {
+        _ref = (
+          names: {for (final u in users) u.id: u.displayName},
+          avatars: {
+            for (final u in users)
+              if (u.avatarUrl != null && u.avatarUrl!.isNotEmpty)
+                u.id: u.avatarUrl!,
+          },
+          projectNames: {for (final p in projects) p.id: p.name},
+          stateOrder: stateOrder,
+          palette: ProjectPalette.fromProjects(projects),
+        );
+        _refLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _refLoading = false;
+        _refError = true;
+      });
+    }
   }
 
-  @override
-  void dispose() {
-    _cubit.close();
-    super.dispose();
+  /// Pull-to-refresh / retry: reload the first page and the reference data.
+  Future<void> _reload() => Future.wait([_issues.load(), _loadRef()]);
+
+  /// Infinite scroll: pull the next page as the user nears the bottom. The
+  /// cubit guards against overlapping or past-the-end requests.
+  void _onScroll() {
+    if (!_scroll.hasClients) return;
+    final pos = _scroll.position;
+    if (pos.pixels >= pos.maxScrollExtent - 600) {
+      _issues.loadMore();
+    }
   }
 
   // ── filtering / sorting ────────────────────────────────────────────────
@@ -124,7 +189,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
 
   /// Buckets [list] into ordered sections for the active grouping. Returns an
   /// empty list when grouping is off (the caller renders a flat list instead).
-  List<_Section> _sections(List<Issue> list, _IssuesData data) {
+  List<_Section> _sections(List<Issue> list, _RefData data) {
     if (_grouping == IssueGrouping.none) return const [];
     final buckets = <String, List<Issue>>{};
     String keyOf(Issue i) => switch (_grouping) {
@@ -150,7 +215,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
     ];
   }
 
-  int Function(String, String) _keyComparator(_IssuesData data) {
+  int Function(String, String) _keyComparator(_RefData data) {
     switch (_grouping) {
       case IssueGrouping.state:
         return (a, b) {
@@ -183,7 +248,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
     }
   }
 
-  Widget _groupHeader(String key, int count, _IssuesData data) {
+  Widget _groupHeader(String key, int count, _RefData data) {
     Widget leading;
     String label;
     switch (_grouping) {
@@ -198,11 +263,19 @@ class _IssuesScreenState extends State<IssuesScreen> {
         label = _enumLabel(context, 'type', key);
       case IssueGrouping.assignee:
         if (key == _kNone) {
-          leading = Icon(LucideIcons.userX, size: 18, color: AppColors.inkFaint);
+          leading = Icon(
+            LucideIcons.userX,
+            size: 18,
+            color: AppColors.inkFaint,
+          );
           label = context.t('issues.unassigned');
         } else {
           final name = data.names[key] ?? key;
-          leading = HiveAvatar(name: name, imageUrl: data.avatars[key], size: 22);
+          leading = HiveAvatar(
+            name: name,
+            imageUrl: data.avatars[key],
+            size: 22,
+          );
           label = name;
         }
       case IssueGrouping.project:
@@ -217,11 +290,11 @@ class _IssuesScreenState extends State<IssuesScreen> {
 
   // ── actions ───────────────────────────────────────────────────────────
 
-  void _openFilter(_IssuesData data) => openIssueFilter(
+  void _openFilter(_RefData data, List<Issue> issues) => openIssueFilter(
     context,
     anchorKey: _filterKey,
     filter: _filter,
-    options: IssueFilterOptions.from(data.issues),
+    options: IssueFilterOptions.from(issues),
     names: data.names,
     avatars: data.avatars,
     projectNames: data.projectNames,
@@ -229,58 +302,90 @@ class _IssuesScreenState extends State<IssuesScreen> {
   );
 
   Future<void> _export(String format) async {
-    final repo = context.read<HinataRepository>();
-    if (format == 'pdf') {
-      final cached = context.read<AppConfigBloc>().state.meta;
-      ServerMeta? meta = cached;
+    if (_exporting) return;
+    // Read inherited blocs before the first await to avoid using context across
+    // async gaps.
+    final cachedMeta = context.read<AppConfigBloc>().state.meta;
+    setState(() => _exporting = true);
+    try {
+      // Export EVERY matching issue, not just the pages scrolled into view:
+      // page through the whole backend result set first so the file is complete
+      // regardless of how far the user has scrolled.
+      final List<Issue> all;
       try {
-        meta = await repo.meta();
+        all = await _repo.allIssues(projectId: widget.projectId);
       } catch (_) {
-        meta = cached;
-      }
-      Uint8List? logoPng;
-      final logoAsset = await repo.organizationLogo();
-      if (logoAsset != null) {
-        logoPng = await logoToPng(bytes: logoAsset.bytes, isSvg: logoAsset.isSvg);
+        if (mounted) _toast(context.t('reports.exportFailed'));
+        return;
       }
       if (!mounted) return;
-      final failMsg = context.t('reports.exportFailed');
-      try {
-        await shareIssuesPdf(_buildExportData(meta, logoPng));
-      } catch (_) {
-        _toast(failMsg);
+      final ref = _ref ?? _emptyRef;
+
+      if (format == 'pdf') {
+        ServerMeta? meta = cachedMeta;
+        try {
+          meta = await _repo.meta();
+        } catch (_) {
+          meta = cachedMeta;
+        }
+        Uint8List? logoPng;
+        try {
+          final logoAsset = await _repo.organizationLogo();
+          if (logoAsset != null) {
+            logoPng = await logoToPng(
+              bytes: logoAsset.bytes,
+              isSvg: logoAsset.isSvg,
+            );
+          }
+        } catch (_) {
+          logoPng = null;
+        }
+        if (!mounted) return;
+        final failMsg = context.t('reports.exportFailed');
+        try {
+          await shareIssuesPdf(_buildExportData(ref, all, meta, logoPng));
+        } catch (_) {
+          _toast(failMsg);
+        }
+        return;
       }
-      return;
-    }
-    final data = _buildExportData(null, null);
-    final isCsv = format == 'csv';
-    final content = isCsv ? buildIssuesCsv(data) : buildIssuesJson(data);
-    final mime = isCsv ? 'text/csv' : 'application/json';
-    final exportedMsg = context.t(
-      'reports.exported',
-      variables: {'format': format.toUpperCase()},
-    );
-    final copiedMsg = context.t(
-      'reports.copied',
-      variables: {'format': format.toUpperCase()},
-    );
-    if (kIsWeb) {
-      final uri = Uri.parse(
-        'data:$mime;charset=utf-8,${Uri.encodeComponent(content)}',
+
+      final data = _buildExportData(ref, all, null, null);
+      final isCsv = format == 'csv';
+      final content = isCsv ? buildIssuesCsv(data) : buildIssuesJson(data);
+      final mime = isCsv ? 'text/csv' : 'application/json';
+      final exportedMsg = context.t(
+        'reports.exported',
+        variables: {'format': format.toUpperCase()},
       );
-      await launchUrl(uri, webOnlyWindowName: '_blank');
-      _toast(exportedMsg);
-    } else {
-      await Clipboard.setData(ClipboardData(text: content));
-      _toast(copiedMsg);
+      final copiedMsg = context.t(
+        'reports.copied',
+        variables: {'format': format.toUpperCase()},
+      );
+      if (kIsWeb) {
+        final uri = Uri.parse(
+          'data:$mime;charset=utf-8,${Uri.encodeComponent(content)}',
+        );
+        await launchUrl(uri, webOnlyWindowName: '_blank');
+        _toast(exportedMsg);
+      } else {
+        await Clipboard.setData(ClipboardData(text: content));
+        _toast(copiedMsg);
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
     }
   }
 
-  IssueExportData _buildExportData(ServerMeta? meta, Uint8List? logoPng) {
-    final data = _cubit.state.data;
-    final list = data == null ? const <Issue>[] : _filtered(data.issues);
-    final names = data?.names ?? const {};
-    final projectNames = data?.projectNames ?? const {};
+  IssueExportData _buildExportData(
+    _RefData ref,
+    List<Issue> allIssues,
+    ServerMeta? meta,
+    Uint8List? logoPng,
+  ) {
+    final list = _filtered(allIssues);
+    final names = ref.names;
+    final projectNames = ref.projectNames;
 
     IssueExportRow rowOf(Issue i) => (
       id: i.readableId,
@@ -297,13 +402,18 @@ class _IssuesScreenState extends State<IssuesScreen> {
 
     final grouped = _grouping != IssueGrouping.none;
     final List<IssueExportGroup> groups;
-    if (grouped && data != null) {
+    if (grouped) {
       groups = [
-        for (final s in _sections(list, data))
-          (title: _sectionLabel(s.key, data), rows: [for (final i in s.issues) rowOf(i)]),
+        for (final s in _sections(list, ref))
+          (
+            title: _sectionLabel(s.key, ref),
+            rows: [for (final i in s.issues) rowOf(i)],
+          ),
       ];
     } else {
-      groups = [(title: '', rows: [for (final i in list) rowOf(i)])];
+      groups = [
+        (title: '', rows: [for (final i in list) rowOf(i)]),
+      ];
     }
 
     final scope = widget.projectId != null
@@ -328,7 +438,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
 
   /// A plain-text label for a group key (no widgets) — used by the PDF/CSV/JSON
   /// export, which can't render header widgets.
-  String _sectionLabel(String key, _IssuesData data) => switch (_grouping) {
+  String _sectionLabel(String key, _RefData data) => switch (_grouping) {
     IssueGrouping.state => stateLabel(key),
     IssueGrouping.priority => _enumLabel(context, 'priority', key),
     IssueGrouping.type => _enumLabel(context, 'type', key),
@@ -346,38 +456,50 @@ class _IssuesScreenState extends State<IssuesScreen> {
     String join(String prefix, Iterable<String> values) =>
         '$prefix: ${values.join(', ')}';
     if (_filter.states.isNotEmpty) {
-      out.add(join(context.t('issues.colStatus'), _filter.states.map(stateLabel)));
+      out.add(
+        join(context.t('issues.colStatus'), _filter.states.map(stateLabel)),
+      );
     }
     if (_filter.priorities.isNotEmpty) {
-      out.add(join(
-        context.t('issues.colPriority'),
-        _filter.priorities.map((p) => _enumLabel(context, 'priority', p)),
-      ));
+      out.add(
+        join(
+          context.t('issues.colPriority'),
+          _filter.priorities.map((p) => _enumLabel(context, 'priority', p)),
+        ),
+      );
     }
     if (_filter.types.isNotEmpty) {
-      out.add(join(
-        context.t('issues.type'),
-        _filter.types.map((t) => _enumLabel(context, 'type', t)),
-      ));
+      out.add(
+        join(
+          context.t('issues.type'),
+          _filter.types.map((t) => _enumLabel(context, 'type', t)),
+        ),
+      );
     }
     if (_filter.assignees.isNotEmpty) {
-      out.add(join(
-        context.t('issues.colAssignee'),
-        _filter.assignees.map(
-          (a) => a == IssueFilter.noAssignee
-              ? context.t('issues.unassigned')
-              : (names[a] ?? a),
+      out.add(
+        join(
+          context.t('issues.colAssignee'),
+          _filter.assignees.map(
+            (a) => a == IssueFilter.noAssignee
+                ? context.t('issues.unassigned')
+                : (names[a] ?? a),
+          ),
         ),
-      ));
+      );
     }
     if (_filter.projects.isNotEmpty) {
-      out.add(join(
-        context.t('issues.project'),
-        _filter.projects.map((p) => projectNames[p] ?? p),
-      ));
+      out.add(
+        join(
+          context.t('issues.project'),
+          _filter.projects.map((p) => projectNames[p] ?? p),
+        ),
+      );
     }
     if (_timeRange.isActive) {
-      out.add('${context.t('issues.timeRange')}: ${_timeLabel(context, _timeRange)}');
+      out.add(
+        '${context.t('issues.timeRange')}: ${_timeLabel(context, _timeRange)}',
+      );
     }
     return out;
   }
@@ -393,58 +515,121 @@ class _IssuesScreenState extends State<IssuesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
-      child: BlocBuilder<FetchCubit<_IssuesData>, FetchState<_IssuesData>>(
-        builder: (context, state) {
-          final data = state.data;
-          final all = data?.issues ?? const <Issue>[];
-          final palette = data?.palette ?? ProjectPalette.empty;
-          final names = data?.names ?? const <String, String>{};
-          final avatars = data?.avatars ?? const <String, String>{};
-          final list = _filtered(all);
-          final sections = data == null ? const <_Section>[] : _sections(list, data);
+    return BlocBuilder<PagedCubit<Issue>, PagedState<Issue>>(
+      bloc: _issues,
+      builder: (context, state) {
+        final ref = _ref ?? _emptyRef;
+        final all = state.items;
+        final list = _filtered(all);
+        final sections = _sections(list, ref);
 
-          return RefreshIndicator(
-            onRefresh: _cubit.load,
-            color: AppColors.accent,
-            edgeOffset: context.topGutter,
-            child: AsyncView(
-              isLoading: state.isLoading,
-              hasData: state.hasData,
-              errorKey: state.errorKey,
-              onRetry: _cubit.load,
-              builder: (context) => CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(
-                      context.pageGutter,
-                      24 + context.topGutter,
-                      context.pageGutter,
-                      14,
-                    ),
-                    sliver: SliverToBoxAdapter(
-                      child: PageHead(
-                        title: context.t('nav.issues'),
-                        subtitle: _subtitle(list.length, all.length),
-                        actions: [
-                          PrimaryButton(
-                            label: context.t('issues.new'),
-                            collapseToIcon: true,
-                            onPressed: () async {
-                              final created = await showIssueForm(
-                                context,
-                                projectId: widget.projectId,
-                              );
-                              if (created != null) _cubit.load();
-                            },
-                          ),
-                        ],
-                      ),
+        // Filters/grouping/sorting run client-side over the loaded pages, so
+        // while a filter is active we eagerly pull the remaining pages in the
+        // background — otherwise a match living beyond the first page would
+        // never surface (the user can't scroll a list that filtered to empty).
+        if (_hasActiveView && state.hasMore && !state.isLoadingMore) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _issues.loadMore();
+          });
+        }
+
+        // True while an active filter is still pulling pages but has matched
+        // nothing yet — show a spinner instead of a premature "no results".
+        final searchingMore =
+            list.isEmpty &&
+            (state.isLoadingMore || (_hasActiveView && state.hasMore));
+
+        return RefreshIndicator(
+          onRefresh: _reload,
+          color: AppColors.accent,
+          edgeOffset: context.topGutter,
+          child: AsyncView(
+            isLoading:
+                state.isLoading || (_refLoading && _ref == null && !_refError),
+            hasData: state.hasData && (_ref != null || _refError),
+            errorKey: state.errorKey,
+            onRetry: _reload,
+            builder: (context) => CustomScrollView(
+              controller: _scroll,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    context.pageGutter,
+                    24 + context.topGutter,
+                    context.pageGutter,
+                    14,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: PageHead(
+                      title: context.t('nav.issues'),
+                      subtitle: _subtitle(list.length, state.total),
+                      actions: [
+                        PrimaryButton(
+                          label: context.t('issues.new'),
+                          collapseToIcon: true,
+                          onPressed: () async {
+                            final created = await showIssueForm(
+                              context,
+                              projectId: widget.projectId,
+                            );
+                            if (created != null) _reload();
+                          },
+                        ),
+                      ],
                     ),
                   ),
-                  // toolbar: group by · filter · time range · export
+                ),
+                // toolbar: group by · filter · time range · export
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    context.pageGutter,
+                    0,
+                    context.pageGutter,
+                    14,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: _Toolbar(
+                      grouping: _grouping,
+                      onGrouping: (g) => setState(() {
+                        _grouping = g;
+                        _collapsed.clear();
+                      }),
+                      filterCount: _filter.activeCount,
+                      filterKey: _filterKey,
+                      onFilter: () => _openFilter(ref, all),
+                      timeRange: _timeRange,
+                      onTimeRange: (r) => setState(() => _timeRange = r),
+                      onExport: _export,
+                      exporting: _exporting,
+                    ),
+                  ),
+                ),
+                if (list.isEmpty && !searchingMore)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.pageGutter,
+                        vertical: 40,
+                      ),
+                      child: HiveEmptyState(
+                        title: context.t('nav.issues'),
+                        message: _hasActiveView
+                            ? context.t('issues.emptyFiltered')
+                            : context.t('issues.empty'),
+                        action: _hasActiveView
+                            ? OutlinedButton(
+                                onPressed: () => setState(() {
+                                  _filter = IssueFilter.empty;
+                                  _timeRange = IssueTimeRange.none;
+                                }),
+                                child: Text(context.t('board.clearFilters')),
+                              )
+                            : null,
+                      ),
+                    ),
+                  )
+                else if (list.isNotEmpty)
                   SliverPadding(
                     padding: EdgeInsets.fromLTRB(
                       context.pageGutter,
@@ -452,79 +637,51 @@ class _IssuesScreenState extends State<IssuesScreen> {
                       context.pageGutter,
                       14,
                     ),
-                    sliver: SliverToBoxAdapter(
-                      child: _Toolbar(
-                        grouping: _grouping,
-                        onGrouping: (g) => setState(() {
-                          _grouping = g;
-                          _collapsed.clear();
-                        }),
-                        filterCount: _filter.activeCount,
-                        filterKey: _filterKey,
-                        onFilter: data == null ? null : () => _openFilter(data),
-                        timeRange: _timeRange,
-                        onTimeRange: (r) => setState(() => _timeRange = r),
-                        onExport: data == null ? null : _export,
-                      ),
+                    sliver: SliverList.list(
+                      children: _grouping == IssueGrouping.none
+                          ? _flatRows(list, ref.names, ref.avatars, ref.palette)
+                          : _groupedRows(
+                              sections,
+                              ref.names,
+                              ref.avatars,
+                              ref.palette,
+                            ),
                     ),
                   ),
-                  if (list.isEmpty)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: context.pageGutter,
-                          vertical: 40,
-                        ),
-                        child: HiveEmptyState(
-                          title: context.t('nav.issues'),
-                          message: _hasActiveView
-                              ? context.t('issues.emptyFiltered')
-                              : context.t('issues.empty'),
-                          action: _hasActiveView
-                              ? OutlinedButton(
-                                  onPressed: () => setState(() {
-                                    _filter = IssueFilter.empty;
-                                    _timeRange = IssueTimeRange.none;
-                                  }),
-                                  child: Text(context.t('board.clearFilters')),
-                                )
-                              : null,
-                        ),
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: EdgeInsets.fromLTRB(
-                        context.pageGutter,
-                        0,
-                        context.pageGutter,
-                        context.pageGutter + context.bottomGutter,
-                      ),
-                      sliver: SliverList.list(
-                        children: _grouping == IssueGrouping.none
-                            ? _flatRows(list, names, avatars, palette)
-                            : _groupedRows(sections, names, avatars, palette),
-                      ),
+                // Infinite-scroll footer: the standard HiveLoader while the next
+                // page (or a filter's background sweep) is loading.
+                if (state.isLoadingMore || searchingMore)
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(child: HiveLoader(size: 30)),
                     ),
-                ],
-              ),
+                  ),
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: context.pageGutter + context.bottomGutter,
+                  ),
+                ),
+              ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
   bool get _hasActiveView => !_filter.isEmpty || _timeRange.isActive;
 
+  /// [shown] is the number of currently-matched rows; [total] is the backend's
+  /// full count (so it reflects everything, not just the pages loaded so far).
   String _subtitle(int shown, int total) {
-    if (_hasActiveView && shown != total) {
+    if (_hasActiveView) {
       return context.t(
         'issues.countFiltered',
         variables: {'count': '$shown', 'total': '$total'},
       );
     }
-    return context.t('issues.countSummary', variables: {'count': '$shown'});
+    return context.t('issues.countSummary', variables: {'count': '$total'});
   }
 
   List<Widget> _flatRows(
@@ -542,6 +699,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
           assignee: names[issue.assigneeId],
           assigneeAvatar: avatars[issue.assigneeId],
           palette: palette,
+          onChanged: _reload,
         ),
       ),
   ];
@@ -574,6 +732,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
                 assignee: names[issue.assigneeId],
                 assigneeAvatar: avatars[issue.assigneeId],
                 palette: palette,
+                onChanged: _reload,
               ),
             ),
           );
@@ -597,7 +756,11 @@ int _rankIn(List<String> order, String value) {
 
 /// One grouped section: a stable [key], a rendered [header] and its issues.
 class _Section {
-  const _Section({required this.key, required this.header, required this.issues});
+  const _Section({
+    required this.key,
+    required this.header,
+    required this.issues,
+  });
   final String key;
   final Widget header;
   final List<Issue> issues;
@@ -617,6 +780,7 @@ class _Toolbar extends StatelessWidget {
     required this.timeRange,
     required this.onTimeRange,
     required this.onExport,
+    required this.exporting,
   });
 
   final IssueGrouping grouping;
@@ -627,6 +791,10 @@ class _Toolbar extends StatelessWidget {
   final IssueTimeRange timeRange;
   final ValueChanged<IssueTimeRange> onTimeRange;
   final ValueChanged<String>? onExport;
+
+  /// While true the export is paging the full result set; the button shows the
+  /// loader and ignores taps.
+  final bool exporting;
 
   @override
   Widget build(BuildContext context) {
@@ -651,7 +819,8 @@ class _Toolbar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        if (onExport != null) _ExportButton(onSelected: onExport!),
+        if (onExport != null)
+          _ExportButton(onSelected: onExport!, exporting: exporting),
       ],
     );
   }
@@ -852,9 +1021,9 @@ class _TimeRangeButton extends StatelessWidget {
         initialDateRange: value.custom,
         builder: (context, child) => Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: AppColors.accentStrong,
-            ),
+            colorScheme: Theme.of(
+              context,
+            ).colorScheme.copyWith(primary: AppColors.accentStrong),
           ),
           child: child!,
         ),
@@ -973,13 +1142,16 @@ class _TimeRangeButton extends StatelessWidget {
 }
 
 class _ExportButton extends StatelessWidget {
-  const _ExportButton({required this.onSelected});
+  const _ExportButton({required this.onSelected, this.exporting = false});
   final ValueChanged<String> onSelected;
+  final bool exporting;
 
   @override
   Widget build(BuildContext context) {
     return GlassPopupMenu<String>(
       value: '',
+      // The handler self-guards re-entry while a previous export is paging, so
+      // a stray tap during export is a no-op.
       onSelected: onSelected,
       items: [
         GlassMenuItem(
@@ -1008,7 +1180,9 @@ class _ExportButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.download, size: 16, color: AppColors.ink),
+            exporting
+                ? const HiveLoader(size: 16)
+                : Icon(LucideIcons.download, size: 16, color: AppColors.ink),
             if (!context.isCompact) ...[
               const SizedBox(width: 8),
               Text(
@@ -1203,6 +1377,7 @@ class IssueRow extends StatelessWidget {
     this.assignee,
     this.assigneeAvatar,
     this.onTap,
+    this.onChanged,
     this.palette,
   });
 
@@ -1210,6 +1385,10 @@ class IssueRow extends StatelessWidget {
   final String? assignee;
   final String? assigneeAvatar;
   final VoidCallback? onTap;
+
+  /// Invoked after the detail sheet edits this issue, so the host list can
+  /// refresh. Only used when [onTap] is not overridden.
+  final VoidCallback? onChanged;
   final ProjectPalette? palette;
 
   @override
@@ -1223,7 +1402,7 @@ class IssueRow extends StatelessWidget {
         () => showIssueDetailSheet(
           context,
           issueId: issue.id,
-          onChanged: () => context.read<FetchCubit<_IssuesData>>().load(),
+          onChanged: onChanged,
         );
 
     if (compact) {
@@ -1239,7 +1418,10 @@ class IssueRow extends StatelessWidget {
                 const Spacer(),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 180),
-                  child: PriorityFlag(priority: issue.priority, withLabel: true),
+                  child: PriorityFlag(
+                    priority: issue.priority,
+                    withLabel: true,
+                  ),
                 ),
               ],
             ),
@@ -1354,7 +1536,11 @@ class IssueRow extends StatelessWidget {
                 ? Text('—', style: TextStyle(color: AppColors.inkFaint))
                 : Row(
                     children: [
-                      HiveAvatar(name: name, imageUrl: assigneeAvatar, size: 24),
+                      HiveAvatar(
+                        name: name,
+                        imageUrl: assigneeAvatar,
+                        size: 24,
+                      ),
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(

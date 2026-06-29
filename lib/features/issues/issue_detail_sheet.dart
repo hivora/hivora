@@ -216,8 +216,16 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
   final _descCtrl = TextEditingController();
 
   Issue? _issue;
+  // Comments are paginated newest-first server-side but displayed oldest-first
+  // (chat style): each loaded page is reversed and older pages prepend above.
+  // Activity stays newest-first; older pages append below.
   List<IssueComment> _comments = const [];
   List<IssueActivity> _activity = const [];
+  int _commentsTotal = 0;
+  int _commentsPage = 0;
+  int _activityTotal = 0;
+  int _activityPage = 0;
+  bool _loadingMore = false;
   List<WorkItem> _workItems = const [];
   Project? _project;
   // Cross-feature smart-links: project issues (keyed by readable id) feed the
@@ -287,13 +295,21 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
         _repo.issueActivity(widget.issueId),
       ]);
       _issue = issue;
-      _comments = results[0] as List<IssueComment>;
+      final commentsPage =
+          results[0] as ({List<IssueComment> items, int total});
+      _comments = commentsPage.items.reversed.toList();
+      _commentsTotal = commentsPage.total;
+      _commentsPage = 0;
       _workItems = results[1] as List<WorkItem>;
       _project = (results[2] as List<Project>)
           .where((p) => p.id == issue.projectId)
           .firstOrNull;
       _users = results[3] as List<DirectoryUser>;
-      _activity = results[4] as List<IssueActivity>;
+      final activityPage =
+          results[4] as ({List<IssueActivity> items, int total});
+      _activity = activityPage.items;
+      _activityTotal = activityPage.total;
+      _activityPage = 0;
       // Sprints come from the project's board(s); aggregate across every board
       // (a project may have both a Kanban and a Scrum board). Best-effort.
       try {
@@ -304,8 +320,8 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       // Project issues power the comment `@`-menu + `{{issue:…}}` chip previews;
       // KB backlinks come from the shared seed. Both best-effort.
       try {
-        final res = await _repo.issues(projectId: issue.projectId, size: 200);
-        _projectIssues = {for (final i in res.issues) i.readableId: i};
+        final all = await _repo.allIssues(projectId: issue.projectId);
+        _projectIssues = {for (final i in all) i.readableId: i};
       } catch (_) {
         _projectIssues = const {};
       }
@@ -339,9 +355,13 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       _issue = updated;
       widget.header?.value = updated;
       widget.onChanged?.call();
-      // Refresh the change history so the new entry shows immediately.
+      // Refresh the change history so the new entry shows immediately (reset to
+      // the newest page).
       try {
-        _activity = await _repo.issueActivity(widget.issueId);
+        final p = await _repo.issueActivity(widget.issueId);
+        _activity = p.items;
+        _activityTotal = p.total;
+        _activityPage = 0;
       } catch (_) {
         // Non-critical; the next full load reflects server truth.
       }
@@ -371,7 +391,11 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
     try {
       await _repo.addComment(widget.issueId, text);
       _comment.clear();
-      _comments = await _repo.comments(widget.issueId);
+      // Reset to the newest page so the just-posted comment shows at the bottom.
+      final p = await _repo.comments(widget.issueId);
+      _comments = p.items.reversed.toList();
+      _commentsTotal = p.total;
+      _commentsPage = 0;
       if (mounted) setState(() {});
     } on ApiFailure catch (failure) {
       _toast(failure.message);
@@ -414,11 +438,69 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       await _repo.deleteComment(widget.issueId, comment.id);
       if (mounted) {
         setState(() {
-          _comments = [for (final c in _comments) if (c.id != comment.id) c];
+          _comments = [
+            for (final c in _comments)
+              if (c.id != comment.id) c,
+          ];
+          if (_commentsTotal > 0) _commentsTotal--;
         });
       }
     } on ApiFailure catch (failure) {
       _toast(failure.message);
+    }
+  }
+
+  bool get _hasMoreComments => _comments.length < _commentsTotal;
+  bool get _hasMoreActivity => _activity.length < _activityTotal;
+
+  /// Loads the previous (older) page of comments and prepends it above the
+  /// thread, de-duplicating in case a row shifted across the page boundary.
+  Future<void> _loadMoreComments() async {
+    if (_loadingMore || !_hasMoreComments) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = _commentsPage + 1;
+      final p = await _repo.comments(widget.issueId, page: next);
+      if (!mounted) return;
+      final existing = {for (final c in _comments) c.id};
+      final older = [
+        for (final c in p.items.reversed)
+          if (!existing.contains(c.id)) c,
+      ];
+      setState(() {
+        _comments = [...older, ..._comments];
+        _commentsTotal = p.total;
+        _commentsPage = next;
+      });
+    } catch (_) {
+      // Keep what we have; the user can retry.
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  /// Loads the next (older) page of change history and appends it below.
+  Future<void> _loadMoreActivity() async {
+    if (_loadingMore || !_hasMoreActivity) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = _activityPage + 1;
+      final p = await _repo.issueActivity(widget.issueId, page: next);
+      if (!mounted) return;
+      final existing = {for (final a in _activity) a.id};
+      final older = [
+        for (final a in p.items)
+          if (!existing.contains(a.id)) a,
+      ];
+      setState(() {
+        _activity = [..._activity, ...older];
+        _activityTotal = p.total;
+        _activityPage = next;
+      });
+    } catch (_) {
+      // Keep what we have; the user can retry.
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -1101,9 +1183,11 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
           ),
           // Assignee(s) + "assign to me"
           _DetailRow(
-            label: context.t(issue.assigneeIds.length > 1
-                ? 'issues.assignees'
-                : 'issues.assignee'),
+            label: context.t(
+              issue.assigneeIds.length > 1
+                  ? 'issues.assignees'
+                  : 'issues.assignee',
+            ),
             onTap: _pickAssignee,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1111,9 +1195,11 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                 if (issue.assigneeIds.isEmpty)
                   _person(null, fallback: context.t('issues.unassigned'))
                 else if (issue.assigneeIds.length == 1)
-                  _person(_names[issue.assigneeIds.first],
-                      imageUrl: _avatars[issue.assigneeIds.first],
-                      fallback: context.t('issues.unassigned'))
+                  _person(
+                    _names[issue.assigneeIds.first],
+                    imageUrl: _avatars[issue.assigneeIds.first],
+                    fallback: context.t('issues.unassigned'),
+                  )
                 else
                   // Multiple assignees: a compact stacked avatar group (matches
                   // the board/cards); the full list is in the picker on tap.
@@ -1129,11 +1215,13 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
                 if (me != null && !issue.assigneeIds.contains(me.id)) ...[
                   const SizedBox(height: 2),
                   GestureDetector(
-                    onTap: () => _patch(multiAssignee
-                        ? {
-                            'assigneeIds': [...issue.assigneeIds, me.id]
-                          }
-                        : {'assigneeId': me.id}),
+                    onTap: () => _patch(
+                      multiAssignee
+                          ? {
+                              'assigneeIds': [...issue.assigneeIds, me.id],
+                            }
+                          : {'assigneeId': me.id},
+                    ),
                     child: Text(
                       context.t('issues.assignToMe'),
                       style: const TextStyle(
@@ -1493,17 +1581,30 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
       issueIds: issueIds,
     );
 
+    Widget loadMore(String label, VoidCallback onTap) =>
+        _LoadMoreTile(label: label, loading: _loadingMore, onTap: onTap);
+
     switch (filter) {
       case _ActivityFilter.comments:
         if (_comments.isEmpty) {
           return [_emptyActivity(context.t('issues.activityEmpty'))];
         }
-        return [for (final c in _comments) commentTile(c)];
+        return [
+          // Older comments live above (chat is oldest→newest), so the control
+          // sits at the top of the thread.
+          if (_hasMoreComments)
+            loadMore(context.t('issues.loadEarlier'), _loadMoreComments),
+          for (final c in _comments) commentTile(c),
+        ];
       case _ActivityFilter.history:
         if (_activity.isEmpty) {
           return [_emptyActivity(context.t('issues.historyEmpty'))];
         }
-        return [for (final a in _activity) activityTile(a)];
+        return [
+          for (final a in _activity) activityTile(a),
+          if (_hasMoreActivity)
+            loadMore(context.t('issues.loadMore'), _loadMoreActivity),
+        ];
       case _ActivityFilter.all:
         // Merge by timestamp, newest first.
         final epoch = DateTime.fromMillisecondsSinceEpoch(0);
@@ -1516,8 +1617,19 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
         if (merged.isEmpty) {
           return [_emptyActivity(context.t('issues.activityEmpty'))];
         }
-        return [for (final m in merged) m.tile];
+        return [
+          for (final m in merged) m.tile,
+          if (_hasMoreComments || _hasMoreActivity)
+            loadMore(context.t('issues.loadMore'), _loadMoreAll),
+        ];
     }
+  }
+
+  /// "All" tab: pull the next older page of whichever streams still have more.
+  Future<void> _loadMoreAll() async {
+    if (_loadingMore) return;
+    if (_hasMoreComments) await _loadMoreComments();
+    if (_hasMoreActivity) await _loadMoreActivity();
   }
 
   Widget _emptyActivity(String message) => Padding(
@@ -2432,8 +2544,8 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
     // Project issues power the description `@`-menu + `{{issue:…}}` chips; the
     // shared KB seed backs `{{doc:…}}`. Both best-effort.
     try {
-      final res = await _repo.issues(projectId: pid, size: 200);
-      _projectIssues = {for (final i in res.issues) i.readableId: i};
+      final all = await _repo.allIssues(projectId: pid);
+      _projectIssues = {for (final i in all) i.readableId: i};
     } catch (_) {
       _projectIssues = const {};
     }
@@ -2693,21 +2805,21 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
                   ),
           ),
           _DetailRow(
-            label: context.t(_assigneeIds.length > 1
-                ? 'issues.assignees'
-                : 'issues.assignee'),
+            label: context.t(
+              _assigneeIds.length > 1 ? 'issues.assignees' : 'issues.assignee',
+            ),
             onTap: _pickAssignee,
             child: _assigneeIds.isEmpty
                 ? _person(null, fallback: context.t('issues.unassigned'))
                 : _assigneeIds.length == 1
-                    ? _person(_names[_assigneeIds.first],
-                        fallback: context.t('issues.unassigned'))
-                    : HiveAvatarStack(
-                        names: [
-                          for (final aid in _assigneeIds) _names[aid] ?? '?',
-                        ],
-                        size: 28,
-                      ),
+                ? _person(
+                    _names[_assigneeIds.first],
+                    fallback: context.t('issues.unassigned'),
+                  )
+                : HiveAvatarStack(
+                    names: [for (final aid in _assigneeIds) _names[aid] ?? '?'],
+                    size: 28,
+                  ),
           ),
           _DetailRow(
             label: context.t('issues.priority'),
@@ -3066,15 +3178,19 @@ class IssueCreateBodyState extends State<IssueCreateBody> {
           ? null
           : () {
               Navigator.of(sheetContext).pop();
-              setState(() => _assigneeIds
-                ..clear()
-                ..add(me.id));
+              setState(
+                () => _assigneeIds
+                  ..clear()
+                  ..add(me.id),
+              );
             },
       onSelect: (id) {
         Navigator.of(sheetContext).pop();
-        setState(() => _assigneeIds
-          ..clear()
-          ..add(id));
+        setState(
+          () => _assigneeIds
+            ..clear()
+            ..add(id),
+        );
       },
     );
 
@@ -3283,6 +3399,52 @@ class _SquareButton extends StatelessWidget {
 }
 
 // ─────────────────────────── Activity tabs + comment tile ──────────────────
+
+/// A centered "Load earlier / Load more" control for the paginated comment and
+/// activity streams; shows the standard [HiveLoader] while a page is fetching.
+class _LoadMoreTile extends StatelessWidget {
+  const _LoadMoreTile({
+    required this.label,
+    required this.loading,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool loading;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Center(
+        child: TextButton.icon(
+          onPressed: loading ? null : onTap,
+          icon: loading
+              ? const HiveLoader(size: 14, strokeWidth: 2)
+              : Icon(
+                  LucideIcons.chevronDown,
+                  size: 15,
+                  color: AppColors.inkSoft,
+                ),
+          label: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.inkSoft,
+            ),
+          ),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 enum _ActivityFilter { all, comments, history }
 
@@ -4020,8 +4182,13 @@ class _PeoplePickerState extends State<_PeoplePicker> {
               backgroundColor: AppColors.canvas2,
               child: Icon(LucideIcons.ban, color: AppColors.inkSoft, size: 18),
             ),
-            title: Text(context.t(
-                widget.multiSelect ? 'issues.clearAssignees' : 'issues.unassign')),
+            title: Text(
+              context.t(
+                widget.multiSelect
+                    ? 'issues.clearAssignees'
+                    : 'issues.unassign',
+              ),
+            ),
             onTap: widget.multiSelect
                 ? () {
                     setState(_selected.clear);
@@ -4058,12 +4225,12 @@ class _PeoplePickerState extends State<_PeoplePicker> {
                         : AppColors.inkFaint,
                   )
                 : (u.id == widget.meId
-                    ? const Icon(
-                        LucideIcons.star,
-                        size: 16,
-                        color: AppColors.accent,
-                      )
-                    : null),
+                      ? const Icon(
+                          LucideIcons.star,
+                          size: 16,
+                          color: AppColors.accent,
+                        )
+                      : null),
             onTap: widget.multiSelect
                 ? () => _toggle(u.id)
                 : () => widget.onSelect(u.id),

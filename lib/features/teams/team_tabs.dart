@@ -10,6 +10,7 @@ import '../../core/models/core_models.dart';
 import '../../core/models/team_models.dart';
 import '../../core/models/work_models.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/hive_loader.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hive_widgets.dart';
 import '../../core/widgets/soft_card.dart';
@@ -108,12 +109,22 @@ class TeamOverviewTab extends StatelessWidget {
     required this.manage,
     required this.onReload,
     required this.onGotoProjects,
+    required this.activity,
+    required this.activityHasMore,
+    required this.activityLoadingMore,
+    required this.onLoadMoreActivity,
   });
 
   final TeamDetailData data;
   final bool manage;
   final Future<void> Function() onReload;
   final VoidCallback onGotoProjects;
+
+  /// Paginated activity (page 0 from the bundle + any loaded older pages).
+  final List<TeamActivity> activity;
+  final bool activityHasMore;
+  final bool activityLoadingMore;
+  final VoidCallback onLoadMoreActivity;
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +196,13 @@ class TeamOverviewTab extends StatelessWidget {
               onReload: onReload,
               onViewAll: onGotoProjects,
             );
-            final activityCard = _ActivityCard(data: data);
+            final activityCard = _ActivityCard(
+              data: data,
+              activity: activity,
+              hasMore: activityHasMore,
+              loadingMore: activityLoadingMore,
+              onLoadMore: onLoadMoreActivity,
+            );
             if (stacked) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -292,12 +309,22 @@ class _MiniProjectRow extends StatelessWidget {
 }
 
 class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({required this.data});
+  const _ActivityCard({
+    required this.data,
+    required this.activity,
+    required this.hasMore,
+    required this.loadingMore,
+    required this.onLoadMore,
+  });
   final TeamDetailData data;
+  final List<TeamActivity> activity;
+  final bool hasMore;
+  final bool loadingMore;
+  final VoidCallback onLoadMore;
 
   @override
   Widget build(BuildContext context) {
-    final acts = data.activity;
+    final acts = activity;
     return SoftCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -317,6 +344,37 @@ class _ActivityCard extends StatelessWidget {
               if (i > 0) const SizedBox(height: 14),
               _ActivityRow(activity: acts[i], data: data),
             ],
+          if (hasMore) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: TextButton.icon(
+                onPressed: loadingMore ? null : onLoadMore,
+                icon: loadingMore
+                    ? const HiveLoader(size: 14, strokeWidth: 2)
+                    : Icon(
+                        LucideIcons.chevronDown,
+                        size: 15,
+                        color: AppColors.inkSoft,
+                      ),
+                label: Text(
+                  context.t('issues.loadMore'),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.inkSoft,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

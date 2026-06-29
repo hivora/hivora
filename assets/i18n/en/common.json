@@ -239,6 +239,8 @@
   "filterHistory": "History",
   "historyEmpty": "No history yet.",
   "activityEmpty": "No activity yet.",
+  "loadEarlier": "Load earlier",
+  "loadMore": "Load more",
   "act": {
    "created": "created this issue",
    "changed": "changed the {{field}}"

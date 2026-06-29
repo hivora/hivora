@@ -185,10 +185,10 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
       }
       _bySprint.clear();
       final issueLists = await Future.wait(
-        sprints.map((s) => _repo.issues(sprintId: s.id, size: 200)),
+        sprints.map((s) => _repo.allIssues(sprintId: s.id)),
       );
       for (var i = 0; i < sprints.length; i++) {
-        _bySprint[sprints[i].id] = issueLists[i].issues;
+        _bySprint[sprints[i].id] = issueLists[i];
       }
       await _loadBacklog();
       await _loadIssueIndex();
@@ -218,12 +218,14 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
       _issuesById = const {};
       return;
     }
+    // allIssues pages through the whole backend result set (search clamps size
+    // to 100), so swimlane epic resolution sees every issue, not just page one.
     final pages = await Future.wait(
-      projectIds.map((p) => _repo.issues(projectId: p, size: 500)),
+      projectIds.map((p) => _repo.allIssues(projectId: p)),
     );
     _issuesById = {
       for (final page in pages)
-        for (final issue in page.issues) issue.id: issue,
+        for (final issue in page) issue.id: issue,
     };
   }
 
@@ -244,11 +246,9 @@ class _ScrumBoardViewState extends State<ScrumBoardView> {
       // Multiple projects: the search endpoint is single-project, so merge a
       // bounded page per project and paginate client-side.
       final pages = await Future.wait(
-        projectIds.map(
-          (p) => _repo.issues(projectId: p, noSprint: true, size: 200),
-        ),
+        projectIds.map((p) => _repo.allIssues(projectId: p, noSprint: true)),
       );
-      var merged = [for (final pg in pages) ...pg.issues];
+      var merged = [for (final pg in pages) ...pg];
       if (query != null) {
         final q = query.toLowerCase();
         merged = merged
