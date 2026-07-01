@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/knowledge_models.dart';
 import '../knowledge_tokens.dart';
+import 'markdown_image.dart';
 import 'smart_link_chip.dart';
 
 /// One Table-of-Contents entry (H1–H3). [key] anchors the matching heading
@@ -34,18 +35,18 @@ class ParsedMarkdown {
 /// line cursor by ≥ 1, so a `#` heading or `---` rule can never spin forever.
 class KbMarkdownParser {
   KbMarkdownParser({this.fontSize = 15, List<TapGestureRecognizer>? sink})
-      : _recognizers = sink;
+    : _recognizers = sink;
 
   final double fontSize;
   final List<TapGestureRecognizer>? _recognizers;
   int _key = 0;
 
   TextStyle get _base => TextStyle(
-        fontFamily: AppTheme.fontUi,
-        fontSize: fontSize,
-        height: 1.68,
-        color: AppColors.ink,
-      );
+    fontFamily: AppTheme.fontUi,
+    fontSize: fontSize,
+    height: 1.68,
+    color: AppColors.ink,
+  );
 
   ParsedMarkdown parse(String src) {
     final toc = <TocEntry>[];
@@ -118,10 +119,12 @@ class KbMarkdownParser {
 
       // horizontal rule
       if (RegExp(r'^(-{3,}|\*{3,}|_{3,})\s*$').hasMatch(line)) {
-        nodes.add(Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          child: Divider(height: 1, color: AppColors.hairline),
-        ));
+        nodes.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            child: Divider(height: 1, color: AppColors.hairline),
+          ),
+        );
         i++;
         continue;
       }
@@ -160,17 +163,20 @@ class KbMarkdownParser {
         final items = <_ListItem>[];
         while (i < lines.length &&
             RegExp(r'^(\s*)([-*+]|\d+\.)\s+').hasMatch(lines[i])) {
-          final lm =
-              RegExp(r'^(\s*)([-*+]|\d+\.)\s+(.*)$').firstMatch(lines[i])!;
+          final lm = RegExp(
+            r'^(\s*)([-*+]|\d+\.)\s+(.*)$',
+          ).firstMatch(lines[i])!;
           final indent = lm.group(1)!.length;
           final content = lm.group(3)!;
           final task = RegExp(r'^\[([ xX])\]\s+(.*)$').firstMatch(content);
-          items.add(_ListItem(
-            indent: indent,
-            isTask: task != null,
-            checked: task != null && task.group(1)!.toLowerCase() == 'x',
-            content: task != null ? task.group(2)! : content,
-          ));
+          items.add(
+            _ListItem(
+              indent: indent,
+              isTask: task != null,
+              checked: task != null && task.group(1)!.toLowerCase() == 'x',
+              content: task != null ? task.group(2)! : content,
+            ),
+          );
           i++;
         }
         nodes.add(_list(ordered, items));
@@ -182,8 +188,9 @@ class KbMarkdownParser {
       i++;
       while (i < lines.length &&
           lines[i].trim().isNotEmpty &&
-          !RegExp(r'^(#{1,6}\s|```|>\s?|\s*\|.*\||:::|(-{3,})|(\s*([-*+]|\d+\.)\s+))')
-              .hasMatch(lines[i])) {
+          !RegExp(
+            r'^(#{1,6}\s|```|>\s?|\s*\|.*\||:::|(-{3,})|(\s*([-*+]|\d+\.)\s+))',
+          ).hasMatch(lines[i])) {
         buf.add(lines[i]);
         i++;
       }
@@ -194,17 +201,33 @@ class KbMarkdownParser {
 
   // ── block builders ──
   Widget _heading(int lvl, String txt, Key key) {
-    final style = switch (lvl) {
-      1 => const TextStyle(fontSize: 25, fontWeight: FontWeight.w700, height: 1.25),
-      2 => const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, height: 1.25),
-      3 => const TextStyle(fontSize: 17.5, fontWeight: FontWeight.w600, height: 1.25),
-      _ => TextStyle(
-          fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.inkSoft),
-    }
-        .copyWith(
-            fontFamily: AppTheme.fontBrand,
-            letterSpacing: -0.4,
-            color: lvl > 3 ? AppColors.inkSoft : AppColors.ink);
+    final style =
+        switch (lvl) {
+          1 => const TextStyle(
+            fontSize: 25,
+            fontWeight: FontWeight.w700,
+            height: 1.25,
+          ),
+          2 => const TextStyle(
+            fontSize: 21,
+            fontWeight: FontWeight.w700,
+            height: 1.25,
+          ),
+          3 => const TextStyle(
+            fontSize: 17.5,
+            fontWeight: FontWeight.w600,
+            height: 1.25,
+          ),
+          _ => TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: AppColors.inkSoft,
+          ),
+        }.copyWith(
+          fontFamily: AppTheme.fontBrand,
+          letterSpacing: -0.4,
+          color: lvl > 3 ? AppColors.inkSoft : AppColors.ink,
+        );
     final text = Text.rich(_inline(txt, style), key: key);
     if (lvl == 2) {
       return Padding(
@@ -225,96 +248,100 @@ class KbMarkdownParser {
   }
 
   Widget _paragraph(String text) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 7),
-        child: Text.rich(_inline(text, _base)),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 7),
+    child: Text.rich(_inline(text, _base)),
+  );
 
   Widget _codeBlock(String code, String lang) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 13),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(KbTokens.radiusCard),
-          child: Container(
-            color: KbTokens.codeBlockBg,
-            child: Stack(
-              children: [
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-                  child: SelectableText(
-                    code,
-                    style: const TextStyle(
-                      fontFamily: AppTheme.fontMono,
-                      fontSize: 13,
-                      height: 1.6,
-                      color: KbTokens.codeBlockInk,
-                    ),
+    padding: const EdgeInsets.symmetric(vertical: 13),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(KbTokens.radiusCard),
+      child: Container(
+        color: KbTokens.codeBlockBg,
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+              child: SelectableText(
+                code,
+                style: const TextStyle(
+                  fontFamily: AppTheme.fontMono,
+                  fontSize: 13,
+                  height: 1.6,
+                  color: KbTokens.codeBlockInk,
+                ),
+              ),
+            ),
+            if (lang.isNotEmpty)
+              Positioned(
+                top: 9,
+                right: 12,
+                child: Text(
+                  lang.toUpperCase(),
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontMono,
+                    fontSize: 10.5,
+                    letterSpacing: 0.6,
+                    color: KbTokens.codeBlockFaint,
                   ),
                 ),
-                if (lang.isNotEmpty)
-                  Positioned(
-                    top: 9,
-                    right: 12,
-                    child: Text(
-                      lang.toUpperCase(),
-                      style: const TextStyle(
-                        fontFamily: AppTheme.fontMono,
-                        fontSize: 10.5,
-                        letterSpacing: 0.6,
-                        color: KbTokens.codeBlockFaint,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+              ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _quote(List<Widget> inner) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 13),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(18, 4, 8, 4),
-          decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: AppColors.accent, width: 3)),
-          ),
-          child: DefaultTextStyle.merge(
-            style: TextStyle(
-                color: AppColors.inkSoft, fontStyle: FontStyle.italic),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: inner),
-          ),
+    padding: const EdgeInsets.symmetric(vertical: 13),
+    child: Container(
+      padding: const EdgeInsets.fromLTRB(18, 4, 8, 4),
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: AppColors.accent, width: 3)),
+      ),
+      child: DefaultTextStyle.merge(
+        style: TextStyle(color: AppColors.inkSoft, fontStyle: FontStyle.italic),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: inner,
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _callout(String kind, List<Widget> inner) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-          decoration: BoxDecoration(
-            color: KbTokens.calloutBg(kind),
-            borderRadius: BorderRadius.circular(KbTokens.radiusCard),
-            border: Border.all(color: KbTokens.calloutBorder(kind)),
+    padding: const EdgeInsets.symmetric(vertical: 14),
+    child: Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: KbTokens.calloutBg(kind),
+        borderRadius: BorderRadius.circular(KbTokens.radiusCard),
+        border: Border.all(color: KbTokens.calloutBorder(kind)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1, right: 12),
+            child: Icon(
+              lucideIcon(KbTokens.calloutIcon(kind)),
+              size: 18,
+              color: KbTokens.calloutInk(kind),
+            ),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 1, right: 12),
-                child: Icon(lucideIcon(KbTokens.calloutIcon(kind)),
-                    size: 18, color: KbTokens.calloutInk(kind)),
-              ),
-              Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: inner),
-              ),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: inner,
+            ),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 
   Widget _list(bool ordered, List<_ListItem> items) {
     // Build a flat structure with one nesting level (indent ≥ 2 → child).
@@ -333,18 +360,21 @@ class KbMarkdownParser {
       rows.add(_listRow(it, ordered ? '${n++}.' : '•'));
       var cn = 1;
       for (final c in it.children) {
-        rows.add(Padding(
-          padding: const EdgeInsets.only(left: 22),
-          child: _listRow(c, ordered ? '${cn++}.' : '◦'),
-        ));
+        rows.add(
+          Padding(
+            padding: const EdgeInsets.only(left: 22),
+            child: _listRow(c, ordered ? '${cn++}.' : '◦'),
+          ),
+        );
       }
     }
     return Padding(
       padding: EdgeInsets.fromLTRB(hasTask ? 3 : 4, 8, 0, 8),
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: rows),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: rows,
+      ),
     );
   }
 
@@ -363,8 +393,9 @@ class KbMarkdownParser {
                 color: it.checked ? AppColors.success : AppColors.surface,
                 borderRadius: BorderRadius.circular(5),
                 border: Border.all(
-                    color: it.checked ? AppColors.success : AppColors.hairline,
-                    width: 1.5),
+                  color: it.checked ? AppColors.success : AppColors.hairline,
+                  width: 1.5,
+                ),
               ),
               alignment: Alignment.center,
               child: it.checked
@@ -372,14 +403,17 @@ class KbMarkdownParser {
                   : null,
             ),
             Expanded(
-              child: Text.rich(_inline(
-                it.content,
-                it.checked
-                    ? _base.copyWith(
-                        color: AppColors.inkFaint,
-                        decoration: TextDecoration.lineThrough)
-                    : _base,
-              )),
+              child: Text.rich(
+                _inline(
+                  it.content,
+                  it.checked
+                      ? _base.copyWith(
+                          color: AppColors.inkFaint,
+                          decoration: TextDecoration.lineThrough,
+                        )
+                      : _base,
+                ),
+              ),
             ),
           ],
         ),
@@ -392,9 +426,13 @@ class KbMarkdownParser {
         children: [
           SizedBox(
             width: 22,
-            child: Text(marker,
-                style: _base.copyWith(
-                    color: AppColors.inkSoft, fontWeight: FontWeight.w600)),
+            child: Text(
+              marker,
+              style: _base.copyWith(
+                color: AppColors.inkSoft,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           Expanded(child: Text.rich(_inline(it.content, _base))),
         ],
@@ -421,54 +459,71 @@ class KbMarkdownParser {
         spans.add(TextSpan(text: text.substring(last, m.start), style: base));
       }
       if (m.group(1) != null) {
-        spans.add(WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          baseline: TextBaseline.alphabetic,
-          child: SmartLinkChip(kind: m.group(1)!, id: m.group(2)!),
-        ));
-      } else if (m.group(3) != null) {
-        spans.add(WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(KbTokens.radiusCard),
-              child: Image.network(m.group(4)!,
-                  errorBuilder: (context, error, stack) =>
-                      const SizedBox.shrink()),
-            ),
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            baseline: TextBaseline.alphabetic,
+            child: SmartLinkChip(kind: m.group(1)!, id: m.group(2)!),
           ),
-        ));
+        );
+      } else if (m.group(3) != null) {
+        // Image `![alt](url)` — rendered via [MarkdownImage] so URL images
+        // actually show on Flutter web (authenticated bytes / server proxy)
+        // instead of silently failing through a plain Image.network.
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: MarkdownImage(url: m.group(4)!, alt: m.group(3)),
+          ),
+        );
       } else if (m.group(5) != null) {
         spans.add(_link(m.group(5)!, m.group(6)!, base));
       } else if (m.group(7) != null) {
-        spans.add(TextSpan(
-          text: m.group(7),
-          style: base.copyWith(
-            fontFamily: AppTheme.fontMono,
-            fontSize: (base.fontSize ?? 15) * 0.86,
-            color: KbTokens.inlineCode,
-            backgroundColor: KbTokens.inlineCodeBg,
+        spans.add(
+          TextSpan(
+            text: m.group(7),
+            style: base.copyWith(
+              fontFamily: AppTheme.fontMono,
+              fontSize: (base.fontSize ?? 15) * 0.86,
+              color: KbTokens.inlineCode,
+              backgroundColor: KbTokens.inlineCodeBg,
+            ),
           ),
-        ));
+        );
       } else if (m.group(8) != null) {
-        spans.add(TextSpan(
+        spans.add(
+          TextSpan(
             text: m.group(8),
-            style: base.copyWith(fontWeight: FontWeight.w700, color: AppColors.ink)));
+            style: base.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
+          ),
+        );
       } else if (m.group(9) != null) {
-        spans.add(TextSpan(
+        spans.add(
+          TextSpan(
             text: m.group(9),
             style: base.copyWith(
-                decoration: TextDecoration.lineThrough,
-                color: AppColors.inkFaint)));
+              decoration: TextDecoration.lineThrough,
+              color: AppColors.inkFaint,
+            ),
+          ),
+        );
       } else if (m.group(10) != null) {
-        spans.add(TextSpan(
+        spans.add(
+          TextSpan(
             text: m.group(10),
-            style: base.copyWith(fontStyle: FontStyle.italic)));
+            style: base.copyWith(fontStyle: FontStyle.italic),
+          ),
+        );
       } else if (m.group(11) != null) {
-        spans.add(TextSpan(
+        spans.add(
+          TextSpan(
             text: m.group(11),
-            style: base.copyWith(fontStyle: FontStyle.italic)));
+            style: base.copyWith(fontStyle: FontStyle.italic),
+          ),
+        );
       }
       last = m.end;
     }
@@ -495,7 +550,8 @@ class KbMarkdownParser {
 
   Future<void> _openUrl(String url) async {
     final uri = Uri.parse(
-        RegExp(r'^[a-zA-Z][a-zA-Z\d+.-]*:').hasMatch(url) ? url : 'https://$url');
+      RegExp(r'^[a-zA-Z][a-zA-Z\d+.-]*:').hasMatch(url) ? url : 'https://$url',
+    );
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
@@ -538,7 +594,11 @@ class _ListItem {
 /// pushes the page wide). Columns size to content but stretch to fill the
 /// available width when narrower.
 class _MdTable extends StatelessWidget {
-  const _MdTable({required this.head, required this.rows, required this.parser});
+  const _MdTable({
+    required this.head,
+    required this.rows,
+    required this.parser,
+  });
 
   final List<String> head;
   final List<List<String>> rows;
@@ -548,27 +608,32 @@ class _MdTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final cols = head.length;
     final headStyle = const TextStyle(
-            fontFamily: AppTheme.fontUi, fontSize: 12, height: 1.4)
-        .copyWith(fontWeight: FontWeight.w700, color: AppColors.ink);
+      fontFamily: AppTheme.fontUi,
+      fontSize: 12,
+      height: 1.4,
+    ).copyWith(fontWeight: FontWeight.w700, color: AppColors.ink);
     final cellStyle = TextStyle(
-        fontFamily: AppTheme.fontUi,
-        fontSize: 13.5,
-        height: 1.5,
-        color: AppColors.ink);
+      fontFamily: AppTheme.fontUi,
+      fontSize: 13.5,
+      height: 1.5,
+      color: AppColors.ink,
+    );
 
     TableRow buildRow(List<String> cells, {required bool header}) => TableRow(
-          decoration:
-              header ? BoxDecoration(color: AppColors.surfaceMuted) : null,
-          children: [
-            for (var c = 0; c < cols; c++)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                child: Text.rich(parser.inlineFor(
-                    c < cells.length ? cells[c] : '',
-                    header ? headStyle : cellStyle)),
+      decoration: header ? BoxDecoration(color: AppColors.surfaceMuted) : null,
+      children: [
+        for (var c = 0; c < cols; c++)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Text.rich(
+              parser.inlineFor(
+                c < cells.length ? cells[c] : '',
+                header ? headStyle : cellStyle,
               ),
-          ],
-        );
+            ),
+          ),
+      ],
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 13),
@@ -587,7 +652,8 @@ class _MdTable extends StatelessWidget {
                 child: Table(
                   defaultColumnWidth: const IntrinsicColumnWidth(),
                   border: TableBorder.symmetric(
-                      inside: BorderSide(color: AppColors.hairline2)),
+                    inside: BorderSide(color: AppColors.hairline2),
+                  ),
                   defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                   children: [
                     buildRow(head, header: true),

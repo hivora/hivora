@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/markdown_image_upload.dart';
 import '../../core/widgets/markdown_toolbar.dart';
 import '../knowledge/knowledge_tokens.dart';
 import '../knowledge/markdown/markdown_renderer.dart';
@@ -63,7 +64,10 @@ class _IssueDescriptionEditorState extends State<IssueDescriptionEditor> {
         // is free to use the full width for a single scrollable command row.
         Row(
           children: [
-            if (widget.label != null) Expanded(child: widget.label!) else const Spacer(),
+            if (widget.label != null)
+              Expanded(child: widget.label!)
+            else
+              const Spacer(),
             _tabs(),
           ],
         ),
@@ -82,6 +86,7 @@ class _IssueDescriptionEditorState extends State<IssueDescriptionEditor> {
                 actions: _actions,
                 enabled: !_preview,
                 dense: true,
+                onImage: () => pickAndInsertMarkdownImage(context, _actions),
               ),
               SizedBox(
                 height: 220,
@@ -175,9 +180,10 @@ class _IssueDescriptionEditorState extends State<IssueDescriptionEditor> {
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: KbMarkdownParser(fontSize: 14, sink: _sink)
-                  .parse(_ctrl.text)
-                  .nodes,
+              children: KbMarkdownParser(
+                fontSize: 14,
+                sink: _sink,
+              ).parse(_ctrl.text).nodes,
             ),
     );
   }

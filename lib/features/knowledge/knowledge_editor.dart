@@ -5,6 +5,7 @@ import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/glass_popup_menu.dart';
+import '../../core/widgets/markdown_image_upload.dart';
 import '../../core/widgets/markdown_toolbar.dart';
 import 'data/knowledge_models.dart';
 import 'data/knowledge_repository.dart';
@@ -48,10 +49,12 @@ class KnowledgeEditor extends StatefulWidget {
 }
 
 class _KnowledgeEditorState extends State<KnowledgeEditor> {
-  late final TextEditingController _title =
-      TextEditingController(text: widget.initialTitle);
-  late final TextEditingController _body =
-      TextEditingController(text: widget.initialBody);
+  late final TextEditingController _title = TextEditingController(
+    text: widget.initialTitle,
+  );
+  late final TextEditingController _body = TextEditingController(
+    text: widget.initialBody,
+  );
   final FocusNode _bodyFocus = FocusNode();
   late final MarkdownEditingActions _actions = MarkdownEditingActions(
     _body,
@@ -81,8 +84,8 @@ class _KnowledgeEditorState extends State<KnowledgeEditor> {
     super.dispose();
   }
 
-  void _save() => widget.onSave(
-      EditorResult(_title.text.trim(), _body.text, _spaceId));
+  void _save() =>
+      widget.onSave(EditorResult(_title.text.trim(), _body.text, _spaceId));
 
   @override
   Widget build(BuildContext context) {
@@ -126,10 +129,11 @@ class _KnowledgeEditorState extends State<KnowledgeEditor> {
               controller: _title,
               autofocus: true,
               style: const TextStyle(
-                  fontFamily: AppTheme.fontBrand,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.4),
+                fontFamily: AppTheme.fontBrand,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.4,
+              ),
               decoration: InputDecoration(
                 isCollapsed: true,
                 border: InputBorder.none,
@@ -150,8 +154,11 @@ class _KnowledgeEditorState extends State<KnowledgeEditor> {
                 GlassMenuItem(
                   value: s.id,
                   label: s.name,
-                  leading:
-                      Icon(lucideIcon(s.icon), size: 16, color: KbTokens.accent),
+                  leading: Icon(
+                    lucideIcon(s.icon),
+                    size: 16,
+                    color: KbTokens.accent,
+                  ),
                 ),
             ],
             child: Row(
@@ -159,26 +166,35 @@ class _KnowledgeEditorState extends State<KnowledgeEditor> {
               children: [
                 Icon(lucideIcon('hash'), size: 15, color: AppColors.inkFaint),
                 const SizedBox(width: 6),
-                Text(repo.spaceById(_spaceId)?.name ?? '',
-                    style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.ink)),
+                Text(
+                  repo.spaceById(_spaceId)?.name ?? '',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
                 const SizedBox(width: 4),
-                Icon(lucideIcon('chevron-down'),
-                    size: 15, color: AppColors.inkFaint),
+                Icon(
+                  lucideIcon('chevron-down'),
+                  size: 15,
+                  color: AppColors.inkFaint,
+                ),
               ],
             ),
           ),
           TextButton(
-              onPressed: widget.onCancel,
-              child: Text(context.t('common.cancel'))),
+            onPressed: widget.onCancel,
+            child: Text(context.t('common.cancel')),
+          ),
           FilledButton.icon(
             onPressed: _save,
             icon: Icon(lucideIcon('check'), size: 16),
-            label: Text(widget.isNew
-                ? context.t('knowledge.publish')
-                : context.t('common.save')),
+            label: Text(
+              widget.isNew
+                  ? context.t('knowledge.publish')
+                  : context.t('common.save'),
+            ),
           ),
         ],
       ),
@@ -188,6 +204,7 @@ class _KnowledgeEditorState extends State<KnowledgeEditor> {
   Widget _toolbar(bool split) => MarkdownToolbar(
     actions: _actions,
     trailing: split ? null : _tabs(),
+    onImage: () => pickAndInsertMarkdownImage(context, _actions),
   );
 
   Widget _tabs() {
@@ -202,14 +219,23 @@ class _KnowledgeEditorState extends State<KnowledgeEditor> {
             color: on ? AppColors.surface : null,
             borderRadius: BorderRadius.circular(7),
             boxShadow: on
-                ? [BoxShadow(color: AppColors.navyDeep.withValues(alpha: 0.08), blurRadius: 4, offset: const Offset(0, 1))]
+                ? [
+                    BoxShadow(
+                      color: AppColors.navyDeep.withValues(alpha: 0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
                 : null,
           ),
-          child: Text(label,
-              style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: on ? AppColors.ink : AppColors.inkSoft)),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: on ? AppColors.ink : AppColors.inkSoft,
+            ),
+          ),
         ),
       );
     }
@@ -221,11 +247,14 @@ class _KnowledgeEditorState extends State<KnowledgeEditor> {
         color: AppColors.canvas2,
         borderRadius: BorderRadius.circular(9),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        tab('write', context.t('issues.tabEditor')),
-        const SizedBox(width: 3),
-        tab('preview', context.t('issues.tabPreview')),
-      ]),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          tab('write', context.t('issues.tabEditor')),
+          const SizedBox(width: 3),
+          tab('preview', context.t('issues.tabPreview')),
+        ],
+      ),
     );
   }
 
@@ -242,7 +271,11 @@ class _KnowledgeEditorState extends State<KnowledgeEditor> {
         ],
       );
     }
-    return showWrite ? _writePane() : showPreview ? _previewPane() : const SizedBox();
+    return showWrite
+        ? _writePane()
+        : showPreview
+        ? _previewPane()
+        : const SizedBox();
   }
 
   Widget _writePane() {
@@ -275,16 +308,21 @@ class _KnowledgeEditorState extends State<KnowledgeEditor> {
           if (_title.text.trim().isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 14),
-              child: Text(_title.text.trim(),
-                  style: const TextStyle(
-                      fontFamily: AppTheme.fontBrand,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.6)),
+              child: Text(
+                _title.text.trim(),
+                style: const TextStyle(
+                  fontFamily: AppTheme.fontBrand,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.6,
+                ),
+              ),
             ),
           if (_body.text.trim().isEmpty)
-            Text(context.t('knowledge.nothingToPreview'),
-                style: TextStyle(color: AppColors.inkFaint))
+            Text(
+              context.t('knowledge.nothingToPreview'),
+              style: TextStyle(color: AppColors.inkFaint),
+            )
           else
             ...parsed.nodes,
         ],

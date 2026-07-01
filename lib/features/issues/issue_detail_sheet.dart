@@ -21,6 +21,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/hue_colors.dart';
 import '../../core/widgets/hive_widgets.dart';
+import '../../core/widgets/markdown_image_upload.dart';
+import '../../core/widgets/markdown_toolbar.dart';
 import '../../core/widgets/soft_card.dart';
 import '../knowledge/data/knowledge_models.dart' show KbArticle, lucideIcon;
 import '../knowledge/data/knowledge_repository.dart';
@@ -212,6 +214,10 @@ class IssueDetailBody extends StatefulWidget {
 class IssueDetailBodyState extends State<IssueDetailBody> {
   final _comment = TextEditingController();
   final _commentFocus = FocusNode();
+  late final MarkdownEditingActions _commentActions = MarkdownEditingActions(
+    _comment,
+    _commentFocus,
+  );
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
 
@@ -1531,6 +1537,11 @@ class IssueDetailBodyState extends State<IssueDetailBody> {
             padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
             child: Row(
               children: [
+                _CommentImageButton(
+                  onTap: () =>
+                      pickAndInsertMarkdownImage(context, _commentActions),
+                ),
+                const SizedBox(width: 8),
                 Text(
                   context.t('issues.commentHint'),
                   style: TextStyle(fontSize: 11, color: AppColors.inkFaint),
@@ -3539,6 +3550,10 @@ class _CommentTile extends StatefulWidget {
 class _CommentTileState extends State<_CommentTile> {
   final _editController = TextEditingController();
   final _editFocus = FocusNode();
+  late final MarkdownEditingActions _editActions = MarkdownEditingActions(
+    _editController,
+    _editFocus,
+  );
   bool _editing = false;
   bool _saving = false;
 
@@ -3694,6 +3709,10 @@ class _CommentTileState extends State<_CommentTile> {
             padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
             child: Row(
               children: [
+                _CommentImageButton(
+                  onTap: () =>
+                      pickAndInsertMarkdownImage(context, _editActions),
+                ),
                 const Spacer(),
                 TextButton(
                   onPressed: _saving ? null : _cancelEdit,
@@ -3724,6 +3743,56 @@ class _CommentTileState extends State<_CommentTile> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "Attach image" button for the comment composer / inline editor: runs the
+/// shared pick → upload → insert flow and shows a spinner while the upload is in
+/// flight (also blocks a second tap until it finishes).
+class _CommentImageButton extends StatefulWidget {
+  const _CommentImageButton({required this.onTap});
+
+  final Future<void> Function() onTap;
+
+  @override
+  State<_CommentImageButton> createState() => _CommentImageButtonState();
+}
+
+class _CommentImageButtonState extends State<_CommentImageButton> {
+  bool _busy = false;
+
+  Future<void> _run() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await widget.onTap();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: context.t('md.image'),
+      child: InkWell(
+        onTap: _busy ? null : _run,
+        borderRadius: BorderRadius.circular(7),
+        child: SizedBox(
+          width: 30,
+          height: 30,
+          child: _busy
+              ? const Center(
+                  child: SizedBox(
+                    width: 15,
+                    height: 15,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : Icon(LucideIcons.image, size: 17, color: AppColors.inkSoft),
+        ),
       ),
     );
   }

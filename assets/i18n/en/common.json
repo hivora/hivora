@@ -630,6 +630,7 @@
   "codeBlock": "Code block",
   "table": "Table",
   "infoPanel": "Info panel",
+  "image": "Insert image",
   "mention": "Mention / link (@)"
  },
  "notifications": {

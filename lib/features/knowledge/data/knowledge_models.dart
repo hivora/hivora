@@ -84,55 +84,54 @@ class KbArticle {
     String? title,
     String? body,
     String? updated,
-  }) =>
-      KbArticle(
-        id: id,
-        spaceId: spaceId ?? this.spaceId,
-        parentId: parentId,
-        title: title ?? this.title,
-        icon: icon,
-        authorId: authorId,
-        contributorIds: contributorIds,
-        updated: updated ?? this.updated,
-        created: created,
-        reads: reads,
-        labels: labels,
-        status: status,
-        body: body ?? this.body,
-      );
+  }) => KbArticle(
+    id: id,
+    spaceId: spaceId ?? this.spaceId,
+    parentId: parentId,
+    title: title ?? this.title,
+    icon: icon,
+    authorId: authorId,
+    contributorIds: contributorIds,
+    updated: updated ?? this.updated,
+    created: created,
+    reads: reads,
+    labels: labels,
+    status: status,
+    body: body ?? this.body,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'spaceId': spaceId,
-        'parentId': parentId,
-        'title': title,
-        'icon': icon,
-        'authorId': authorId,
-        'contributorIds': contributorIds,
-        'updated': updated,
-        'created': created,
-        'reads': reads,
-        'labels': labels,
-        'status': status,
-        'body': body,
-      };
+    'id': id,
+    'spaceId': spaceId,
+    'parentId': parentId,
+    'title': title,
+    'icon': icon,
+    'authorId': authorId,
+    'contributorIds': contributorIds,
+    'updated': updated,
+    'created': created,
+    'reads': reads,
+    'labels': labels,
+    'status': status,
+    'body': body,
+  };
 
   factory KbArticle.fromJson(Map<String, dynamic> json) => KbArticle(
-        id: json['id'] as String,
-        spaceId: json['spaceId'] as String,
-        parentId: json['parentId'] as String?,
-        title: json['title'] as String? ?? '',
-        icon: json['icon'] as String? ?? 'file-text',
-        authorId: json['authorId'] as String? ?? '',
-        contributorIds:
-            ((json['contributorIds'] as List?) ?? const []).cast<String>(),
-        updated: json['updated'] as String? ?? 'just now',
-        created: json['created'] as String? ?? 'Today',
-        reads: (json['reads'] as num?)?.toInt() ?? 0,
-        labels: ((json['labels'] as List?) ?? const []).cast<String>(),
-        status: json['status'] as String? ?? 'published',
-        body: json['body'] as String? ?? '',
-      );
+    id: json['id'] as String,
+    spaceId: json['spaceId'] as String,
+    parentId: json['parentId'] as String?,
+    title: json['title'] as String? ?? '',
+    icon: json['icon'] as String? ?? 'file-text',
+    authorId: json['authorId'] as String? ?? '',
+    contributorIds: ((json['contributorIds'] as List?) ?? const [])
+        .cast<String>(),
+    updated: json['updated'] as String? ?? 'just now',
+    created: json['created'] as String? ?? 'Today',
+    reads: (json['reads'] as num?)?.toInt() ?? 0,
+    labels: ((json['labels'] as List?) ?? const []).cast<String>(),
+    status: json['status'] as String? ?? 'published',
+    body: json['body'] as String? ?? '',
+  );
 }
 
 // ─────────────────────────── metadata maps ───────────────────────────
@@ -187,7 +186,8 @@ const Map<String, StateMeta> kStateMeta = {
   'DONE': StateMeta('Done', 155),
 };
 
-StateMeta stateMeta(String state) => kStateMeta[state] ?? kStateMeta['BACKLOG']!;
+StateMeta stateMeta(String state) =>
+    kStateMeta[state] ?? kStateMeta['BACKLOG']!;
 
 // ─────────────────────────── lucide icon lookup ───────────────────────────
 
@@ -196,6 +196,10 @@ StateMeta stateMeta(String state) => kStateMeta[state] ?? kStateMeta['BACKLOG']!
 IconData lucideIcon(String? name) {
   switch (name) {
     // article / space icons
+    case 'image':
+      return LucideIcons.image;
+    case 'image-off':
+      return LucideIcons.imageOff;
     case 'container':
       return LucideIcons.container;
     case 'lock':

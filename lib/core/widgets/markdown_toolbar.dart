@@ -66,6 +66,63 @@ class MarkdownEditingActions {
     focusNode.requestFocus();
   }
 
+  // ── inline image upload ──
+  // A placeholder `![alt](hinata-uploading:<token>)` is inserted at the caret
+  // the moment an upload starts, then swapped for the real `![alt](url)` when it
+  // resolves — so the caret is freed immediately and the user can keep typing.
+  int _imgSeq = 0;
+  final Map<String, String> _pendingImages = {};
+
+  /// Inserts an upload placeholder for [fileName] and returns its token. The
+  /// alt text is derived from the file name (extension stripped).
+  String beginImageUpload(String fileName) {
+    final token = 'img${_imgSeq++}';
+    final alt = _imageAlt(fileName);
+    final placeholder = '![$alt](hinata-uploading:$token)';
+    _pendingImages[token] = placeholder;
+    final v = controller.value;
+    final s = v.selection.start < 0 ? v.text.length : v.selection.start;
+    // Keep the image on its own line so it renders as a block, not mid-sentence.
+    final pre = (s > 0 && v.text[s - 1] != '\n') ? '\n' : '';
+    final insert = '$pre$placeholder\n';
+    controller.value = TextEditingValue(
+      text: v.text.replaceRange(s, s, insert),
+      selection: TextSelection.collapsed(offset: s + insert.length),
+    );
+    focusNode.requestFocus();
+    return token;
+  }
+
+  /// Swaps the placeholder for [token] with the final image markdown at [url].
+  void completeImageUpload(String token, String url, String fileName) {
+    final placeholder = _pendingImages.remove(token);
+    if (placeholder == null || !controller.text.contains(placeholder)) return;
+    controller.text = controller.text.replaceFirst(
+      placeholder,
+      '![${_imageAlt(fileName)}]($url)',
+    );
+  }
+
+  /// Removes the placeholder for [token] after a failed/cancelled upload.
+  void failImageUpload(String token) {
+    final placeholder = _pendingImages.remove(token);
+    if (placeholder == null) return;
+    final text = controller.text;
+    // Drop the placeholder and the blank line we padded it with.
+    for (final variant in ['$placeholder\n', placeholder]) {
+      if (text.contains(variant)) {
+        controller.text = text.replaceFirst(variant, '');
+        return;
+      }
+    }
+  }
+
+  String _imageAlt(String fileName) {
+    final dot = fileName.lastIndexOf('.');
+    final base = dot > 0 ? fileName.substring(0, dot) : fileName;
+    return base.trim().isEmpty ? 'image' : base.trim();
+  }
+
   /// Types a literal `@` to trigger the `@`-mention menu at the caret.
   void insertMention() {
     final v = controller.value;
@@ -154,12 +211,17 @@ class MarkdownToolbar extends StatelessWidget {
     this.trailing,
     this.groups,
     this.dense = false,
+    this.onImage,
   });
 
   final MarkdownEditingActions actions;
 
   /// When false, buttons are greyed and inert (e.g. while previewing).
   final bool enabled;
+
+  /// When set, an "insert image" button is shown that runs this async pick →
+  /// upload → insert flow (see `markdown_image_upload.dart`).
+  final Future<void> Function()? onImage;
 
   /// Optional right-aligned widget (kept on one row with the buttons).
   final Widget? trailing;
@@ -169,6 +231,31 @@ class MarkdownToolbar extends StatelessWidget {
 
   /// Slightly smaller hit targets for compact surfaces.
   final bool dense;
+
+  Widget _button(
+    BuildContext context,
+    IconData icon,
+    String tooltip,
+    VoidCallback? onTap,
+    double size,
+  ) {
+    return Tooltip(
+      message: context.t(tooltip),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(7),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Icon(
+            icon,
+            size: dense ? 16 : 17,
+            color: onTap != null ? AppColors.inkSoft : AppColors.inkFaint,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -188,24 +275,35 @@ class MarkdownToolbar extends StatelessWidget {
       }
       for (final cmd in groups[g]) {
         children.add(
-          Tooltip(
-            message: context.t(cmd.tooltip),
-            child: InkWell(
-              onTap: enabled ? () => cmd.run(actions) : null,
-              borderRadius: BorderRadius.circular(7),
-              child: SizedBox(
-                width: size,
-                height: size,
-                child: Icon(
-                  cmd.icon,
-                  size: dense ? 16 : 17,
-                  color: enabled ? AppColors.inkSoft : AppColors.inkFaint,
-                ),
-              ),
-            ),
+          _button(
+            context,
+            cmd.icon,
+            cmd.tooltip,
+            enabled ? () => cmd.run(actions) : null,
+            size,
           ),
         );
       }
+    }
+
+    if (onImage != null) {
+      children.add(
+        Container(
+          width: 1,
+          height: 18,
+          margin: const EdgeInsets.symmetric(horizontal: 5),
+          color: AppColors.hairline,
+        ),
+      );
+      children.add(
+        _button(
+          context,
+          LucideIcons.image,
+          'md.image',
+          enabled ? () => onImage!() : null,
+          size,
+        ),
+      );
     }
 
     return Container(

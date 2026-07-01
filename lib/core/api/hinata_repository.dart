@@ -592,6 +592,18 @@ class HinataRepository {
         as Map<String, dynamic>,
   );
 
+  /// Uploads an inline Markdown image (issue description/comment or KB article)
+  /// and returns its app-relative URL — e.g. `/api/v1/media/<uuid>` — ready to
+  /// embed as `![alt](url)`. Not bound to any entity; readable by any signed-in
+  /// user, served back through the authenticated media proxy.
+  Future<String> uploadMedia(
+    MultipartFile file, {
+    CancelToken? cancelToken,
+  }) async =>
+      ((await _api.upload('/api/v1/media', file, cancelToken: cancelToken))
+              as Map<String, dynamic>)['url']
+          as String;
+
   /// Short-lived presigned download URL for an attachment.
   Future<String> attachmentDownloadUrl(
     String issueId,
